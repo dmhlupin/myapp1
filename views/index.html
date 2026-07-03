@@ -4,167 +4,8 @@
     <meta charset="UTF-8">
     <title>Главная страница</title>
     <link rel="stylesheet" href="/css/style.css">
-    <style>
-        .main-container {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 20px;
-        }
-        
-        .main-card {
-            background: white;
-            padding: 50px 40px;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            max-width: 700px;
-            width: 100%;
-            animation: fadeIn 0.5s ease;
-            position: relative;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .admin-badge {
-            position: absolute;
-            top: 15px;
-            right: 20px;
-        }
-        
-        .admin-badge a {
-            display: inline-block;
-            padding: 5px 15px;
-            background: #2d3748;
-            color: white;
-            text-decoration: none;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            transition: all 0.3s;
-            letter-spacing: 0.5px;
-        }
-        
-        .admin-badge a:hover {
-            background: #1a202c;
-            transform: scale(1.05);
-        }
-        
-        .main-title {
-            color: #333;
-            text-align: center;
-            font-size: 32px;
-            margin-bottom: 10px;
-        }
-        
-        .main-subtitle {
-            text-align: center;
-            color: #666;
-            margin-bottom: 30px;
-        }
-        
-        .links {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-        
-        .link-card {
-            display: block;
-            padding: 20px 25px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            text-decoration: none;
-            border-radius: 12px;
-            transition: transform 0.2s, box-shadow 0.2s;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .link-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
-        }
-        
-        .link-card.second {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-        }
-        
-        .link-card.second:hover {
-            box-shadow: 0 10px 30px rgba(245, 87, 108, 0.4);
-        }
-        
-        .link-card.third {
-            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
-        }
-        
-        .link-card.third:hover {
-            box-shadow: 0 10px 30px rgba(72, 187, 120, 0.4);
-        }
-        
-        .link-card.fourth {
-            background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);
-        }
-        
-        .link-card.fourth:hover {
-            box-shadow: 0 10px 30px rgba(237, 137, 54, 0.4);
-        }
-        
-        .link-card.admin {
-            background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
-        }
-        
-        .link-card.admin:hover {
-            box-shadow: 0 10px 30px rgba(26, 32, 44, 0.4);
-        }
-        
-        .link-card .icon {
-            font-size: 24px;
-            margin-right: 10px;
-        }
-        
-        .link-card .title {
-            font-size: 18px;
-            font-weight: 600;
-        }
-        
-        .link-card .description {
-            font-size: 13px;
-            opacity: 0.9;
-            margin-top: 5px;
-        }
-        
-        .divider {
-            border: none;
-            border-top: 2px dashed #e2e8f0;
-            margin: 20px 0;
-        }
-        
-        .footer {
-            margin-top: 30px;
-            text-align: center;
-            color: #999;
-            font-size: 13px;
-        }
-        
-        @media (max-width: 480px) {
-            .main-card {
-                padding: 30px 20px;
-            }
-            .main-title {
-                font-size: 24px;
-            }
-            .admin-badge {
-                position: static;
-                text-align: right;
-                margin-bottom: 10px;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="/css/main-page.css">
+    <link rel="stylesheet" href="/css/help.css">
 </head>
 <body>
     <div class="main-container">
@@ -173,47 +14,53 @@
                 <a href="/admin">⚙️ Админ-панель</a>
             </div>
             
-            <h1 class="main-title">🚀 Добро пожаловать</h1>
-            <p class="main-subtitle">Выберите нужный раздел</p>
+            <h1 class="main-title">🚀 Учет техники</h1>
+            <p class="main-subtitle">Система управления техникой и пользователями</p>
             
-            <div class="links">
-                <a href="/users" class="link-card">
-                    <div>
-                        <span class="icon">👥</span>
-                        <span class="title">Учет пользователей</span>
-                        <div class="description">Просмотр всех пользователей и их техники</div>
-                    </div>
+            <div class="main-sections">
+                <a href="/users" class="link-card users">
+                    <span class="icon">👥</span>
+                    <div class="title">Учет пользователей</div>
+                    <div class="description">Просмотр всех пользователей и их техники</div>
                 </a>
                 
-                <a href="/pdf" class="link-card second">
-                    <div>
+                <a href="/equipment" class="link-card equipment">
+                    <span class="icon">🔧</span>
+                    <div class="title">Учет техники</div>
+                    <div class="description">Просмотр всей техники и ее статуса</div>
+                </a>
+            </div>
+            
+            <!-- Справочный раздел -->
+            <div class="reference-section" style="margin-top: 20px;">
+                <div class="reference-title">
+                    <span class="icon">📚</span>
+                    Справочная информация
+                    <span style="font-weight: 400; font-size: 13px; color: #a0aec0; margin-left: auto;">
+                        Для пользователей
+                    </span>
+                </div>
+                <div class="reference-links">
+                    <a href="/pdf" class="reference-link">
                         <span class="icon">📑</span>
-                        <span class="title">PDF инструкции</span>
-                        <div class="description">Генерация и просмотр PDF файлов инструкций</div>
-                    </div>
-                </a>
-                
-                <a href="/equipment" class="link-card third">
-                    <div>
-                        <span class="icon">🔧</span>
-                        <span class="title">Учет техники</span>
-                        <div class="description">Просмотр всей техники и ее статуса</div>
-                    </div>
-                </a>
-                
-                <a href="/admin" class="link-card admin">
-                    <div>
-                        <span class="icon">⚙️</span>
-                        <span class="title">Админ-панель</span>
-                        <div class="description">Управление техникой: добавление, редактирование, удаление</div>
-                    </div>
-                </a>
+                        Инструкции и документация
+                        <span class="badge">PDF</span>
+                    </a>
+                    <button onclick="showHelpModal()" class="reference-link" style="border: none; cursor: pointer; font-family: inherit;">
+                        <span class="icon">❓</span>
+                        Помощь
+                        <span class="badge">FAQ</span>
+                    </button>
+                </div>
             </div>
             
-            <div class="footer">
-                ⚡ Node.js + Express + SQLite
-            </div>
-        </div>
-    </div>
+
+
+    
+
+    <script src="/js/main.js"></script>
+    <script src="/js/help.js"></script>
+    <script src="/js/footer.js"></script>
+    <script src="/js/main-page.js"></script>
 </body>
 </html>

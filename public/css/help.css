@@ -1,0 +1,74 @@
+/* public/css/help.css - Стили для справочного блока */
+
+.help-footer {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.help-footer .footer-info {
+    color: #a0aec0;
+    font-size: 13px;
+}
+
+.help-footer .footer-links {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.help-footer .footer-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #718096;
+    text-decoration: none;
+    font-size: 14px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    transition: all 0.2s;
+    background: #f7fafc;
+    border: 1px solid #e2e8f0;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.help-footer .footer-link:hover {
+    background: #ebf8ff;
+    border-color: #667eea;
+    color: #2d3748;
+    transform: translateY(-1px);
+}
+
+.help-footer .footer-link .icon {
+    font-size: 16px;
+}
+
+.help-footer .footer-link .badge {
+    background: #edf2f7;
+    padding: 1px 8px;
+    border-radius: 12px;
+    font-size: 10px;
+    color: #718096;
+}
+
+.help-footer .footer-link:hover .badge {
+    background: #bee3f8;
+}
+
+@media (max-width: 640px) {
+    .help-footer {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .help-footer .footer-links {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+}
