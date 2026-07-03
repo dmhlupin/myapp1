@@ -1,0 +1,41 @@
+/* Стили для страницы редактирования */
+
+body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: #f0f2f5;
+    padding: 40px 20px;
+}
+
+.container {
+    max-width: 600px;
+    width: 100%;
+    background: white;
+    border-radius: 16px;
+    padding: 40px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+}
+
+.back-link {
+    color: #667eea;
+    text-decoration: none;
+    padding: 8px 16px;
+    border: 1px solid #667eea;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.back-link:hover {
+    background: #667eea;
+    color: white;
+}
+
+/* Добавьте в public/css/admin-edit.css */
+
+.help-text {
+    font-size: 13px;
+    color: #a0aec0;
+    margin-top: 4px;
+}

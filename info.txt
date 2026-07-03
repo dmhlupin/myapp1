@@ -1,0 +1,38 @@
+my-node-app-v2/
+├── data/
+│   └── database.db
+├── public/                    # Статические файлы
+│   ├── css/
+│   │   ├── style.css         # Общие стили
+│   │   ├── admin.css         # Стили админки
+│   │   ├── admin-add.css     # Стили добавления
+│   │   └── admin-edit.css    # Стили редактирования
+│   ├── js/
+│   │   ├── main.js           # Общий JS
+│   │   ├── admin.js          # JS админки
+│   │   ├── admin-add.js      # JS добавления
+│   │   └── admin-edit.js     # JS редактирования
+│   └── images/               # Для будущих изображений
+├── views/
+│   ├── index.html
+│   ├── page.html
+│   ├── pdf.html
+│   ├── equipment.html
+│   ├── admin.html
+│   ├── admin-add.html
+│   └── admin-edit.html
+├── database/
+│   └── db.js
+├── routes/
+│   ├── index.js
+│   ├── page.js
+│   ├── pdf.js
+│   ├── equipment.js
+│   └── admin.js
+├── middleware/
+│   └── auth.js
+├── .env
+├── .gitignore
+├── package.json
+├── server.js
+└── Dockerfile

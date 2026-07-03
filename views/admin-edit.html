@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Редактировать технику</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/admin-edit.css">
+    <style>
+        .status-warning {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            color: #856404;
+            display: none;
+        }
+        
+        .status-warning.show {
+            display: block;
+        }
+        
+        .status-info {
+            background: #cce5ff;
+            border: 1px solid #b8daff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            color: #004085;
+            display: none;
+        }
+        
+        .status-info.show {
+            display: block;
+        }
+        
+        .help-text {
+            font-size: 13px;
+            color: #a0aec0;
+            margin-top: 4px;
+        }
+        
+        .assign-section {
+            display: none;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .assign-section.show {
+            display: block;
+        }
+        
+        .assign-section label {
+            font-weight: 600;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>✏️ Редактировать технику</h1>
+            <a href="/admin" class="back-link">← Назад</a>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <span class="id-badge">ID: {{id}}</span>
+        </div>
+
+        <!-- Скрытые поля -->
+        <input type="hidden" id="equipmentId" value="{{id}}">
+        <input type="hidden" id="currentStatus" value="{{status}}">
+
+        <!-- Предупреждение при возврате -->
+        <div class="status-warning" id="statusWarning">
+            <strong>⚠️ Внимание!</strong>
+            <span>При изменении статуса с "Назначена" на "Доступна", техника будет автоматически возвращена от пользователя.</span>
+        </div>
+
+        <!-- Информация при назначении -->
+        <div class="status-info" id="statusInfo">
+            <strong>ℹ️ Назначение техники</strong>
+            <span>При изменении статуса с "Доступна" на "Назначена", выберите пользователя, которому будет выдана техника.</span>
+        </div>
+
+        <!-- Секция назначения -->
+        <div class="assign-section" id="assignSection">
+            <div class="form-group">
+                <label>Выберите пользователя <span class="required">*</span></label>
+                <select id="assignUserId">
+                    {{user_options}}
+                </select>
+                <div class="help-text">Выберите пользователя, которому будет назначена техника</div>
+            </div>
+            <div class="form-group">
+                <label>Состояние при выдаче</label>
+                <select id="assignCondition">
+                    <option value="В хорошем состоянии">В хорошем состоянии</option>
+                    <option value="Новая">Новая</option>
+                    <option value="Требуется внимание">Требуется внимание</option>
+                    <option value="С дефектами">С дефектами</option>
+                </select>
+                <div class="help-text">Укажите состояние техники при выдаче</div>
+            </div>
+        </div>
+
+        <form id="editForm" onsubmit="submitForm(event)">
+            <div class="form-group">
+                <label>Инвентарный номер <span class="required">*</span></label>
+                <input type="text" id="inventory_number" required value="{{inventory_number}}">
+            </div>
+
+            <div class="form-group">
+                <label>Название <span class="required">*</span></label>
+                <input type="text" id="name" required value="{{name}}">
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Модель</label>
+                    <input type="text" id="model" value="{{model}}">
+                </div>
+                <div class="form-group">
+                    <label>Серийный номер</label>
+                    <input type="text" id="serial_number" value="{{serial_number}}">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Производитель</label>
+                <input type="text" id="manufacturer" value="{{manufacturer}}">
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Дата покупки</label>
+                    <input type="date" id="purchase_date" value="{{purchase_date}}">
+                </div>
+                <div class="form-group">
+                    <label>Гарантия до</label>
+                    <input type="date" id="warranty_until" value="{{warranty_until}}">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Статус</label>
+                <select id="status" onchange="onStatusChange()">
+                    {{status_options}}
+                </select>
+                <div class="help-text">
+                    <span id="statusHelpText">При смене статуса с "Назначена" на "Доступна" техника будет автоматически возвращена</span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Описание</label>
+                <textarea id="description">{{description}}</textarea>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" id="submitBtn">💾 Обновить</button>
+                <a href="/admin" class="btn btn-back">Отмена</a>
+            </div>
+        </form>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="/js/main.js"></script>
+    <script>
+        // Получаем ID из скрытого поля
+        const equipmentIdInput = document.getElementById('equipmentId');
+        const equipmentId = equipmentIdInput ? parseInt(equipmentIdInput.value) : null;
+        
+        console.log('🆔 ID техники для редактирования:', equipmentId);
+        
+        if (!equipmentId || isNaN(equipmentId)) {
+            showToast('❌ Ошибка: ID техники не указан', 'error');
+            setTimeout(() => {
+                window.location.href = '/admin';
+            }, 2000);
+        }
+
+        const currentStatus = document.getElementById('currentStatus')?.value || '';
+
+        function onStatusChange() {
+            const newStatus = document.getElementById('status').value;
+            const warning = document.getElementById('statusWarning');
+            const info = document.getElementById('statusInfo');
+            const assignSection = document.getElementById('assignSection');
+            const helpText = document.getElementById('statusHelpText');
+            
+            // Скрываем все
+            warning.classList.remove('show');
+            info.classList.remove('show');
+            assignSection.classList.remove('show');
+            
+            if (currentStatus === 'assigned' && newStatus === 'available') {
+                warning.classList.add('show');
+                helpText.textContent = '⚠️ Техника будет автоматически возвращена от пользователя';
+            } else if (currentStatus === 'available' && newStatus === 'assigned') {
+                info.classList.add('show');
+                assignSection.classList.add('show');
+                helpText.textContent = 'ℹ️ Выберите пользователя для назначения техники';
+            } else {
+                helpText.textContent = 'Выберите статус техники';
+            }
+        }
+
+        async function submitForm(event) {
+            event.preventDefault();
+            
+            if (!equipmentId || isNaN(equipmentId)) {
+                showToast('❌ Ошибка: ID техники не указан', 'error');
+                return;
+            }
+            
+            const newStatus = document.getElementById('status').value;
+            
+            // Проверяем, нужно ли назначение
+            if (currentStatus === 'available' && newStatus === 'assigned') {
+                const userId = document.getElementById('assignUserId').value;
+                if (!userId) {
+                    showToast('❌ Для назначения техники выберите пользователя', 'error');
+                    document.getElementById('assignUserId').focus();
+                    return;
+                }
+            }
+            
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = '⏳ Обновление...';
+
+            const formData = {
+                inventory_number: document.getElementById('inventory_number').value.trim(),
+                name: document.getElementById('name').value.trim(),
+                model: document.getElementById('model').value.trim(),
+                serial_number: document.getElementById('serial_number').value.trim(),
+                manufacturer: document.getElementById('manufacturer').value.trim(),
+                purchase_date: document.getElementById('purchase_date').value || null,
+                warranty_until: document.getElementById('warranty_until').value || null,
+                status: newStatus,
+                description: document.getElementById('description').value.trim()
+            };
+            
+            // Добавляем данные о назначении если нужно
+            if (currentStatus === 'available' && newStatus === 'assigned') {
+                formData.assign_user_id = document.getElementById('assignUserId').value;
+                formData.assign_condition = document.getElementById('assignCondition').value;
+            }
+
+            console.log('📤 Отправка данных для ID:', equipmentId);
+            console.log('📦 Данные:', formData);
+
+            try {
+                const response = await fetch(`/api/admin/equipment/${equipmentId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+                console.log('📥 Ответ сервера:', result);
+
+                if (result.success) {
+                    let message = '✅ Техника успешно обновлена!';
+                    if (result.assignment) {
+                        message += ' Техника назначена пользователю.';
+                    }
+                    showToast(message, 'success');
+                    setTimeout(() => {
+                        window.location.href = '/admin';
+                    }, 1500);
+                } else {
+                    showToast('❌ ' + result.error, 'error');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = '💾 Обновить';
+                }
+            } catch (error) {
+                console.error('❌ Ошибка при обновлении:', error);
+                showToast('❌ Ошибка при обновлении техники', 'error');
+                submitBtn.disabled = false;
+                submitBtn.textContent = '💾 Обновить';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            onStatusChange();
+            console.log('✅ Страница редактирования загружена, ID:', equipmentId);
+        });
+    </script>
+</body>
+</html>
