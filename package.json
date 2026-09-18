@@ -1,7 +1,7 @@
 {
   "name": "node-web-server-v2",
-  "version": "1.4.0",
-  "description": "Система учета техники с авторизацией и ролями",
+  "version": "1.4.1",
+  "description": "Система учёта техники с авторизацией и ролями",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -13,7 +13,6 @@
     "reset-admin": "node scripts/reset-admin-password.js",
     "fix-assignments": "node scripts/fix-double-assignments.js"
   },
-
   "dependencies": {
     "express": "^4.18.2",
     "express-session": "^1.17.3",
@@ -23,5 +22,16 @@
   },
   "devDependencies": {
     "nodemon": "^2.0.22"
-  }
+  },
+  "keywords": [
+    "equipment",
+    "inventory",
+    "management",
+    "nodejs",
+    "express",
+    "sqlite",
+    "auth"
+  ],
+  "author": "Your Name",
+  "license": "MIT"
 }
