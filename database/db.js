@@ -548,16 +548,22 @@ function deleteEquipment(id) {
 
 // ===== НАЗНАЧЕНИЕ ТЕХНИКИ =====
 
+// ===== НАЗНАЧЕНИЕ ТЕХНИКИ =====
+
 function assignEquipment(userId, equipmentId, condition, notes = '') {
   return new Promise((resolve, reject) => {
     // Проверяем пользователя
-    db.get('SELECT id FROM users WHERE id = ?', [userId], (err, user) => {
+    db.get('SELECT id, is_active FROM users WHERE id = ?', [userId], (err, user) => {
       if (err) {
         reject(err);
         return;
       }
       if (!user) {
         reject(new Error('Пользователь не найден'));
+        return;
+      }
+      if (!user.is_active) {
+        reject(new Error('Пользователь заблокирован'));
         return;
       }
       
@@ -571,38 +577,79 @@ function assignEquipment(userId, equipmentId, condition, notes = '') {
           reject(new Error('Техника не найдена'));
           return;
         }
+        
+        // Разрешаем назначать только available
         if (eq.status !== 'available') {
           reject(new Error(`Техника не может быть назначена (текущий статус: ${eq.status})`));
           return;
         }
         
-        // Создаём назначение
-        db.run(
-          `INSERT INTO user_equipment (user_id, equipment_id, condition_on_assign, notes) 
-           VALUES (?, ?, ?, ?)`,
-          [userId, equipmentId, condition || 'В хорошем состоянии', notes],
-          function(err) {
+        // 🆕 НОВОЕ: Проверяем, нет ли активных назначений у этой техники
+        db.get(
+          `SELECT id, user_id FROM user_equipment 
+           WHERE equipment_id = ? AND returned_date IS NULL`,
+          [equipmentId],
+          (err, activeAssignment) => {
             if (err) {
               reject(err);
               return;
             }
             
-            // Обновляем статус техники
-            db.run(
-              'UPDATE equipment SET status = "assigned", updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-              [equipmentId],
-              function(err) {
-                if (err) {
-                  reject(err);
-                  return;
+            const createNewAssignment = () => {
+              // Создаём новое назначение
+              db.run(
+                `INSERT INTO user_equipment (user_id, equipment_id, condition_on_assign, notes) 
+                 VALUES (?, ?, ?, ?)`,
+                [userId, equipmentId, condition || 'В хорошем состоянии', notes],
+                function(err) {
+                  if (err) {
+                    reject(err);
+                    return;
+                  }
+                  
+                  // Обновляем статус техники
+                  db.run(
+                    'UPDATE equipment SET status = "assigned", updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+                    [equipmentId],
+                    function(err) {
+                      if (err) {
+                        reject(err);
+                        return;
+                      }
+                      resolve({ 
+                        assignment_id: this.lastID, 
+                        user_id: userId, 
+                        equipment_id: equipmentId,
+                        previous_returned: false
+                      });
+                    }
+                  );
                 }
-                resolve({ 
-                  assignment_id: this.lastID, 
-                  user_id: userId, 
-                  equipment_id: equipmentId 
-                });
-              }
-            );
+              );
+            };
+            
+            // Если есть активное назначение — закрываем его перед новым
+            if (activeAssignment) {
+              console.log(`⚠️  Обнаружено активное назначение техники ${equipmentId} у пользователя ${activeAssignment.user_id}. Закрываем...`);
+              
+              db.run(
+                `UPDATE user_equipment 
+                 SET returned_date = CURRENT_TIMESTAMP, 
+                     condition_on_return = 'Автовозврат: переназначение другой технике',
+                     notes = COALESCE(notes, '') || ' | Автовозврат при переназначении'
+                 WHERE id = ?`,
+                [activeAssignment.id],
+                function(err) {
+                  if (err) {
+                    console.error('❌ Ошибка закрытия старого назначения:', err);
+                    // Продолжаем, чтобы не блокировать назначение
+                  }
+                  createNewAssignment();
+                }
+              );
+            } else {
+              createNewAssignment();
+            }
           }
         );
       });

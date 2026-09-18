@@ -314,35 +314,18 @@ async function updateEquipmentAPI(req, res) {
     }
     
     const oldStatus = existing.status;
+    
+    // 🆕 Переменная для результата назначения
     let assignmentResult = null;
     
-    // Если статус меняется с available на assigned - назначаем пользователя
-    if (oldStatus === 'available' && status === 'assigned') {
-      if (!assign_user_id) {
-        return res.status(400).json({ 
-          error: 'Для назначения техники выберите пользователя' 
-        });
-      }
+    // 🆕 Если назначаем технику пользователю
+    if (status === 'assigned' && assign_user_id) {
       
-      try {
-        assignmentResult = await assignEquipment(
-          parseInt(assign_user_id),
-          id,
-          assign_condition || 'В хорошем состоянии',
-          'Назначено через редактирование техники'
-        );
-        console.log(`✅ Техника ${id} назначена пользователю ${assign_user_id}`);
-      } catch (error) {
-        console.error('❌ Ошибка назначения:', error);
-        return res.status(400).json({ error: error.message });
-      }
-    }
-    
-    // Если статус меняется с assigned на available - возвращаем технику
-    if (oldStatus === 'assigned' && status === 'available') {
-      try {
-        // Находим активное назначение
-        const assignment = await new Promise((resolve, reject) => {
+      // Если техника уже была назначена — закрываем старое назначение
+      if (oldStatus === 'assigned') {
+        const { db } = require('../database/db');
+        
+        const oldAssignment = await new Promise((resolve, reject) => {
           db.get(
             `SELECT id, user_id FROM user_equipment 
              WHERE equipment_id = ? AND returned_date IS NULL`,
@@ -354,22 +337,87 @@ async function updateEquipmentAPI(req, res) {
           );
         });
         
-        if (assignment) {
+        // Если назначение на ДРУГОГО пользователя — закрываем старое
+        if (oldAssignment && oldAssignment.user_id !== parseInt(assign_user_id)) {
           await new Promise((resolve, reject) => {
             db.run(
               `UPDATE user_equipment 
                SET returned_date = CURRENT_TIMESTAMP, 
-                   condition_on_return = ?
+                   condition_on_return = 'Автовозврат: переназначение другому пользователю',
+                   notes = COALESCE(notes, '') || ' | Возврат при переназначении'
                WHERE id = ?`,
-              ['Возвращена при изменении статуса', assignment.id],
+              [oldAssignment.id],
               function(err) {
                 if (err) reject(err);
                 else resolve();
               }
             );
           });
-          console.log(`✅ Техника ${id} возвращена от пользователя ${assignment.user_id}`);
+          
+          console.log(`✅ Закрыто старое назначение техники ${id}`);
         }
+        
+        // Временно меняем статус на available, чтобы assignEquipment сработала
+        await new Promise((resolve, reject) => {
+          db.run(
+            'UPDATE equipment SET status = "available" WHERE id = ?',
+            [id],
+            function(err) {
+              if (err) reject(err);
+              else resolve();
+            }
+          );
+        });
+      }
+      
+      // Назначаем новому пользователю
+      try {
+        assignmentResult = await assignEquipment(
+          parseInt(assign_user_id),
+          id,
+          assign_condition || 'В хорошем состоянии',
+          'Назначено через редактирование техники'
+        );
+        console.log(`✅ Техника ${id} назначена пользователю ${assign_user_id}`);
+        
+        // Логируем назначение
+        await logAction({
+          req,
+          action: 'equipment_assign',
+          entityType: 'equipment',
+          entityId: id,
+          details: JSON.stringify({ 
+            inventory_number: existing.inventory_number,
+            user_id: assign_user_id 
+          })
+        });
+      } catch (error) {
+        console.error('❌ Ошибка назначения:', error);
+        return res.status(400).json({ error: error.message });
+      }
+    }
+    
+    // Если статус меняется с assigned на available — возвращаем технику
+    if (oldStatus === 'assigned' && status === 'available') {
+      const { returnEquipmentByEquipmentId } = require('../database/db');
+      try {
+        const returnResult = await returnEquipmentByEquipmentId(
+          id, 
+          'Возвращена при изменении статуса', 
+          'Автоматический возврат'
+        );
+        console.log(`✅ Техника ${id} возвращена`);
+        
+        // Логируем возврат
+        await logAction({
+          req,
+          action: 'equipment_return',
+          entityType: 'equipment',
+          entityId: id,
+          details: JSON.stringify({ 
+            inventory_number: existing.inventory_number 
+          })
+        });
       } catch (error) {
         console.warn('⚠️ Не удалось автоматически вернуть технику:', error.message);
       }
@@ -388,23 +436,23 @@ async function updateEquipmentAPI(req, res) {
       description: description || ''
     });
     
-    const { logAction } = require('../utils/logger');
+    // Логируем обновление
     await logAction({
-        req,
-        action: 'equipment_update',
-        entityType: 'equipment',
-        entityId: result.id,
-        details: JSON.stringify({ 
-          inventory_number: inventory_number,
-          name: name 
-        })
+      req,
+      action: 'equipment_update',
+      entityType: 'equipment',
+      entityId: id,
+      details: JSON.stringify({ 
+        inventory_number: inventory_number,
+        status_changed: oldStatus !== status 
+      })
     });
-
+    
     res.json({ 
       success: true, 
       message: 'Техника обновлена успешно',
       data: result,
-      assignment: assignmentResult
+      assignment: assignmentResult    // ← теперь переменная объявлена
     });
   } catch (error) {
     console.error('❌ Ошибка обновления:', error);
