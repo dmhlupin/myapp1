@@ -1,36 +1,45 @@
 const fs = require('fs');
 const path = require('path');
+
 const {
+  // Equipment
   getAllEquipment,
   getEquipmentById,
   addEquipment,
   updateEquipment,
   deleteEquipment,
   getAvailableEquipment,
+  // Assignment ← ДОБАВЬТЕ ЭТИ
+  assignEquipment,
+  returnEquipmentByEquipmentId,
+  // Stats
   getStats,
-  // Пользователи
+  // Users
   getAllUsers,
   getUserById,
-  getUserByUsernameWithPassword,
   addUser,
   updateUser,
   deleteUser,
   getUsersWithEquipment,
-  // Новые функции
+  // Admin users
   createUserWithPassword,
   getUserWithDetails,
   getAllUsersWithDetails,
   checkUserExists,
   deleteUserWithEquipmentReturn,
   getUsersWithActiveEquipment,
-  // логи
+  // Auth
+  getUserByUsernameWithPassword,
+  updateUserPassword,
+  setUserActive,
+  setUserRole,
+  // Logs
   getActivityLogs,
   getActivityLogsCount,
   getUniqueActions,
   getActivityStats,
   getActivityByDay,
   cleanOldLogs
-  
 } = require('../database/db');
 
 // Утилиты

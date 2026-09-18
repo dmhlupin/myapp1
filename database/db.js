@@ -546,8 +546,11 @@ function deleteEquipment(id) {
 
 // ===== ФУНКЦИИ ДЛЯ СОПОСТАВЛЕНИЙ =====
 
+// ===== НАЗНАЧЕНИЕ ТЕХНИКИ =====
+
 function assignEquipment(userId, equipmentId, condition, notes = '') {
   return new Promise((resolve, reject) => {
+    // Проверяем пользователя
     db.get('SELECT id FROM users WHERE id = ?', [userId], (err, user) => {
       if (err) {
         reject(err);
@@ -558,6 +561,7 @@ function assignEquipment(userId, equipmentId, condition, notes = '') {
         return;
       }
       
+      // Проверяем технику
       db.get('SELECT id, status FROM equipment WHERE id = ?', [equipmentId], (err, eq) => {
         if (err) {
           reject(err);
@@ -568,10 +572,11 @@ function assignEquipment(userId, equipmentId, condition, notes = '') {
           return;
         }
         if (eq.status !== 'available') {
-          reject(new Error(`Техника уже ${eq.status === 'assigned' ? 'назначена' : 'в ремонте'}`));
+          reject(new Error(`Техника не может быть назначена (текущий статус: ${eq.status})`));
           return;
         }
         
+        // Создаём назначение
         db.run(
           `INSERT INTO user_equipment (user_id, equipment_id, condition_on_assign, notes) 
            VALUES (?, ?, ?, ?)`,
@@ -582,6 +587,7 @@ function assignEquipment(userId, equipmentId, condition, notes = '') {
               return;
             }
             
+            // Обновляем статус техники
             db.run(
               'UPDATE equipment SET status = "assigned", updated_at = CURRENT_TIMESTAMP WHERE id = ?',
               [equipmentId],
