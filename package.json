@@ -1,6 +1,6 @@
 {
   "name": "node-web-server-v2",
-  "version": "1.4.2",
+  "version": "1.4.5",
   "description": "Система учёта техники с авторизацией и ролями",
   "main": "server.js",
   "scripts": {
