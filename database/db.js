@@ -853,6 +853,121 @@ function closeDatabase() {
   });
 }
 
+// ===== ФУНКЦИИ ДЛЯ АВТОРИЗАЦИИ =====
+
+/**
+ * Получить пользователя по логину (включая пароль)
+ */
+function getUserByUsernameWithPassword(username) {
+  return new Promise((resolve, reject) => {
+    db.get('SELECT * FROM users WHERE username = ?', [username], (err, row) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+      resolve(row);
+    });
+  });
+}
+
+/**
+ * Получить пользователя по email (включая пароль)
+ */
+function getUserByEmailWithPassword(email) {
+  return new Promise((resolve, reject) => {
+    db.get('SELECT * FROM users WHERE email = ?', [email], (err, row) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+      resolve(row);
+    });
+  });
+}
+
+/**
+ * Обновить пароль пользователя
+ */
+function updateUserPassword(userId, passwordHash, mustChange = 0) {
+  return new Promise((resolve, reject) => {
+    db.run(
+      `UPDATE users 
+       SET password_hash = ?, must_change_password = ?, updated_at = CURRENT_TIMESTAMP 
+       WHERE id = ?`,
+      [passwordHash, mustChange, userId],
+      function(err) {
+        if (err) {
+          reject(err);
+          return;
+        }
+        resolve({ updated: this.changes });
+      }
+    );
+  });
+}
+
+/**
+ * Обновить время последнего входа
+ */
+function updateLastLogin(userId) {
+  return new Promise((resolve, reject) => {
+    db.run(
+      'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?',
+      [userId],
+      function(err) {
+        if (err) {
+          reject(err);
+          return;
+        }
+        resolve({ updated: this.changes });
+      }
+    );
+  });
+}
+
+/**
+ * Изменить активность пользователя (блокировка/разблокировка)
+ */
+function setUserActive(userId, isActive) {
+  return new Promise((resolve, reject) => {
+    db.run(
+      'UPDATE users SET is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+      [isActive ? 1 : 0, userId],
+      function(err) {
+        if (err) {
+          reject(err);
+          return;
+        }
+        resolve({ updated: this.changes });
+      }
+    );
+  });
+}
+
+/**
+ * Изменить роль пользователя
+ */
+function setUserRole(userId, role) {
+  return new Promise((resolve, reject) => {
+    if (!['admin', 'user'].includes(role)) {
+      reject(new Error('Недопустимая роль'));
+      return;
+    }
+    
+    db.run(
+      'UPDATE users SET role = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+      [role, userId],
+      function(err) {
+        if (err) {
+          reject(err);
+          return;
+        }
+        resolve({ updated: this.changes });
+      }
+    );
+  });
+}
+
 // ===== ЭКСПОРТЫ =====
 
 module.exports = {
@@ -884,5 +999,12 @@ module.exports = {
   // Stats
   getStats,
   checkDataIntegrity,
-  closeDatabase
+  closeDatabase,
+  // Auth
+  getUserByUsernameWithPassword,
+  getUserByEmailWithPassword,
+  updateUserPassword,
+  updateLastLogin,
+  setUserActive,
+  setUserRole
 };

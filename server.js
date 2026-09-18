@@ -1,4 +1,6 @@
 const express = require('express');
+const session = require('express-session');
+const SQLiteStore = require('connect-sqlite3')(session);
 const path = require('path');
 const { initDatabase, closeDatabase } = require('./database/db');
 const renderIndex = require('./routes/index');
@@ -29,6 +31,24 @@ const PORT = process.env.PORT || 3000;
 // Middleware для парсинга JSON
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Настройка сессий
+app.use(session({
+  store: new SQLiteStore({
+    db: 'sessions.db',
+    dir: path.join(__dirname, 'data')
+  }),
+  secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production-2026',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    maxAge: 24 * 60 * 60 * 1000, // 24 часа
+    httpOnly: true,
+    secure: false, // true только для HTTPS в production
+    sameSite: 'lax'
+  },
+  name: 'equipment.sid'
+}));
 
 // Раздача статических файлов
 app.use('/css', express.static(path.join(__dirname, 'public', 'css')));
