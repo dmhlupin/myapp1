@@ -40,6 +40,12 @@ const {
   getCurrentUserAPI
 } = require('./routes/auth');
 
+// Роут профиля
+const {
+  renderProfile,
+  updateProfileAPI
+} = require('./routes/profile');
+
 // Middleware
 const {
   requireAuth,
@@ -66,9 +72,9 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    maxAge: 24 * 60 * 60 * 1000, // 24 часа
+    maxAge: 24 * 60 * 60 * 1000,
     httpOnly: true,
-    secure: false, // true только для HTTPS в production
+    secure: false,
     sameSite: 'lax'
   },
   name: 'equipment.sid'
@@ -101,14 +107,19 @@ app.get('/login', requireGuest, renderLogin);
 app.get('/logout', logoutRedirect);
 app.get('/change-password', requireAuth, renderChangePassword);
 
-// API авторизации
 app.post('/api/auth/login', requireGuest, loginAPI);
 app.post('/api/auth/logout', logoutAPI);
 app.post('/api/auth/change-password', requireAuth, changePasswordAPI);
 app.get('/api/auth/me', requireAuth, getCurrentUserAPI);
 
 // ============================================
-// ОСНОВНЫЕ РОУТЫ (защищённые)
+// ПРОФИЛЬ (только авторизованные)
+// ============================================
+app.get('/profile', requireAuth, renderProfile);
+app.post('/api/profile/update', requireAuth, updateProfileAPI);
+
+// ============================================
+// ОСНОВНЫЕ РОУТЫ (только авторизованные)
 // ============================================
 app.get('/', requireAuth, renderIndex);
 app.get('/users', requireAuth, renderUsers);
@@ -117,31 +128,31 @@ app.get('/pdf/:filename', requireAuth, renderPdfFile);
 app.get('/equipment', requireAuth, renderEquipmentDashboard);
 
 // ============================================
-// АДМИН-ПАНЕЛЬ (пока только requireAuth, requireAdmin добавим на Этапе 4)
+// АДМИН-ПАНЕЛЬ (только администраторы!)
 // ============================================
-app.get('/admin', requireAuth, renderAdmin);
-app.get('/admin/add', requireAuth, renderAddEquipment);
-app.get('/admin/edit/:id', requireAuth, renderEditEquipment);
-app.get('/admin/user/add', requireAuth, renderAddUser);
-app.get('/admin/user/edit/:id', requireAuth, renderEditUser);
+app.get('/admin', requireAdmin, renderAdmin);
+app.get('/admin/add', requireAdmin, renderAddEquipment);
+app.get('/admin/edit/:id', requireAdmin, renderEditEquipment);
+app.get('/admin/user/add', requireAdmin, renderAddUser);
+app.get('/admin/user/edit/:id', requireAdmin, renderEditUser);
 
 // ============================================
-// API ДЛЯ ТЕХНИКИ (пока только requireAuth)
+// API ДЛЯ ТЕХНИКИ (только администраторы!)
 // ============================================
-app.get('/api/admin/equipment', requireAuth, getEquipmentAPI);
-app.get('/api/admin/equipment/:id', requireAuth, getEquipmentByIdAPI);
-app.post('/api/admin/equipment', requireAuth, addEquipmentAPI);
-app.put('/api/admin/equipment/:id', requireAuth, updateEquipmentAPI);
-app.delete('/api/admin/equipment/:id', requireAuth, deleteEquipmentAPI);
+app.get('/api/admin/equipment', requireAdmin, getEquipmentAPI);
+app.get('/api/admin/equipment/:id', requireAdmin, getEquipmentByIdAPI);
+app.post('/api/admin/equipment', requireAdmin, addEquipmentAPI);
+app.put('/api/admin/equipment/:id', requireAdmin, updateEquipmentAPI);
+app.delete('/api/admin/equipment/:id', requireAdmin, deleteEquipmentAPI);
 
 // ============================================
-// API ДЛЯ ПОЛЬЗОВАТЕЛЕЙ (пока только requireAuth)
+// API ДЛЯ ПОЛЬЗОВАТЕЛЕЙ (только администраторы!)
 // ============================================
-app.get('/api/admin/users', requireAuth, getUsersAPI);
-app.get('/api/admin/users/:id', requireAuth, getUserByIdAPI);
-app.post('/api/admin/users', requireAuth, addUserAPI);
-app.put('/api/admin/users/:id', requireAuth, updateUserAPI);
-app.delete('/api/admin/users/:id', requireAuth, deleteUserAPI);
+app.get('/api/admin/users', requireAdmin, getUsersAPI);
+app.get('/api/admin/users/:id', requireAdmin, getUserByIdAPI);
+app.post('/api/admin/users', requireAdmin, addUserAPI);
+app.put('/api/admin/users/:id', requireAdmin, updateUserAPI);
+app.delete('/api/admin/users/:id', requireAdmin, deleteUserAPI);
 
 // ============================================
 // ЗАПУСК СЕРВЕРА
@@ -151,19 +162,14 @@ const server = app.listen(PORT, () => {
   console.log('🚀 ============================================');
   console.log(`🚀  Сервер запущен: http://localhost:${PORT}`);
   console.log('🚀 ============================================');
-  console.log(`📖  Главная:            http://localhost:${PORT}/`);
   console.log(`🔐  Вход:               http://localhost:${PORT}/login`);
-  console.log(`👥  Пользователи:       http://localhost:${PORT}/users`);
-  console.log(`🔧  Техника:            http://localhost:${PORT}/equipment`);
-  console.log(`📑  PDF инструкции:     http://localhost:${PORT}/pdf`);
+  console.log(`👤  Профиль:            http://localhost:${PORT}/profile`);
+  console.log(`📖  Главная:            http://localhost:${PORT}/`);
   console.log(`⚙️   Админ-панель:       http://localhost:${PORT}/admin`);
   console.log('🚀 ============================================');
   console.log('');
 });
 
-// ============================================
-// GRACEFUL SHUTDOWN
-// ============================================
 process.on('SIGINT', async () => {
   console.log('\n👋 Остановка сервера...');
   await closeDatabase();

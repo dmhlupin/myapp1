@@ -139,13 +139,12 @@ async function loginAPI(req, res) {
     
     // Определяем куда редиректить
     let redirectUrl = '/profile';
-    
+
     if (user.must_change_password === 1) {
       redirectUrl = '/change-password';
-    } else if (user.role === 'admin') {
-      // Админ после входа на главную (или на админку — но давайте на главную)
-      redirectUrl = '/';
     }
+    // Все (и админ, и пользователь) после входа идут в профиль
+    // (админ может потом перейти в админку из шапки)
     
     res.json({
       success: true,

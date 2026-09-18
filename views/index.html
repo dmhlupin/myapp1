@@ -10,8 +10,12 @@
 <body>
     <div class="main-container">
         <div class="main-card">
-            <div class="admin-badge">
-                <a href="/admin">⚙️ Админ-панель</a>
+            <!-- Шапка с информацией о пользователе -->
+            <div class="user-badge">
+                <a href="/profile" class="user-link" title="Личный кабинет">
+                    👤 <span id="userName">{{userName}}</span>
+                </a>
+                <a href="/logout" class="user-link logout" title="Выйти">🚪 Выйти</a>
             </div>
             
             <h1 class="main-title">🚀 Учет техники</h1>

@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Личный кабинет</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/profile.css">
+    <link rel="stylesheet" href="/css/help.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Шапка -->
+        <div class="header">
+            <div>
+                <h1>👤 Личный кабинет</h1>
+                <div class="subtitle">Добро пожаловать, <strong>{{user.full_name}}</strong></div>
+            </div>
+            <div class="header-actions">
+                <a href="/" class="btn btn-back btn-sm">← На главную</a>
+                <a href="/change-password" class="btn btn-primary btn-sm">🔑 Сменить пароль</a>
+                <a href="/logout" class="btn btn-danger btn-sm">🚪 Выйти</a>
+            </div>
+        </div>
+
+        <!-- Статистика -->
+        <div class="stats">
+            <div class="stat-card">
+                <span class="icon">📦</span>
+                <div class="number">{{stats.active_equipment}}</div>
+                <div class="label">Активной техники</div>
+            </div>
+            <div class="stat-card">
+                <span class="icon">📊</span>
+                <div class="number green">{{stats.total_equipment}}</div>
+                <div class="label">Всего получено</div>
+            </div>
+            <div class="stat-card">
+                <span class="icon">↩️</span>
+                <div class="number orange">{{stats.returned_equipment}}</div>
+                <div class="label">Возвращено</div>
+            </div>
+            <div class="stat-card">
+                <span class="icon">🎭</span>
+                <div class="number pink" style="font-size: 20px; padding-top: 8px;">{{user.role_text}}</div>
+                <div class="label">Роль</div>
+            </div>
+        </div>
+
+        <!-- Профиль -->
+        <div class="profile-section">
+            <div class="section-header">
+                <h2>📋 Мой профиль</h2>
+                <button onclick="toggleEditProfile()" class="btn btn-primary btn-sm" id="editBtn">
+                    ✏️ Редактировать
+                </button>
+            </div>
+
+            <div id="profileView" class="profile-view">
+                <div class="profile-grid">
+                    <div class="profile-item">
+                        <label>Логин</label>
+                        <div class="value">{{user.username}}</div>
+                    </div>
+                    <div class="profile-item">
+                        <label>Email</label>
+                        <div class="value">{{user.email}}</div>
+                    </div>
+                    <div class="profile-item">
+                        <label>ФИО</label>
+                        <div class="value">{{user.full_name}}</div>
+                    </div>
+                    <div class="profile-item">
+                        <label>Отдел</label>
+                        <div class="value">{{user.department}}</div>
+                    </div>
+                    <div class="profile-item">
+                        <label>Телефон</label>
+                        <div class="value">{{user.phone}}</div>
+                    </div>
+                    <div class="profile-item">
+                        <label>Последний вход</label>
+                        <div class="value">{{user.last_login}}</div>
+                    </div>
+                </div>
+            </div>
+
+            <form id="profileEditForm" class="profile-edit" style="display: none;" onsubmit="saveProfile(event)">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Email <span class="required">*</span></label>
+                        <input type="email" id="editEmail" value="{{user.email}}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>ФИО</label>
+                        <input type="text" id="editFullName" value="{{user.full_name}}">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Отдел</label>
+                        <input type="text" id="editDepartment" value="{{user.department}}">
+                    </div>
+                    <div class="form-group">
+                        <label>Телефон</label>
+                        <input type="text" id="editPhone" value="{{user.phone}}">
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary" id="saveBtn">💾 Сохранить</button>
+                    <button type="button" class="btn btn-back" onclick="cancelEditProfile()">Отмена</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Активная техника -->
+        <div class="section">
+            <div class="section-header">
+                <h2>📦 Моя техника</h2>
+                <span class="badge-count">{{stats.active_equipment}} активных</span>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Инв. номер</th>
+                            <th>Название</th>
+                            <th>Модель</th>
+                            <th>Производитель</th>
+                            <th>Дата выдачи</th>
+                            <th>Состояние</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{active_equipment_rows}}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- История -->
+        <div class="section">
+            <div class="section-header">
+                <h2>📜 История получений</h2>
+                <span class="badge-count">{{stats.total_equipment}} записей</span>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Инв. номер</th>
+                            <th>Название</th>
+                            <th>Модель</th>
+                            <th>Дата выдачи</th>
+                            <th>Дата возврата</th>
+                            <th>Статус</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{history_rows}}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="help-footer">
+            <div class="footer-info">
+                ⚡ Node.js + Express + SQLite &nbsp;·&nbsp; Версия 1.4.0
+            </div>
+            <div class="footer-links">
+                <a href="/pdf" class="footer-link">
+                    <span class="icon">📑</span>
+                    Инструкции
+                    <span class="badge">PDF</span>
+                </a>
+                <button onclick="showHelpModal()" class="footer-link" style="border: none; cursor: pointer; font-family: inherit; background: #f7fafc;">
+                    <span class="icon">❓</span>
+                    Помощь
+                    <span class="badge">FAQ</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="/js/main.js"></script>
+    <script src="/js/help.js"></script>
+    <script src="/js/footer.js"></script>
+    <script src="/js/profile.js"></script>
+</body>
+</html>

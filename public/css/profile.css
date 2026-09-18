@@ -1,0 +1,231 @@
+/* public/css/profile.css — Стили для личного кабинета */
+
+.stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 20px;
+    margin-bottom: 25px;
+}
+
+.stat-card {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    text-align: center;
+    transition: transform 0.2s;
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+.stat-card .number {
+    font-size: 32px;
+    font-weight: bold;
+    color: #667eea;
+}
+
+.stat-card .number.green { color: #48bb78; }
+.stat-card .number.orange { color: #ed8936; }
+.stat-card .number.pink { color: #ed64a6; }
+
+.stat-card .label {
+    color: #666;
+    margin-top: 5px;
+    font-size: 13px;
+}
+
+.stat-card .icon {
+    font-size: 26px;
+    display: block;
+    margin-bottom: 5px;
+}
+
+/* Секции */
+.section,
+.profile-section {
+    background: white;
+    border-radius: 12px;
+    padding: 25px 30px;
+    margin-bottom: 25px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.section-header h2 {
+    color: #2d3748;
+    font-size: 20px;
+    margin: 0;
+}
+
+.badge-count {
+    background: #edf2f7;
+    color: #4a5568;
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* Профиль — просмотр */
+.profile-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.profile-item {
+    padding: 12px 0;
+    border-bottom: 1px solid #f7fafc;
+}
+
+.profile-item label {
+    display: block;
+    color: #a0aec0;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.profile-item .value {
+    color: #2d3748;
+    font-size: 15px;
+    font-weight: 500;
+}
+
+/* Таблицы */
+.table-container {
+    overflow-x: auto;
+    border-radius: 8px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th {
+    background: #f7fafc;
+    color: #4a5568;
+    font-weight: 600;
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+
+td {
+    padding: 12px 16px;
+    border-bottom: 1px solid #e2e8f0;
+    color: #2d3748;
+    font-size: 14px;
+}
+
+tr:hover {
+    background: #f7fafc;
+}
+
+.empty-row {
+    padding: 0;
+}
+
+.empty-row .empty-state {
+    padding: 40px;
+    text-align: center;
+    color: #a0aec0;
+}
+
+.empty-state .emoji {
+    font-size: 36px;
+    display: block;
+    margin-bottom: 10px;
+}
+
+/* Формы */
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 6px;
+    color: #4a5568;
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.form-group label .required {
+    color: #fc8181;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 15px;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #e2e8f0;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .section,
+    .profile-section {
+        padding: 20px 15px;
+    }
+    
+    .header-actions {
+        flex-wrap: wrap;
+    }
+    
+    table {
+        font-size: 13px;
+    }
+    
+    th, td {
+        padding: 8px 10px;
+    }
+}

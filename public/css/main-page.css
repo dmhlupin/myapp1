@@ -238,3 +238,52 @@
         justify-content: center;
     }
 }
+/* Шапка с пользователем */
+.user-badge {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.user-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 14px;
+    background: #f7fafc;
+    color: #4a5568;
+    text-decoration: none;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.2s;
+    border: 1px solid #e2e8f0;
+}
+
+.user-link:hover {
+    background: #edf2f7;
+    border-color: #cbd5e0;
+    transform: translateY(-1px);
+}
+
+.user-link.logout {
+    background: #fff5f5;
+    color: #c53030;
+    border-color: #fed7d7;
+}
+
+.user-link.logout:hover {
+    background: #fed7d7;
+    border-color: #fc8181;
+}
+
+@media (max-width: 640px) {
+    .user-badge {
+        position: static;
+        justify-content: flex-end;
+        margin-bottom: 15px;
+    }
+}
