@@ -452,8 +452,9 @@ async function updateEquipmentAPI(req, res) {
       success: true, 
       message: 'Техника обновлена успешно',
       data: result,
-      assignment: assignmentResult    // ← теперь переменная объявлена
+      assignment: assignmentResult    // ← теперь переменная объявлена (была необъявлена)
     });
+
   } catch (error) {
     console.error('❌ Ошибка обновления:', error);
     if (error.message === 'Техника не найдена') {
