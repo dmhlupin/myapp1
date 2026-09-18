@@ -106,6 +106,7 @@ async function renderAdmin(req, res) {
           <td>${assignedInfo}</td>
           <td>
             <div class="action-buttons">
+              <button onclick="viewEquipment(${item.id})" class="btn-icon btn-info" title="Просмотр">👁️</button>
               <button onclick="editEquipment(${item.id})" class="btn-edit" title="Редактировать">✏️</button>
               ${deleteButton}
             </div>
@@ -864,6 +865,57 @@ async function getUserDetailsAPI(req, res) {
   }
 }
 
+/**
+ * GET /api/admin/equipment/:id/details — детали техники + история
+ */
+async function getEquipmentDetailsAPI(req, res) {
+  try {
+    const id = parseInt(req.params.id);
+    
+    if (isNaN(id)) {
+      return res.status(400).json({ error: 'Неверный ID техники' });
+    }
+    
+    // Получаем технику
+    const equipment = await getEquipmentById(id);
+    if (!equipment) {
+      return res.status(404).json({ error: 'Техника не найдена' });
+    }
+    
+    // Получаем историю использования
+    const { getEquipmentHistory } = require('../database/db');
+    const history = await getEquipmentHistory(id);
+    
+    // Ищем активное назначение (returned_date IS NULL)
+    const activeAssignment = history.find(h => h.status === 'active');
+    
+    // Статистика
+    const stats = {
+      total: history.length,
+      active: activeAssignment ? 1 : 0,
+      returned: history.filter(h => h.status === 'returned').length,
+      current_user: activeAssignment ? {
+        id: activeAssignment.user_id,
+        full_name: activeAssignment.full_name,
+        username: activeAssignment.username,
+        department: activeAssignment.department,
+        email: activeAssignment.email,
+        assigned_date: activeAssignment.assigned_date,
+        condition_on_assign: activeAssignment.condition_on_assign
+      } : null
+    };
+    
+    res.json({
+      equipment,
+      stats,
+      history
+    });
+  } catch (error) {
+    console.error('❌ Ошибка получения деталей техники:', error);
+    res.status(500).json({ error: error.message });
+  }
+}
+
 async function updateUserAPI(req, res) {
   try {
     const id = parseInt(req.params.id);
@@ -1372,6 +1424,7 @@ module.exports = {
   // API для техники
   getEquipmentAPI,
   getEquipmentByIdAPI,
+  getEquipmentDetailsAPI,
   addEquipmentAPI,
   updateEquipmentAPI,
   deleteEquipmentAPI,

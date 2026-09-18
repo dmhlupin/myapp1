@@ -831,23 +831,39 @@ function getAvailableEquipment() {
   });
 }
 
+/**
+ * Получить историю назначений техники
+ */
 function getEquipmentHistory(equipmentId) {
   return new Promise((resolve, reject) => {
     db.all(`
       SELECT 
-        ue.*,
-        u.full_name as user_name,
-        u.department as user_department
+        ue.id,
+        ue.user_id,
+        ue.equipment_id,
+        ue.assigned_date,
+        ue.returned_date,
+        ue.condition_on_assign,
+        ue.condition_on_return,
+        ue.notes,
+        u.username,
+        u.full_name,
+        u.department,
+        u.email,
+        CASE 
+          WHEN ue.returned_date IS NULL THEN 'active'
+          ELSE 'returned'
+        END as status
       FROM user_equipment ue
       JOIN users u ON ue.user_id = u.id
       WHERE ue.equipment_id = ?
-      ORDER BY ue.assigned_date DESC
+      ORDER BY ue.id DESC
     `, [equipmentId], (err, rows) => {
       if (err) {
         reject(err);
         return;
       }
-      resolve(rows);
+      resolve(rows || []);
     });
   });
 }

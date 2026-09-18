@@ -460,6 +460,225 @@ function closeViewUserModal() {
     document.getElementById('viewUserModal').classList.remove('active');
 }
 
+// ===== ПРОСМОТР ТЕХНИКИ =====
+
+async function viewEquipment(id) {
+  try {
+    const response = await fetch(`/api/admin/equipment/${id}/details`);
+    const data = await response.json();
+    
+    if (!data.equipment) {
+      showToast('❌ Техника не найдена', 'error');
+      return;
+    }
+    
+    const { equipment, stats, history } = data;
+    
+    // Форматирование дат
+    const purchaseDate = equipment.purchase_date 
+      ? new Date(equipment.purchase_date).toLocaleDateString('ru-RU')
+      : '—';
+    const warrantyDate = equipment.warranty_until 
+      ? new Date(equipment.warranty_until).toLocaleDateString('ru-RU')
+      : '—';
+    
+    // Проверка гарантии
+    const warrantyExpired = equipment.warranty_until && new Date(equipment.warranty_until) < new Date();
+    const warrantyBadge = warrantyExpired 
+      ? '<span style="color: #c53030; font-size: 12px;">⚠️ Истекла</span>'
+      : (equipment.warranty_until ? '<span style="color: #2f855a; font-size: 12px;">✅ Действует</span>' : '');
+    
+    // Статус
+    const statusLabels = {
+      'available': { label: 'Доступна', class: 'status-available', icon: '✅' },
+      'assigned': { label: 'Назначена', class: 'status-assigned', icon: '👤' },
+      'maintenance': { label: 'В ремонте', class: 'status-maintenance', icon: '🔧' },
+      'retired': { label: 'Списана', class: 'status-retired', icon: '❌' }
+    };
+    const statusInfo = statusLabels[equipment.status] || statusLabels.available;
+    const statusBadge = `<span class="status-badge ${statusInfo.class}">${statusInfo.icon} ${statusInfo.label}</span>`;
+    
+    // Текущий пользователь
+    let currentUserHtml = '';
+    if (stats.current_user) {
+      const u = stats.current_user;
+      const initials = getInitials(u.full_name || u.username);
+      const assignedDate = new Date(u.assigned_date).toLocaleDateString('ru-RU');
+      currentUserHtml = `
+        <div class="current-user-card">
+          <div class="current-user-avatar">${initials}</div>
+          <div class="current-user-info">
+            <div class="current-user-name">${u.full_name || u.username}</div>
+            <div class="current-user-dept">${u.department || 'Без отдела'} · @${u.username}</div>
+            <div class="current-user-date">📅 Выдано: ${assignedDate}</div>
+          </div>
+          <span class="current-user-status">Активно</span>
+        </div>
+      `;
+    } else {
+      currentUserHtml = `
+        <div class="empty-equipment">
+          <span class="empty-icon">📭</span>
+          <p>Техника не назначена пользователю</p>
+        </div>
+      `;
+    }
+    
+    // История (таблица)
+    let historyHtml = '';
+    if (history.length === 0) {
+      historyHtml = '<p style="color: #a0aec0; text-align: center; padding: 15px;">История пуста</p>';
+    } else {
+      historyHtml = `
+        <table class="history-table">
+          <thead>
+            <tr>
+              <th>Пользователь</th>
+              <th>Отдел</th>
+              <th>Выдано</th>
+              <th>Возвращено</th>
+              <th>Состояние при выдаче</th>
+              <th>Статус</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+      history.forEach(h => {
+        const assignedDate = h.assigned_date 
+          ? new Date(h.assigned_date).toLocaleDateString('ru-RU') 
+          : '—';
+        const returnedDate = h.returned_date 
+          ? new Date(h.returned_date).toLocaleDateString('ru-RU') 
+          : '—';
+        
+        // 🆕 Проверка аномалии: возврат раньше выдачи
+        let anomalyWarning = '';
+        if (h.assigned_date && h.returned_date) {
+          const assigned = new Date(h.assigned_date);
+          const returned = new Date(h.returned_date);
+          if (returned < assigned) {
+            anomalyWarning = ' <span title="Дата возврата раньше выдачи — возможно, сбой системного времени" style="color: #ed8936; cursor: help;">⚠️</span>';
+          }
+        }
+        
+        const statusBadge = h.status === 'active'
+          ? '<span class="status-badge status-assigned">Активна</span>'
+          : '<span class="status-badge status-available">Возвращена</span>';
+        
+        const userName = h.full_name || h.username || `Пользователь #${h.user_id}`;
+        const userDept = h.department || '—';
+        
+        historyHtml += `
+          <tr>
+            <td>
+              <div class="history-user">
+                <span class="history-user-avatar">${getInitials(userName)}</span>
+                <span>${userName}</span>
+              </div>
+            </td>
+            <td>${userDept}</td>
+            <td>${assignedDate}</td>
+            <td>${returnedDate}${anomalyWarning}</td>
+            <td>${h.condition_on_assign || '—'}</td>
+            <td>${statusBadge}</td>
+          </tr>
+        `;
+      });
+      historyHtml += '</tbody></table>';
+    }
+    
+    // Собираем всё
+    const body = document.getElementById('viewEquipmentBody');
+    body.innerHTML = `
+      <!-- Заголовок с иконкой -->
+      <div class="equipment-header-card">
+        <div class="equipment-header-icon">🔧</div>
+        <div class="equipment-header-info">
+          <h2>${equipment.name}</h2>
+          <div class="equipment-header-inv">${equipment.inventory_number}</div>
+          <div class="equipment-header-badges">
+            ${statusBadge}
+          </div>
+        </div>
+      </div>
+      
+      <!-- Статистика -->
+      <div class="user-stats">
+        <div class="user-stat">
+          <div class="user-stat-number active">${stats.active}</div>
+          <div class="user-stat-label">Сейчас назначена</div>
+        </div>
+        <div class="user-stat">
+          <div class="user-stat-number total">${stats.total}</div>
+          <div class="user-stat-label">Всего выдач</div>
+        </div>
+        <div class="user-stat">
+          <div class="user-stat-number returned">${stats.returned}</div>
+          <div class="user-stat-label">Возвращено</div>
+        </div>
+      </div>
+      
+      <!-- Основная информация -->
+      <div class="user-detail-section">
+        <h4>📋 Информация о технике</h4>
+        <div class="detail-grid">
+          <div class="detail-item">
+            <label>Название</label>
+            <div class="value">${equipment.name}</div>
+          </div>
+          <div class="detail-item">
+            <label>Модель</label>
+            <div class="value">${equipment.model || '—'}</div>
+          </div>
+          <div class="detail-item">
+            <label>Производитель</label>
+            <div class="value">${equipment.manufacturer || '—'}</div>
+          </div>
+          <div class="detail-item">
+            <label>Серийный номер</label>
+            <div class="value">${equipment.serial_number || '—'}</div>
+          </div>
+          <div class="detail-item">
+            <label>Дата покупки</label>
+            <div class="value">${purchaseDate}</div>
+          </div>
+          <div class="detail-item">
+            <label>Гарантия до</label>
+            <div class="value">${warrantyDate} ${warrantyBadge}</div>
+          </div>
+        </div>
+        ${equipment.description ? `
+          <div class="detail-item" style="margin-top: 12px;">
+            <label>Описание</label>
+            <div class="value">${equipment.description}</div>
+          </div>
+        ` : ''}
+      </div>
+      
+      <!-- Текущий пользователь -->
+      <div class="user-detail-section">
+        <h4>👤 Текущий владелец</h4>
+        ${currentUserHtml}
+      </div>
+      
+      <!-- История -->
+      <div class="user-detail-section">
+        <h4>📜 История использования (${stats.total})</h4>
+        ${historyHtml}
+      </div>
+    `;
+    
+    document.getElementById('viewEquipmentModal').classList.add('active');
+  } catch (error) {
+    console.error('Ошибка:', error);
+    showToast('❌ Ошибка загрузки данных', 'error');
+  }
+}
+
+function closeViewEquipmentModal() {
+  document.getElementById('viewEquipmentModal').classList.remove('active');
+}
+
 // ===== ИНИЦИАЛИЗАЦИЯ =====
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -470,6 +689,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (this.id === 'deleteModal') closeModal();
                 if (this.id === 'passwordModal') closePasswordModal();
                 if (this.id === 'viewUserModal') closeViewUserModal();
+                if (this.id === 'viewEquipmentModal') closeViewEquipmentModal();  // ← НОВОЕ
             }
         });
     });
@@ -484,6 +704,7 @@ document.addEventListener('DOMContentLoaded', function() {
             closeModal();
             closePasswordModal();
             closeViewUserModal();
+            closeViewEquipmentModal();  // ← НОВОЕ
         }
     });
 });

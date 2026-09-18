@@ -13,9 +13,10 @@ const { renderPdfList, renderPdfFile } = require('./routes/pdf');
 const renderEquipmentDashboard = require('./routes/equipment');
 const {
   renderAdmin,
-  renderLogs,              // ← НОВОЕ
+  renderLogs,              
   getEquipmentAPI,
   getEquipmentByIdAPI,
+  getEquipmentDetailsAPI, // ← НОВОЕ
   addEquipmentAPI,
   updateEquipmentAPI,
   deleteEquipmentAPI,
@@ -149,6 +150,7 @@ app.get('/admin/user/edit/:id', requireAdmin, renderEditUser);
 // API ДЛЯ ТЕХНИКИ (только администраторы!)
 // ============================================
 app.get('/api/admin/equipment', requireAdmin, getEquipmentAPI);
+app.get('/api/admin/equipment/:id/details', requireAdmin, getEquipmentDetailsAPI);  // ← НОВОЕ (до :id!)
 app.get('/api/admin/equipment/:id', requireAdmin, getEquipmentByIdAPI);
 app.post('/api/admin/equipment', requireAdmin, addEquipmentAPI);
 app.put('/api/admin/equipment/:id', requireAdmin, updateEquipmentAPI);

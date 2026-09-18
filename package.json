@@ -11,7 +11,8 @@
     "check-db": "node scripts/check-db.js",
     "create-admin": "node scripts/create-admin.js",
     "reset-admin": "node scripts/reset-admin-password.js",
-    "fix-assignments": "node scripts/fix-double-assignments.js"
+    "fix-assignments": "node scripts/fix-double-assignments.js",
+    "normalize-dates": "node scripts/normalize-dates.js"
   },
   "dependencies": {
     "express": "^4.18.2",

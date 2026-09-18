@@ -169,6 +169,19 @@
         </div>
     </div>
 
+    <!-- Модальное окно: Просмотр техники -->
+    <div class="modal-overlay" id="viewEquipmentModal">
+        <div class="modal view-user-modal">
+            <div class="modal-header">
+                <h3>🔧 Информация о технике</h3>
+                <button onclick="closeViewEquipmentModal()" class="modal-close">✕</button>
+            </div>
+            <div class="modal-body" id="viewEquipmentBody">
+                <!-- Заполняется через JS -->
+            </div>
+        </div>
+    </div>
+
     <div class="toast-container" id="toastContainer"></div>
 
     <script src="/js/main.js"></script>

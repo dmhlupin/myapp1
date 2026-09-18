@@ -1139,3 +1139,180 @@ tr:hover {
         padding: 8px;
     }
 }
+
+/* ============================================================ */
+/* ===== КАРТОЧКА ПРОСМОТРА ТЕХНИКИ ===== */
+/* ============================================================ */
+
+/* Заголовок карточки техники */
+.equipment-header-card {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    padding: 20px;
+    background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+    border-radius: 12px;
+    margin-bottom: 20px;
+    color: white;
+}
+
+.equipment-header-icon {
+    width: 70px;
+    height: 70px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    flex-shrink: 0;
+    border: 3px solid rgba(255, 255, 255, 0.4);
+}
+
+.equipment-header-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.equipment-header-info h2 {
+    color: white;
+    font-size: 22px;
+    margin: 0 0 4px 0;
+    word-break: break-word;
+}
+
+.equipment-header-inv {
+    font-family: 'Courier New', monospace;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+}
+
+.equipment-header-badges {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.equipment-header-badges .status-badge {
+    background: rgba(255, 255, 255, 0.95);
+    color: #2d3748;
+}
+
+/* Текущий владелец */
+.current-user-card {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    padding: 15px;
+    background: linear-gradient(135deg, #ebf8ff 0%, #e6fffa 100%);
+    border-radius: 10px;
+    border: 1px solid #90cdf4;
+    position: relative;
+}
+
+.current-user-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.current-user-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.current-user-name {
+    font-weight: 600;
+    color: #2d3748;
+    font-size: 15px;
+    margin-bottom: 2px;
+}
+
+.current-user-dept {
+    font-size: 12px;
+    color: #718096;
+    margin-bottom: 4px;
+}
+
+.current-user-date {
+    font-size: 12px;
+    color: #4a5568;
+}
+
+.current-user-status {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    background: #48bb78;
+    color: white;
+    padding: 2px 10px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+/* Пользователь в истории */
+.history-user {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.history-user-avatar {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 10px;
+    flex-shrink: 0;
+}
+
+/* Адаптивность */
+@media (max-width: 640px) {
+    .equipment-header-card {
+        flex-direction: column;
+        text-align: center;
+        gap: 12px;
+    }
+    
+    .equipment-header-badges {
+        justify-content: center;
+    }
+    
+    .current-user-card {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .current-user-status {
+        position: static;
+        align-self: center;
+        margin-top: 8px;
+    }
+    
+    .history-table {
+        font-size: 11px;
+    }
+    
+    .history-table th,
+    .history-table td {
+        padding: 6px 4px;
+    }
+}
