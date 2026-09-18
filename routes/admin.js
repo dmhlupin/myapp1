@@ -22,7 +22,15 @@ const {
   getAllUsersWithDetails,
   checkUserExists,
   deleteUserWithEquipmentReturn,
-  getUsersWithActiveEquipment
+  getUsersWithActiveEquipment,
+  // логи
+  getActivityLogs,
+  getActivityLogsCount,
+  getUniqueActions,
+  getActivityStats,
+  getActivityByDay,
+  cleanOldLogs
+  
 } = require('../database/db');
 
 // Утилиты
@@ -243,6 +251,18 @@ async function addEquipmentAPI(req, res) {
       status: status || 'available',
       description: description || ''
     });
+
+    const { logAction } = require('../utils/logger');
+    await logAction({
+        req,
+        action: 'equipment_create',
+        entityType: 'equipment',
+        entityId: result.id,
+        details: JSON.stringify({ 
+          inventory_number: inventory_number,
+          name: name 
+        })
+    });
     
     res.json({ 
       success: true, 
@@ -359,6 +379,18 @@ async function updateEquipmentAPI(req, res) {
       description: description || ''
     });
     
+    const { logAction } = require('../utils/logger');
+    await logAction({
+        req,
+        action: 'equipment_update',
+        entityType: 'equipment',
+        entityId: result.id,
+        details: JSON.stringify({ 
+          inventory_number: inventory_number,
+          name: name 
+        })
+    });
+
     res.json({ 
       success: true, 
       message: 'Техника обновлена успешно',
@@ -383,6 +415,18 @@ async function deleteEquipmentAPI(req, res) {
     if (result.deleted === 0) {
       return res.status(404).json({ error: 'Техника не найдена' });
     }
+    
+    const { logAction } = require('../utils/logger');
+    await logAction({
+        req,
+        action: 'equipment_delete',
+        entityType: 'equipment',
+        entityId: result.id,
+        details: JSON.stringify({ 
+          inventory_number: inventory_number,
+          name: name 
+        })
+    });
     
     res.json({ 
       success: true, 
@@ -935,11 +979,311 @@ async function renderEditUser(req, res) {
   }
 }
 
+/**
+ * GET /admin/logs — страница логов
+ */
+async function renderLogs(req, res) {
+  try {
+    // Параметры фильтрации
+    const filters = {
+      userId: req.query.userId ? parseInt(req.query.userId) : null,
+      action: req.query.action || null,
+      search: req.query.search || null,
+      dateFrom: req.query.dateFrom || null,
+      dateTo: req.query.dateTo || null,
+      limit: req.query.limit ? parseInt(req.query.limit) : 50,
+      offset: req.query.offset ? parseInt(req.query.offset) : 0
+    };
+    
+    // Получаем данные
+    const logs = await getActivityLogs(filters);
+    const totalCount = await getActivityLogsCount(filters);
+    const stats = await getActivityStats(30);
+    const users = await getAllUsers();
+    const actions = await getUniqueActions();
+    
+    // Читаем HTML
+    const htmlPath = path.join(__dirname, '..', 'views', 'admin-logs.html');
+    let html = fs.readFileSync(htmlPath, 'utf8');
+    
+    // Статистика
+    html = html.replace(/\{\{stats\.total\}\}/g, stats.total || 0);
+    html = html.replace(/\{\{stats\.unique_users\}\}/g, stats.unique_users || 0);
+    html = html.replace(/\{\{stats\.logins\}\}/g, stats.logins || 0);
+    html = html.replace(/\{\{stats\.failed_logins\}\}/g, stats.failed_logins || 0);
+    html = html.replace(/\{\{stats\.equipment_actions\}\}/g, stats.equipment_actions || 0);
+    html = html.replace(/\{\{stats\.user_actions\}\}/g, stats.user_actions || 0);
+    html = html.replace(/\{\{stats\.deletes\}\}/g, stats.deletes || 0);
+    
+    // Список пользователей для фильтра
+    let userOptions = '<option value="">Все пользователи</option>';
+    users.forEach(u => {
+      const selected = filters.userId === u.id ? 'selected' : '';
+      userOptions += `<option value="${u.id}" ${selected}>${u.full_name || u.username}</option>`;
+    });
+    html = html.replace('{{user_options}}', userOptions);
+    
+    // Список действий для фильтра
+    const actionNames = {
+      'login': '🔐 Вход',
+      'logout': '🚪 Выход',
+      'login_failed': '❌ Неудачный вход',
+      'password_change': '🔑 Смена пароля',
+      'profile_update': '👤 Обновление профиля',
+      'user_create': '➕ Создание пользователя',
+      'user_update': '✏️ Редактирование пользователя',
+      'user_delete': '🗑️ Удаление пользователя',
+      'user_block': '🚫 Блокировка пользователя',
+      'user_unblock': '✅ Разблокировка пользователя',
+      'user_password_reset': '🔑 Сброс пароля',
+      'equipment_create': '➕ Добавление техники',
+      'equipment_update': '✏️ Редактирование техники',
+      'equipment_delete': '🗑️ Удаление техники',
+      'equipment_assign': '📦 Назначение техники',
+      'equipment_return': '↩️ Возврат техники'
+    };
+    
+    let actionOptions = '<option value="">Все действия</option>';
+    actions.forEach(a => {
+      const selected = filters.action === a.action ? 'selected' : '';
+      const label = actionNames[a.action] || a.action;
+      actionOptions += `<option value="${a.action}" ${selected}>${label} (${a.count})</option>`;
+    });
+    html = html.replace('{{action_options}}', actionOptions);
+    
+    // Значения фильтров
+    html = html.replace(/\{\{filter\.search\}\}/g, filters.search || '');
+    html = html.replace(/\{\{filter\.dateFrom\}\}/g, filters.dateFrom || '');
+    html = html.replace(/\{\{filter\.dateTo\}\}/g, filters.dateTo || '');
+    
+    // Строки логов
+    let logRows = '';
+    if (logs.length === 0) {
+      logRows = `
+        <tr>
+          <td colspan="6" class="empty-row">
+            <div class="empty-state">
+              <span class="emoji">📭</span>
+              <h3>Логи не найдены</h3>
+              <p>Попробуйте изменить фильтры</p>
+            </div>
+          </td>
+        </tr>
+      `;
+    } else {
+      logs.forEach(log => {
+        // Цвет для действия
+        let actionClass = 'log-action-default';
+        if (log.action.includes('delete')) actionClass = 'log-action-delete';
+        else if (log.action.includes('create')) actionClass = 'log-action-create';
+        else if (log.action.includes('update')) actionClass = 'log-action-update';
+        else if (log.action === 'login') actionClass = 'log-action-login';
+        else if (log.action === 'login_failed') actionClass = 'log-action-failed';
+        else if (log.action.includes('block')) actionClass = 'log-action-block';
+        
+        const actionLabel = actionNames[log.action] || log.action;
+        
+        // Формируем детали
+        let detailsHtml = '—';
+        if (log.details) {
+          try {
+            const parsed = JSON.parse(log.details);
+            detailsHtml = Object.entries(parsed)
+              .map(([k, v]) => `<span class="log-detail-key">${k}:</span> <span class="log-detail-value">${v}</span>`)
+              .join('<br>');
+          } catch {
+            detailsHtml = escapeHtml(log.details);
+          }
+        }
+        
+        // Пользователь
+        const userName = log.user_full_name || log.username || '—';
+        const userInitials = getInitials(log.user_full_name || log.username);
+        
+        logRows += `
+          <tr>
+            <td class="log-date">${formatDateTime(log.created_at)}</td>
+            <td>
+              <div class="log-user">
+                <span class="log-avatar">${userInitials}</span>
+                <div>
+                  <div class="log-user-name">${userName}</div>
+                  ${log.user_department ? `<div class="log-user-dept">${log.user_department}</div>` : ''}
+                </div>
+              </div>
+            </td>
+            <td><span class="log-action ${actionClass}">${actionLabel}</span></td>
+            <td class="log-entity">
+              ${log.entity_type ? `<span class="log-entity-type">${log.entity_type}</span>` : ''}
+              ${log.entity_id ? `<span class="log-entity-id">#${log.entity_id}</span>` : ''}
+              ${!log.entity_type && !log.entity_id ? '—' : ''}
+            </td>
+            <td class="log-details">${detailsHtml}</td>
+            <td class="log-ip">${log.ip_address || '—'}</td>
+          </tr>
+        `;
+      });
+    }
+    html = html.replace('{{log_rows}}', logRows);
+    
+    // Пагинация
+    const totalPages = Math.ceil(totalCount / filters.limit);
+    const currentPage = Math.floor(filters.offset / filters.limit) + 1;
+    
+    let pagination = '';
+    if (totalPages > 1) {
+      pagination = `<div class="pagination">`;
+      pagination += `<span class="pagination-info">Страница ${currentPage} из ${totalPages} (всего: ${totalCount})</span>`;
+      pagination += `<div class="pagination-buttons">`;
+      
+      // Формируем query string
+      const buildQuery = (offset) => {
+        const params = new URLSearchParams();
+        if (filters.userId) params.set('userId', filters.userId);
+        if (filters.action) params.set('action', filters.action);
+        if (filters.search) params.set('search', filters.search);
+        if (filters.dateFrom) params.set('dateFrom', filters.dateFrom);
+        if (filters.dateTo) params.set('dateTo', filters.dateTo);
+        params.set('limit', filters.limit);
+        params.set('offset', offset);
+        return '?' + params.toString();
+      };
+      
+      if (filters.offset > 0) {
+        pagination += `<a href="/admin/logs${buildQuery(filters.offset - filters.limit)}" class="pagination-btn">← Назад</a>`;
+      }
+      
+      if (filters.offset + filters.limit < totalCount) {
+        pagination += `<a href="/admin/logs${buildQuery(filters.offset + filters.limit)}" class="pagination-btn">Вперёд →</a>`;
+      }
+      
+      pagination += `</div></div>`;
+    } else {
+      pagination = `<div class="pagination"><span class="pagination-info">Всего: ${totalCount} записей</span></div>`;
+    }
+    html = html.replace('{{pagination}}', pagination);
+    
+    res.send(html);
+  } catch (error) {
+    console.error('❌ Ошибка загрузки логов:', error);
+    res.status(500).send('Ошибка загрузки страницы логов');
+  }
+}
+
+/**
+ * Форматирование даты и времени
+ */
+function formatDateTime(dateString) {
+  if (!dateString) return '—';
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleString('ru-RU', {
+      day: '2-digit',
+      month: '2-digit',
+      year: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+  } catch {
+    return dateString;
+  }
+}
+
+/**
+ * Экранирование HTML
+ */
+function escapeHtml(text) {
+  if (!text) return '';
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+/**
+ * GET /api/admin/logs — API логов (для автообновления)
+ */
+async function getLogsAPI(req, res) {
+  try {
+    const filters = {
+      userId: req.query.userId ? parseInt(req.query.userId) : null,
+      action: req.query.action || null,
+      search: req.query.search || null,
+      dateFrom: req.query.dateFrom || null,
+      dateTo: req.query.dateTo || null,
+      limit: req.query.limit ? parseInt(req.query.limit) : 50,
+      offset: req.query.offset ? parseInt(req.query.offset) : 0
+    };
+    
+    const logs = await getActivityLogs(filters);
+    const total = await getActivityLogsCount(filters);
+    
+    res.json({ logs, total, filters });
+  } catch (error) {
+    console.error('❌ Ошибка API логов:', error);
+    res.status(500).json({ error: error.message });
+  }
+}
+
+/**
+ * GET /api/admin/logs/stats — статистика
+ */
+async function getLogsStatsAPI(req, res) {
+  try {
+    const days = req.query.days ? parseInt(req.query.days) : 30;
+    const stats = await getActivityStats(days);
+    const byDay = await getActivityByDay(14);
+    
+    res.json({ stats, byDay });
+  } catch (error) {
+    console.error('❌ Ошибка статистики:', error);
+    res.status(500).json({ error: error.message });
+  }
+}
+
+/**
+ * POST /api/admin/logs/clean — очистка старых логов
+ */
+async function cleanLogsAPI(req, res) {
+  try {
+    const days = req.body.days ? parseInt(req.body.days) : 90;
+    
+    if (days < 30) {
+      return res.status(400).json({ 
+        error: 'Нельзя удалять логи младше 30 дней' 
+      });
+    }
+    
+    const result = await cleanOldLogs(days);
+    
+    // Логируем само действие
+    const { logAction } = require('../utils/logger');
+    await logAction({
+      req,
+      action: 'logs_clean',
+      details: JSON.stringify({ days, deleted: result.deleted })
+    });
+    
+    res.json({ 
+      success: true, 
+      message: `Удалено ${result.deleted} старых записей`,
+      deleted: result.deleted
+    });
+  } catch (error) {
+    console.error('❌ Ошибка очистки логов:', error);
+    res.status(500).json({ error: error.message });
+  }
+}
+
 // ===== ЭКСПОРТЫ =====
 
 module.exports = {
   // Страницы
   renderAdmin,
+  renderLogs,              // ← НОВОЕ
   
   // API для техники
   getEquipmentAPI,
@@ -965,5 +1309,10 @@ module.exports = {
   
   // Страницы для пользователей
   renderAddUser,
-  renderEditUser
+  renderEditUser,
+  
+  // Логи                              ← НОВОЕ
+  getLogsAPI,
+  getLogsStatsAPI,
+  cleanLogsAPI
 };

@@ -13,6 +13,7 @@ const { renderPdfList, renderPdfFile } = require('./routes/pdf');
 const renderEquipmentDashboard = require('./routes/equipment');
 const {
   renderAdmin,
+  renderLogs,              // ← НОВОЕ
   getEquipmentAPI,
   getEquipmentByIdAPI,
   addEquipmentAPI,
@@ -30,7 +31,11 @@ const {
   unblockUserAPI,
   getUserDetailsAPI,
   renderAddUser,
-  renderEditUser
+  renderEditUser,
+  // Логи                ← НОВОЕ
+  getLogsAPI,
+  getLogsStatsAPI,
+  cleanLogsAPI
 } = require('./routes/admin');
 
 // Роуты авторизации
@@ -148,6 +153,14 @@ app.get('/api/admin/equipment/:id', requireAdmin, getEquipmentByIdAPI);
 app.post('/api/admin/equipment', requireAdmin, addEquipmentAPI);
 app.put('/api/admin/equipment/:id', requireAdmin, updateEquipmentAPI);
 app.delete('/api/admin/equipment/:id', requireAdmin, deleteEquipmentAPI);
+
+// ============================================
+// ЛОГИ (только администраторы!)
+// ============================================
+app.get('/admin/logs', requireAdmin, renderLogs);
+app.get('/api/admin/logs', requireAdmin, getLogsAPI);
+app.get('/api/admin/logs/stats', requireAdmin, getLogsStatsAPI);
+app.post('/api/admin/logs/clean', requireAdmin, cleanLogsAPI);
 
 // ============================================
 // API ДЛЯ ПОЛЬЗОВАТЕЛЕЙ (только администраторы!)

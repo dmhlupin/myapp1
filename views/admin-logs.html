@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Логи активности - Админ-панель</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/admin.css">
+    <link rel="stylesheet" href="/css/logs.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1>📊 Логи активности</h1>
+                <div class="subtitle">История действий пользователей</div>
+            </div>
+            <div class="header-actions">
+                <a href="/admin" class="btn btn-back btn-sm">← К админ-панели</a>
+                <a href="/profile" class="btn btn-back btn-sm">👤 Профиль</a>
+                <a href="/logout" class="btn btn-danger btn-sm">🚪 Выйти</a>
+            </div>
+        </div>
+
+        <!-- Статистика -->
+        <div class="stats">
+            <div class="stat-card">
+                <span class="icon">📊</span>
+                <div class="number">{{stats.total}}</div>
+                <div class="label">Всего событий (30 дней)</div>
+            </div>
+            <div class="stat-card">
+                <span class="icon">👥</span>
+                <div class="number">{{stats.unique_users}}</div>
+                <div class="label">Активных пользователей</div>
+            </div>
+            <div class="stat-card">
+                <span class="icon">🔐</span>
+                <div class="number green">{{stats.logins}}</div>
+                <div class="label">Входов</div>
+            </div>
+            <div class="stat-card">
+                <span class="icon">❌</span>
+                <div class="number red">{{stats.failed_logins}}</div>
+                <div class="label">Неудачных входов</div>
+            </div>
+            <div class="stat-card">
+                <span class="icon">📦</span>
+                <div class="number orange">{{stats.equipment_actions}}</div>
+                <div class="label">Действий с техникой</div>
+            </div>
+            <div class="stat-card">
+                <span class="icon">👤</span>
+                <div class="number pink">{{stats.user_actions}}</div>
+                <div class="label">Действий с юзерами</div>
+            </div>
+            <div class="stat-card">
+                <span class="icon">🗑️</span>
+                <div class="number red">{{stats.deletes}}</div>
+                <div class="label">Удалений</div>
+            </div>
+        </div>
+
+        <!-- Фильтры -->
+        <div class="filters-card">
+            <h2>🔍 Фильтры</h2>
+            <form method="GET" action="/admin/logs" class="filters-form">
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label>Пользователь</label>
+                        <select name="userId">
+                            {{user_options}}
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Действие</label>
+                        <select name="action">
+                            {{action_options}}
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Дата с</label>
+                        <input type="date" name="dateFrom" value="{{filter.dateFrom}}">
+                    </div>
+                    <div class="filter-group">
+                        <label>Дата по</label>
+                        <input type="date" name="dateTo" value="{{filter.dateTo}}">
+                    </div>
+                </div>
+                <div class="filter-row">
+                    <div class="filter-group filter-group-wide">
+                        <label>Поиск</label>
+                        <input type="text" name="search" value="{{filter.search}}" placeholder="Логин, ФИО, детали...">
+                    </div>
+                    <div class="filter-group">
+                        <label>Записей на странице</label>
+                        <select name="limit">
+                            <option value="25">25</option>
+                            <option value="50" selected>50</option>
+                            <option value="100">100</option>
+                            <option value="200">200</option>
+                        </select>
+                    </div>
+                    <div class="filter-actions">
+                        <button type="submit" class="btn btn-primary">🔍 Применить</button>
+                        <a href="/admin/logs" class="btn btn-back">✕ Сбросить</a>
+                        <button type="button" onclick="cleanLogs()" class="btn btn-danger">🧹 Очистить старые</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Таблица логов -->
+        <div class="table-container">
+            <div class="table-header">
+                <h2>📋 История действий</h2>
+                <button onclick="location.reload()" class="btn btn-back btn-sm">🔄 Обновить</button>
+            </div>
+            <table class="logs-table">
+                <thead>
+                    <tr>
+                        <th style="width: 140px;">Дата и время</th>
+                        <th style="width: 180px;">Пользователь</th>
+                        <th style="width: 180px;">Действие</th>
+                        <th style="width: 120px;">Объект</th>
+                        <th>Детали</th>
+                        <th style="width: 130px;">IP</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{log_rows}}
+                </tbody>
+            </table>
+            {{pagination}}
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="/js/main.js"></script>
+    <script src="/js/logs.js"></script>
+</body>
+</html>
