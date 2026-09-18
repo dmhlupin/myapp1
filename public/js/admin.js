@@ -1,5 +1,52 @@
 // public/js/admin.js — Логика админ-панели
 
+// ===== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =====
+
+/**
+ * Получить инициалы из имени
+ * "Мария Петрова" → "МП"
+ * "admin" → "A"
+ */
+function getInitials(name) {
+    if (!name) return '?';
+    const parts = String(name).trim().split(/\s+/).filter(p => p);
+    if (parts.length === 0) return '?';
+    if (parts.length === 1) return parts[0][0].toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+/**
+ * Форматирование даты и времени в относительный вид
+ * "5 мин назад", "2 ч назад", "вчера"
+ */
+function formatDate(dateString) {
+    if (!dateString) return '—';
+    try {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffMs = now - date;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+        
+        if (diffMins < 1) return 'только что';
+        if (diffMins < 60) return `${diffMins} мин назад`;
+        if (diffHours < 24) return `${diffHours} ч назад`;
+        if (diffDays < 7) return `${diffDays} дн назад`;
+        
+        return date.toLocaleDateString('ru-RU', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        });
+    } catch {
+        return dateString;
+    }
+}
+
+// ===== ОСНОВНАЯ ЛОГИКА =====
+
+
 let deleteId = null;
 let deleteType = null;
 let deleteUserName = '';
@@ -211,98 +258,202 @@ function copyPassword() {
 // ===== ПРОСМОТР ПОЛЬЗОВАТЕЛЯ =====
 
 async function viewUser(id) {
-    try {
-        const response = await fetch(`/api/admin/users/${id}/details`);
-        const data = await response.json();
-        
-        if (!data.user) {
-            showToast('❌ Пользователь не найден', 'error');
-            return;
-        }
-        
-        const { user, activeEquipment, history } = data;
-        
-        // Форматирование
-        const lastLogin = user.last_login ? new Date(user.last_login).toLocaleString('ru-RU') : 'никогда';
-        const created = user.created_at ? new Date(user.created_at).toLocaleDateString('ru-RU') : '—';
-        const status = user.is_active 
-            ? '<span class="status-badge status-available">Активен</span>' 
-            : '<span class="status-badge status-retired">Заблокирован</span>';
-        const role = user.role === 'admin' 
-            ? '<span class="role-badge role-admin">👑 Админ</span>' 
-            : '<span class="role-badge role-user">👤 Пользователь</span>';
-        
-        let equipmentHtml = '';
-        if (activeEquipment.length === 0) {
-            equipmentHtml = '<p style="color: #a0aec0; text-align: center; padding: 20px;">Нет активной техники</p>';
-        } else {
-            equipmentHtml = '<ul class="equipment-list-modal">';
-            activeEquipment.forEach(eq => {
-                equipmentHtml += `
-                    <li>
-                        <span class="inv">${eq.inventory_number}</span>
-                        <span>${eq.name} ${eq.model ? '· ' + eq.model : ''}</span>
-                    </li>
-                `;
-            });
-            equipmentHtml += '</ul>';
-        }
-        
-        const body = document.getElementById('viewUserBody');
-        body.innerHTML = `
-            <div class="user-detail-section">
-                <h4>Основная информация</h4>
-                <div class="detail-grid">
-                    <div class="detail-item">
-                        <label>Логин</label>
-                        <div class="value">@${user.username}</div>
-                    </div>
-                    <div class="detail-item">
-                        <label>ФИО</label>
-                        <div class="value">${user.full_name || '—'}</div>
-                    </div>
-                    <div class="detail-item">
-                        <label>Email</label>
-                        <div class="value">${user.email}</div>
-                    </div>
-                    <div class="detail-item">
-                        <label>Отдел</label>
-                        <div class="value">${user.department || '—'}</div>
-                    </div>
-                    <div class="detail-item">
-                        <label>Телефон</label>
-                        <div class="value">${user.phone || '—'}</div>
-                    </div>
-                    <div class="detail-item">
-                        <label>Роль</label>
-                        <div class="value">${role}</div>
-                    </div>
-                    <div class="detail-item">
-                        <label>Статус</label>
-                        <div class="value">${status}</div>
-                    </div>
-                    <div class="detail-item">
-                        <label>Последний вход</label>
-                        <div class="value">${lastLogin}</div>
-                    </div>
-                    <div class="detail-item">
-                        <label>Создан</label>
-                        <div class="value">${created}</div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="user-detail-section">
-                <h4>📦 Активная техника (${activeEquipment.length})</h4>
-                ${equipmentHtml}
-            </div>
-        `;
-        
-        document.getElementById('viewUserModal').classList.add('active');
-    } catch (error) {
-        console.error('Ошибка:', error);
-        showToast('❌ Ошибка загрузки данных', 'error');
+  try {
+    const response = await fetch(`/api/admin/users/${id}/details`);
+    const data = await response.json();
+    
+    if (!data.user) {
+      showToast('❌ Пользователь не найден', 'error');
+      return;
     }
+    
+    const { user, stats, activeEquipment, history } = data;
+    
+    // Форматирование дат
+    const lastLogin = user.last_login 
+      ? new Date(user.last_login).toLocaleString('ru-RU', {
+          day: '2-digit', month: '2-digit', year: 'numeric',
+          hour: '2-digit', minute: '2-digit'
+        })
+      : 'никогда';
+    
+    const createdAt = user.created_at 
+      ? new Date(user.created_at).toLocaleDateString('ru-RU') 
+      : '—';
+    
+    // Статус
+    const isActive = user.is_active === 1;
+    const statusBadge = isActive
+      ? '<span class="status-badge status-available">✅ Активен</span>'
+      : '<span class="status-badge status-retired">🚫 Заблокирован</span>';
+    
+    // Роль
+    const isAdmin = user.role === 'admin';
+    const roleBadge = isAdmin
+      ? '<span class="role-badge role-admin">👑 Администратор</span>'
+      : '<span class="role-badge role-user">👤 Пользователь</span>';
+    
+    // Инициалы
+    const initials = getInitials(user.full_name || user.username);
+    
+    // Активная техника
+    let activeEquipmentHtml = '';
+    if (activeEquipment.length === 0) {
+      activeEquipmentHtml = `
+        <div class="empty-equipment">
+          <span class="empty-icon">📭</span>
+          <p>Нет активной техники</p>
+        </div>
+      `;
+    } else {
+      activeEquipmentHtml = '<div class="equipment-cards">';
+      activeEquipment.forEach(eq => {
+        const assignedDate = new Date(eq.assigned_date).toLocaleDateString('ru-RU');
+        activeEquipmentHtml += `
+          <div class="equipment-card">
+            <div class="equipment-card-header">
+              <span class="equipment-card-inv">${eq.inventory_number}</span>
+              <span class="equipment-card-date">${assignedDate}</span>
+            </div>
+            <div class="equipment-card-body">
+              <div class="equipment-card-name">${eq.name}</div>
+              ${eq.model ? `<div class="equipment-card-model">${eq.model}</div>` : ''}
+              ${eq.manufacturer ? `<div class="equipment-card-manufacturer">${eq.manufacturer}</div>` : ''}
+            </div>
+            ${eq.condition_on_assign ? `
+              <div class="equipment-card-footer">
+                Состояние: ${eq.condition_on_assign}
+              </div>
+            ` : ''}
+          </div>
+        `;
+      });
+      activeEquipmentHtml += '</div>';
+    }
+    
+    // История (компактная таблица)
+    let historyHtml = '';
+    if (history.length === 0) {
+      historyHtml = '<p style="color: #a0aec0; text-align: center; padding: 15px;">История пуста</p>';
+    } else {
+      historyHtml = `
+        <table class="history-table">
+          <thead>
+            <tr>
+              <th>Инв. номер</th>
+              <th>Название</th>
+              <th>Выдано</th>
+              <th>Возвращено</th>
+              <th>Статус</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+      history.forEach(h => {
+        const assignedDate = h.assigned_date 
+          ? new Date(h.assigned_date).toLocaleDateString('ru-RU') 
+          : '—';
+        const returnedDate = h.returned_date 
+          ? new Date(h.returned_date).toLocaleDateString('ru-RU') 
+          : '—';
+        const statusBadge = h.status === 'active'
+          ? '<span class="status-badge status-assigned">Активна</span>'
+          : '<span class="status-badge status-available">Возвращена</span>';
+        
+        historyHtml += `
+          <tr>
+            <td><strong>${h.inventory_number}</strong></td>
+            <td>${h.name}</td>
+            <td>${assignedDate}</td>
+            <td>${returnedDate}</td>
+            <td>${statusBadge}</td>
+          </tr>
+        `;
+      });
+      historyHtml += '</tbody></table>';
+    }
+    
+    // Собираем всё
+    const body = document.getElementById('viewUserBody');
+    body.innerHTML = `
+      <!-- Заголовок с аватаром -->
+      <div class="user-header-card">
+        <div class="user-header-avatar">${initials}</div>
+        <div class="user-header-info">
+          <h2>${user.full_name || user.username}</h2>
+          <div class="user-header-username">@${user.username}</div>
+          <div class="user-header-badges">
+            ${roleBadge}
+            ${statusBadge}
+          </div>
+        </div>
+      </div>
+      
+      <!-- Статистика -->
+      <div class="user-stats">
+        <div class="user-stat">
+          <div class="user-stat-number active">${stats.active}</div>
+          <div class="user-stat-label">Активной техники</div>
+        </div>
+        <div class="user-stat">
+          <div class="user-stat-number total">${stats.total}</div>
+          <div class="user-stat-label">Всего получал</div>
+        </div>
+        <div class="user-stat">
+          <div class="user-stat-number returned">${stats.returned}</div>
+          <div class="user-stat-label">Возвращено</div>
+        </div>
+      </div>
+      
+      <!-- Контакты -->
+      <div class="user-detail-section">
+        <h4>📋 Контактная информация</h4>
+        <div class="detail-grid">
+          <div class="detail-item">
+            <label>Email</label>
+            <div class="value">${user.email || '—'}</div>
+          </div>
+          <div class="detail-item">
+            <label>Телефон</label>
+            <div class="value">${user.phone || '—'}</div>
+          </div>
+          <div class="detail-item">
+            <label>Отдел</label>
+            <div class="value">${user.department || '—'}</div>
+          </div>
+          <div class="detail-item">
+            <label>Последний вход</label>
+            <div class="value">${lastLogin}</div>
+          </div>
+          <div class="detail-item">
+            <label>Дата создания</label>
+            <div class="value">${createdAt}</div>
+          </div>
+          <div class="detail-item">
+            <label>ID пользователя</label>
+            <div class="value">#${user.id}</div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Активная техника -->
+      <div class="user-detail-section">
+        <h4>📦 Активная техника (${stats.active})</h4>
+        ${activeEquipmentHtml}
+      </div>
+      
+      <!-- История -->
+      <div class="user-detail-section">
+        <h4>📜 История получений (${stats.total})</h4>
+        ${historyHtml}
+      </div>
+    `;
+    
+    document.getElementById('viewUserModal').classList.add('active');
+  } catch (error) {
+    console.error('Ошибка:', error);
+    showToast('❌ Ошибка загрузки данных', 'error');
+  }
 }
 
 function closeViewUserModal() {

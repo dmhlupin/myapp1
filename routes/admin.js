@@ -4,6 +4,7 @@ const path = require('path');
 const {
   // Equipment
   getAllEquipment,
+  getEquipmentWithUsers,
   getEquipmentById,
   addEquipment,
   updateEquipment,
@@ -58,7 +59,7 @@ const { logAction } = require('../utils/logger');
 async function renderAdmin(req, res) {
   try {
     const stats = await getStats();
-    const equipment = await getAllEquipment();
+    const equipment = await getEquipmentWithUsers();
     const users = await getAllUsersWithDetails();
     
     const htmlPath = path.join(__dirname, '..', 'views', 'admin.html');
@@ -78,14 +79,31 @@ async function renderAdmin(req, res) {
         ? `<button onclick="deleteEquipment(${item.id})" class="btn-delete" title="Удалить">🗑️</button>` 
         : '';
       
+      // 🆕 Формируем информацию о том, кому назначена техника
+      let assignedInfo = '—';
+      if (item.status === 'assigned' && item.user_name) {
+        const initials = getInitials(item.user_name);
+        assignedInfo = `
+          <div class="assigned-cell">
+            <span class="assigned-avatar">${initials}</span>
+            <div class="assigned-info">
+              <div class="assigned-name">${item.user_name}</div>
+              ${item.user_department ? `<div class="assigned-dept">${item.user_department}</div>` : ''}
+            </div>
+          </div>
+        `;
+      } else if (item.status === 'assigned') {
+        assignedInfo = '<span style="color: #a0aec0; font-size: 12px;">не найдено</span>';
+      }
+      
       equipmentRows += `
         <tr>
           <td>${item.id}</td>
           <td><strong>${item.inventory_number}</strong></td>
           <td>${item.name}</td>
           <td>${item.model || '—'}</td>
-          <td>${item.manufacturer || '—'}</td>
           <td><span class="status-badge ${statusClass}">${item.status}</span></td>
+          <td>${assignedInfo}</td>
           <td>
             <div class="action-buttons">
               <button onclick="editEquipment(${item.id})" class="btn-edit" title="Редактировать">✏️</button>
@@ -824,13 +842,21 @@ async function getUserDetailsAPI(req, res) {
     const activeEquipment = await getUserActiveEquipment(id);
     const history = await getUserEquipmentHistory(id);
     
+    // Статистика
+    const stats = {
+      active: activeEquipment.length,
+      total: history.length,
+      returned: history.filter(h => h.returned_date).length
+    };
+    
     // Убираем пароль из ответа
     delete user.password_hash;
     
     res.json({
       user,
+      stats,
       activeEquipment,
-      history: history.slice(0, 20) // последние 20
+      history: history.slice(0, 30) // последние 30 записей
     });
   } catch (error) {
     console.error('❌ Ошибка получения деталей:', error);
