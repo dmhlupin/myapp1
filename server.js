@@ -25,6 +25,10 @@ const {
   addUserAPI,
   updateUserAPI,
   deleteUserAPI,
+  resetUserPasswordAPI,
+  blockUserAPI,
+  unblockUserAPI,
+  getUserDetailsAPI,
   renderAddUser,
   renderEditUser
 } = require('./routes/admin');
@@ -150,9 +154,13 @@ app.delete('/api/admin/equipment/:id', requireAdmin, deleteEquipmentAPI);
 // ============================================
 app.get('/api/admin/users', requireAdmin, getUsersAPI);
 app.get('/api/admin/users/:id', requireAdmin, getUserByIdAPI);
+app.get('/api/admin/users/:id/details', requireAdmin, getUserDetailsAPI);
 app.post('/api/admin/users', requireAdmin, addUserAPI);
 app.put('/api/admin/users/:id', requireAdmin, updateUserAPI);
 app.delete('/api/admin/users/:id', requireAdmin, deleteUserAPI);
+app.post('/api/admin/users/:id/reset-password', requireAdmin, resetUserPasswordAPI);
+app.post('/api/admin/users/:id/block', requireAdmin, blockUserAPI);
+app.post('/api/admin/users/:id/unblock', requireAdmin, unblockUserAPI);
 
 // ============================================
 // ЗАПУСК СЕРВЕРА

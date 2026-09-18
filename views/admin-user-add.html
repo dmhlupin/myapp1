@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <title>Добавить пользователя</title>
     <link rel="stylesheet" href="/css/style.css">
-    <link rel="stylesheet" href="/css/help.css">
     <style>
         body {
             display: flex;
@@ -43,6 +42,28 @@
             color: #a0aec0;
             margin-top: 4px;
         }
+        
+        .info-box {
+            background: #ebf8ff;
+            border: 1px solid #90cdf4;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+        
+        .info-box .icon {
+            font-size: 20px;
+        }
+        
+        .info-box p {
+            margin: 0;
+            color: #2a4365;
+            font-size: 13px;
+            line-height: 1.5;
+        }
     </style>
 </head>
 <body>
@@ -52,17 +73,22 @@
             <a href="/admin" class="back-link">← Назад</a>
         </div>
 
+        <div class="info-box">
+            <span class="icon">💡</span>
+            <p>Пароль будет сгенерирован автоматически и показан <strong>один раз</strong> после создания. 
+            Передайте его пользователю.</p>
+        </div>
+
         <form id="addUserForm" onsubmit="submitForm(event)">
             <div class="form-group">
                 <label>Логин <span class="required">*</span></label>
                 <input type="text" id="username" required placeholder="Например: ivanov">
-                <div class="help-text">Уникальный логин для входа</div>
+                <div class="help-text">Минимум 3 символа. Латиница, цифры, точка, дефис, подчёркивание</div>
             </div>
 
             <div class="form-group">
                 <label>Email <span class="required">*</span></label>
                 <input type="email" id="email" required placeholder="Например: ivanov@company.com">
-                <div class="help-text">Уникальный email адрес</div>
             </div>
 
             <div class="form-group">
@@ -80,80 +106,94 @@
                 <input type="text" id="phone" placeholder="Например: +7(999)111-22-33">
             </div>
 
+            <div class="form-group">
+                <label>Роль</label>
+                <select id="role">
+                    <option value="user">👤 Пользователь</option>
+                    <option value="admin">👑 Администратор</option>
+                </select>
+                <div class="help-text">Администратор имеет полный доступ к системе</div>
+            </div>
+
             <div class="form-actions">
-                <button type="submit" class="btn btn-primary" id="submitBtn">💾 Сохранить</button>
+                <button type="submit" class="btn btn-primary" id="submitBtn">💾 Создать</button>
                 <a href="/admin" class="btn btn-back">Отмена</a>
             </div>
         </form>
-        <div id="footer-container"></div>
     </div>
 
     <div class="toast-container" id="toastContainer"></div>
-    
+
+    <!-- Модальное окно с паролем -->
+    <div class="modal-overlay" id="passwordModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 10000; align-items: center; justify-content: center;">
+        <div style="background: white; border-radius: 12px; padding: 30px; max-width: 500px; width: 90%;">
+            <h3 style="margin: 0 0 15px 0; color: #2d3748;">✅ Пользователь создан</h3>
+            <div style="background: #fffaf0; border: 1px solid #f6ad55; padding: 12px 15px; border-radius: 8px; margin-bottom: 15px;">
+                <strong style="color: #c05621;">⚠️ Сохраните пароль!</strong>
+                <p style="margin: 5px 0 0 0; color: #744210; font-size: 13px;">Он показывается только один раз.</p>
+            </div>
+            <div style="background: #2d3748; color: #48bb78; padding: 20px; border-radius: 8px; text-align: center; margin-bottom: 15px;">
+                <code id="tempPasswordValue" style="font-size: 22px; font-family: 'Courier New', monospace; font-weight: 600; letter-spacing: 2px;"></code>
+            </div>
+            <div style="background: #f7fafc; padding: 12px 15px; border-radius: 8px; margin-bottom: 20px;">
+                <p style="margin: 0; color: #4a5568; font-size: 14px;">
+                    <strong>Логин:</strong> <span id="passwordUsername"></span>
+                </p>
+            </div>
+            <div style="text-align: right;">
+                <button onclick="finishCreate()" class="btn btn-primary" style="padding: 10px 25px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer;">Понятно, перейти к списку</button>
+            </div>
+        </div>
+    </div>
 
     <script src="/js/main.js"></script>
-    <script src="/js/help.js"></script>
-    <script src="/js/footer.js"></script>
-
     <script>
+        let createdUsername = '';
+        
         async function submitForm(event) {
             event.preventDefault();
             
             const submitBtn = document.getElementById('submitBtn');
             submitBtn.disabled = true;
-            submitBtn.textContent = '⏳ Сохранение...';
+            submitBtn.textContent = '⏳ Создание...';
 
             const formData = {
                 username: document.getElementById('username').value.trim(),
                 email: document.getElementById('email').value.trim(),
                 full_name: document.getElementById('full_name').value.trim(),
                 department: document.getElementById('department').value.trim(),
-                phone: document.getElementById('phone').value.trim()
+                phone: document.getElementById('phone').value.trim(),
+                role: document.getElementById('role').value
             };
 
             try {
                 const response = await fetch('/api/admin/users', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(formData)
                 });
 
                 const result = await response.json();
 
                 if (result.success) {
-                    showToast('✅ Пользователь успешно добавлен!', 'success');
-                    setTimeout(() => {
-                        window.location.href = '/admin';
-                    }, 1500);
+                    createdUsername = result.data.username;
+                    document.getElementById('tempPasswordValue').textContent = result.tempPassword;
+                    document.getElementById('passwordUsername').textContent = result.data.username;
+                    document.getElementById('passwordModal').style.display = 'flex';
                 } else {
                     showToast('❌ ' + result.error, 'error');
                     submitBtn.disabled = false;
-                    submitBtn.textContent = '💾 Сохранить';
+                    submitBtn.textContent = '💾 Создать';
                 }
             } catch (error) {
-                showToast('❌ Ошибка при добавлении пользователя', 'error');
+                showToast('❌ Ошибка при создании пользователя', 'error');
                 submitBtn.disabled = false;
-                submitBtn.textContent = '💾 Сохранить';
+                submitBtn.textContent = '💾 Создать';
             }
         }
-
-        function showToast(message, type = 'info') {
-            const container = document.getElementById('toastContainer');
-            const toast = document.createElement('div');
-            toast.className = `toast toast-${type}`;
-            toast.textContent = message;
-            container.appendChild(toast);
-
-            setTimeout(() => {
-                toast.style.opacity = '0';
-                toast.style.transform = 'translateX(100%)';
-                toast.style.transition = 'all 0.3s ease';
-                setTimeout(() => {
-                    container.removeChild(toast);
-                }, 300);
-            }, 3000);
+        
+        function finishCreate() {
+            window.location.href = '/admin';
         }
     </script>
 </body>

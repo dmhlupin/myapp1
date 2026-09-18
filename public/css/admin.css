@@ -1,5 +1,6 @@
-/* Стили для админ-панели */
+/* public/css/admin.css — Стили для админ-панели */
 
+/* ===== Статистика ===== */
 .stats {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -33,11 +34,13 @@
     margin-bottom: 5px;
 }
 
+/* ===== Таблица ===== */
 .table-container {
     background: white;
     border-radius: 12px;
     overflow: hidden;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    overflow-x: auto;
 }
 
 .table-header {
@@ -58,6 +61,7 @@
 .table-search {
     display: flex;
     gap: 10px;
+    align-items: center;
 }
 
 .table-search input {
@@ -100,9 +104,41 @@ tr:hover {
     background: #f7fafc;
 }
 
+/* ===== Статусы ===== */
+.status-badge {
+    display: inline-block;
+    padding: 3px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
+.status-available {
+    background: #c6f6d5;
+    color: #22543d;
+}
+
+.status-assigned {
+    background: #bee3f8;
+    color: #2a4365;
+}
+
+.status-maintenance {
+    background: #fefcbf;
+    color: #744210;
+}
+
+.status-retired {
+    background: #fed7d7;
+    color: #742a2a;
+}
+
+/* ===== Кнопки действий (для техники) ===== */
 .action-buttons {
     display: flex;
-    gap: 5px;
+    gap: 4px;
+    flex-wrap: nowrap;
 }
 
 .btn-edit {
@@ -138,6 +174,7 @@ tr:hover {
     cursor: not-allowed;
 }
 
+/* ===== Бадж ID ===== */
 .id-badge {
     display: inline-block;
     background: #edf2f7;
@@ -148,50 +185,7 @@ tr:hover {
     font-weight: 600;
 }
 
-@media (max-width: 768px) {
-    .stats {
-        grid-template-columns: repeat(2, 1fr);
-    }
-
-    .table-search {
-        width: 100%;
-    }
-
-    .table-search input {
-        width: 100%;
-    }
-
-    table {
-        font-size: 14px;
-    }
-
-    th,
-    td {
-        padding: 8px 12px;
-    }
-}
-/* Добавьте эти стили в конец файла public/css/admin.css */
-
-.badge {
-    display: inline-block;
-    padding: 2px 10px;
-    border-radius: 20px;
-    font-size: 14px;
-    font-weight: 600;
-    min-width: 30px;
-    text-align: center;
-}
-
-.badge-active {
-    background: #c6f6d5;
-    color: #22543d;
-}
-
-.badge-inactive {
-    background: #fed7d7;
-    color: #742a2a;
-}
-
+/* ===== Вкладки (Tabs) ===== */
 .tabs {
     display: flex;
     gap: 10px;
@@ -209,6 +203,7 @@ tr:hover {
     font-weight: 500;
     transition: all 0.2s;
     color: #4a5568;
+    font-family: inherit;
 }
 
 .tab-btn:hover {
@@ -228,4 +223,555 @@ tr:hover {
 
 .tab-content.active {
     display: block;
+}
+
+/* ===== Бейджи (для таблицы пользователей) ===== */
+.badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    min-width: 28px;
+    text-align: center;
+}
+
+.badge-active {
+    background: #c6f6d5;
+    color: #22543d;
+}
+
+.badge-inactive {
+    background: #fed7d7;
+    color: #742a2a;
+}
+
+/* ============================================================ */
+/* ===== ТАБЛИЦА ПОЛЬЗОВАТЕЛЕЙ (компактная версия) ===== */
+/* ============================================================ */
+
+.users-table {
+    table-layout: fixed;
+    width: 100%;
+}
+
+.users-table th {
+    padding: 12px 14px;
+    font-size: 11px;
+}
+
+.users-table td {
+    padding: 12px 14px;
+    vertical-align: middle;
+}
+
+/* Ячейка пользователя */
+.user-cell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.user-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 13px;
+    flex-shrink: 0;
+}
+
+.user-name {
+    font-weight: 600;
+    color: #2d3748;
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.user-username {
+    font-size: 12px;
+    color: #a0aec0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Ячейка контактов */
+.contact-cell {
+    min-width: 0;
+}
+
+.contact-email {
+    font-size: 13px;
+    color: #2d3748;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.contact-dept {
+    font-size: 12px;
+    color: #a0aec0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Ячейка активности */
+.activity-cell {
+    min-width: 0;
+}
+
+.activity-status {
+    font-size: 13px;
+    color: #2d3748;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.activity-login {
+    font-size: 11px;
+    color: #a0aec0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Точка статуса */
+.status-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.status-dot-active {
+    background: #48bb78;
+    box-shadow: 0 0 0 3px rgba(72, 187, 120, 0.2);
+}
+
+.status-dot-blocked {
+    background: #fc8181;
+    box-shadow: 0 0 0 3px rgba(252, 129, 129, 0.2);
+}
+
+/* Бейдж роли */
+.role-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.role-admin {
+    background: #fefcbf;
+    color: #744210;
+}
+
+.role-user {
+    background: #e2e8f0;
+    color: #4a5568;
+}
+
+/* Заблокированная строка */
+.row-blocked {
+    background: #fff5f5 !important;
+}
+
+.row-blocked:hover {
+    background: #fed7d7 !important;
+}
+
+/* Кнопки-иконки для таблицы пользователей */
+.btn-icon {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.btn-icon:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn-icon.btn-info {
+    background: #e6fffa;
+    color: #2c7a7b;
+}
+
+.btn-icon.btn-info:hover {
+    background: #b2f5ea;
+}
+
+.btn-icon.btn-edit {
+    background: #ebf8ff;
+    color: #2b6cb0;
+}
+
+.btn-icon.btn-edit:hover {
+    background: #bee3f8;
+}
+
+.btn-icon.btn-warning {
+    background: #fffaf0;
+    color: #c05621;
+}
+
+.btn-icon.btn-warning:hover {
+    background: #feebc8;
+}
+
+.btn-icon.btn-success {
+    background: #f0fff4;
+    color: #2f855a;
+}
+
+.btn-icon.btn-success:hover {
+    background: #c6f6d5;
+}
+
+.btn-icon.btn-delete {
+    background: #fff5f5;
+    color: #c53030;
+}
+
+.btn-icon.btn-delete:hover {
+    background: #fed7d7;
+}
+
+/* ============================================================ */
+/* ===== МОДАЛЬНЫЕ ОКНА ===== */
+/* ============================================================ */
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: #2d3748;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 20px;
+    color: #a0aec0;
+    cursor: pointer;
+    padding: 5px 10px;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.modal-close:hover {
+    background: #f7fafc;
+    color: #4a5568;
+}
+
+/* ===== Модальное окно: Пароль ===== */
+.password-modal {
+    max-width: 500px;
+}
+
+.password-warning {
+    background: #fffaf0;
+    border: 1px solid #f6ad55;
+    padding: 12px 15px;
+    border-radius: 8px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    margin-bottom: 15px;
+}
+
+.password-warning .warning-icon {
+    font-size: 20px;
+}
+
+.password-warning p {
+    margin: 0;
+    color: #744210;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.password-display {
+    background: #2d3748;
+    color: #48bb78;
+    padding: 20px;
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.password-display code {
+    font-size: 20px;
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+    letter-spacing: 1px;
+}
+
+.btn-copy {
+    background: #4a5568;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s;
+    font-size: 16px;
+}
+
+.btn-copy:hover {
+    background: #718096;
+}
+
+.password-info {
+    background: #f7fafc;
+    padding: 12px 15px;
+    border-radius: 8px;
+}
+
+.password-info p {
+    margin: 5px 0;
+    color: #4a5568;
+    font-size: 14px;
+}
+
+/* ===== Модальное окно: Просмотр пользователя ===== */
+.view-user-modal {
+    max-width: 700px;
+    max-height: 85vh;
+    overflow-y: auto;
+}
+
+.user-detail-section {
+    margin-bottom: 20px;
+}
+
+.user-detail-section h4 {
+    color: #2d3748;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+.detail-item {
+    padding: 8px 0;
+}
+
+.detail-item label {
+    display: block;
+    color: #a0aec0;
+    font-size: 12px;
+    margin-bottom: 3px;
+}
+
+.detail-item .value {
+    color: #2d3748;
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.equipment-list-modal {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.equipment-list-modal li {
+    padding: 10px 12px;
+    background: #f7fafc;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    font-size: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.equipment-list-modal li .inv {
+    font-family: 'Courier New', monospace;
+    color: #667eea;
+    font-weight: 600;
+}
+
+/* ===== Модальное окно: Удаление ===== */
+.delete-warning {
+    background: #fff5f5;
+    border: 1px solid #fc8181;
+    padding: 12px 15px;
+    border-radius: 8px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    margin: 15px 0;
+}
+
+.delete-warning .warning-icon {
+    font-size: 20px;
+}
+
+.delete-warning strong {
+    color: #c53030;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.delete-warning p {
+    margin: 0;
+    color: #742a2a;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+/* ============================================================ */
+/* ===== АДАПТИВНОСТЬ ===== */
+/* ============================================================ */
+
+@media (max-width: 1100px) {
+    .users-table {
+        font-size: 13px;
+    }
+    
+    .users-table th {
+        padding: 10px 8px;
+        font-size: 10px;
+    }
+    
+    .users-table td {
+        padding: 10px 8px;
+    }
+    
+    .user-avatar {
+        width: 32px;
+        height: 32px;
+        font-size: 12px;
+    }
+    
+    .user-name {
+        font-size: 13px;
+    }
+    
+    .btn-icon {
+        width: 28px;
+        height: 28px;
+        font-size: 13px;
+    }
+}
+
+@media (max-width: 900px) {
+    /* На узких экранах скрываем контакты и активность */
+    .users-table th:nth-child(2),
+    .users-table td:nth-child(2),
+    .users-table th:nth-child(5),
+    .users-table td:nth-child(5) {
+        display: none;
+    }
+    
+    .users-table th:nth-child(1) { width: auto; }
+    .users-table th:nth-child(3) { width: auto; }
+    .users-table th:nth-child(4) { width: 60px; }
+    .users-table th:nth-child(6) { width: auto; }
+}
+
+@media (max-width: 640px) {
+    .users-table th:nth-child(3),
+    .users-table td:nth-child(3) {
+        display: none;
+    }
+    
+    .action-buttons {
+        gap: 2px;
+    }
+    
+    .btn-icon {
+        width: 26px;
+        height: 28px;
+        font-size: 12px;
+    }
+    
+    .stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .table-search {
+        width: 100%;
+    }
+    
+    .table-search input {
+        width: 100%;
+    }
+    
+    table {
+        font-size: 14px;
+    }
+    
+    th,
+    td {
+        padding: 8px 12px;
+    }
+}
+
+@media (max-width: 768px) {
+    .stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .table-search {
+        width: 100%;
+    }
+    
+    .table-search input {
+        width: 100%;
+    }
+    
+    table {
+        font-size: 14px;
+    }
+    
+    th,
+    td {
+        padding: 8px 12px;
+    }
 }

@@ -8,14 +8,33 @@ const {
   deleteEquipment,
   getAvailableEquipment,
   getStats,
-  getAllUsers,        // ← Добавлено
+  // Пользователи
+  getAllUsers,
   getUserById,
+  getUserByUsernameWithPassword,
   addUser,
   updateUser,
   deleteUser,
   getUsersWithEquipment,
-  assignEquipment     // ← Добавлено
+  // Новые функции
+  createUserWithPassword,
+  getUserWithDetails,
+  getAllUsersWithDetails,
+  checkUserExists,
+  deleteUserWithEquipmentReturn,
+  getUsersWithActiveEquipment
 } = require('../database/db');
+
+// Утилиты
+const { 
+  hashPassword, 
+  generateTempPassword,
+  validateUsername,
+  validateEmail,
+  validatePassword
+} = require('../utils/auth');
+
+const { logAction } = require('../utils/logger');
 
 // ===== СТРАНИЦЫ =====
 
@@ -23,21 +42,23 @@ async function renderAdmin(req, res) {
   try {
     const stats = await getStats();
     const equipment = await getAllEquipment();
-    const users = await getUsersWithEquipment();
+    const users = await getAllUsersWithDetails();
     
     const htmlPath = path.join(__dirname, '..', 'views', 'admin.html');
     let html = fs.readFileSync(htmlPath, 'utf8');
     
+    // Статистика
     html = html.replace('{{total_equipment}}', stats.total_equipment || 0);
     html = html.replace('{{available_equipment}}', stats.available_equipment || 0);
     html = html.replace('{{assigned_equipment}}', stats.assigned_equipment || 0);
     html = html.replace('{{total_users}}', stats.total_users || 0);
     
+    // Таблица техники
     let equipmentRows = '';
     equipment.forEach(item => {
       const statusClass = `status-${item.status}`;
       const deleteButton = item.status === 'available' 
-        ? `<button onclick="deleteEquipment(${item.id})" class="btn-delete">🗑️</button>` 
+        ? `<button onclick="deleteEquipment(${item.id})" class="btn-delete" title="Удалить">🗑️</button>` 
         : '';
       
       equipmentRows += `
@@ -49,40 +70,127 @@ async function renderAdmin(req, res) {
           <td>${item.manufacturer || '—'}</td>
           <td><span class="status-badge ${statusClass}">${item.status}</span></td>
           <td>
-            <button onclick="editEquipment(${item.id})" class="btn-edit">✏️</button>
-            ${deleteButton}
+            <div class="action-buttons">
+              <button onclick="editEquipment(${item.id})" class="btn-edit" title="Редактировать">✏️</button>
+              ${deleteButton}
+            </div>
           </td>
         </tr>
       `;
     });
     html = html.replace('{{equipment_rows}}', equipmentRows);
     
-    let userRows = '';
-    users.forEach(user => {
-      const equipmentCount = user.equipment_count || 0;
-      const hasEquipment = equipmentCount > 0;
-      
-      userRows += `
-        <tr>
-          <td>${user.id}</td>
-          <td><strong>${user.full_name || user.username}</strong></td>
-          <td>${user.username}</td>
-          <td>${user.email}</td>
-          <td>${user.department || '—'}</td>
-          <td><span class="badge ${hasEquipment ? 'badge-active' : 'badge-inactive'}">${equipmentCount}</span></td>
-          <td>
-            <button onclick="editUser(${user.id})" class="btn-edit">✏️</button>
-            <button onclick="deleteUser(${user.id})" class="btn-delete">🗑️</button>
-          </td>
+// Таблица пользователей
+let userRows = '';
+users.forEach(user => {
+    const equipmentCount = user.active_equipment_count || 0;
+    const hasEquipment = equipmentCount > 0;
+    const isActive = user.is_active === 1;
+    const isAdmin = user.role === 'admin';
+    
+    // Роль
+    const roleBadge = isAdmin
+        ? '<span class="role-badge role-admin">👑 Админ</span>'
+        : '<span class="role-badge role-user">👤 Пользователь</span>';
+    
+    // Статус + последний вход
+    const lastLogin = user.last_login 
+        ? formatDate(user.last_login) 
+        : 'никогда';
+    
+    const statusHtml = isActive
+        ? `<span class="status-dot status-dot-active"></span> Активен`
+        : `<span class="status-dot status-dot-blocked"></span> Заблокирован`;
+    
+    // Кнопки блокировки
+    const blockButton = isActive
+        ? `<button onclick="blockUser(${user.id})" class="btn-icon btn-warning" title="Заблокировать">🚫</button>`
+        : `<button onclick="unblockUser(${user.id})" class="btn-icon btn-success" title="Разблокировать">✅</button>`;
+    
+    userRows += `
+        <tr class="${!isActive ? 'row-blocked' : ''}">
+            <td>
+                <div class="user-cell">
+                    <span class="user-avatar">${getInitials(user.full_name || user.username)}</span>
+                    <div>
+                        <div class="user-name">${user.full_name || user.username}</div>
+                        <div class="user-username">@${user.username}</div>
+                    </div>
+                </div>
+            </td>
+            <td>
+                <div class="contact-cell">
+                    <div class="contact-email">${user.email}</div>
+                    <div class="contact-dept">${user.department || 'Без отдела'}</div>
+                </div>
+            </td>
+            <td>${roleBadge}</td>
+            <td style="text-align: center;">
+                <span class="badge ${hasEquipment ? 'badge-active' : 'badge-inactive'}">${equipmentCount}</span>
+            </td>
+            <td>
+                <div class="activity-cell">
+                    <div class="activity-status">${statusHtml}</div>
+                    <div class="activity-login" title="Последний вход">${lastLogin}</div>
+                </div>
+            </td>
+            <td>
+                <div class="action-buttons">
+                    <button onclick="viewUser(${user.id})" class="btn-icon btn-info" title="Просмотр">👁️</button>
+                    <button onclick="editUser(${user.id})" class="btn-icon btn-edit" title="Редактировать">✏️</button>
+                    <button onclick="resetUserPassword(${user.id}, '${user.username}')" class="btn-icon btn-warning" title="Сбросить пароль">🔑</button>
+                    ${blockButton}
+                    <button onclick="deleteUser(${user.id}, '${(user.full_name || user.username).replace(/'/g, "\\'")}')" class="btn-icon btn-delete" title="Удалить">🗑️</button>
+                </div>
+            </td>
         </tr>
-      `;
-    });
-    html = html.replace('{{user_rows}}', userRows);
+    `;
+});
+html = html.replace('{{user_rows}}', userRows);
     
     res.send(html);
   } catch (error) {
-    console.error('Ошибка:', error);
+    console.error('❌ Ошибка:', error);
     res.status(500).send('Ошибка при загрузке админ-панели');
+  }
+}
+
+/**
+ * Получить инициалы для аватара
+ */
+function getInitials(name) {
+  if (!name) return '?';
+  const parts = name.split(' ').filter(p => p);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0][0].toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+/**
+ * Форматирование даты
+ */
+function formatDate(dateString) {
+  if (!dateString) return '—';
+  try {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return 'только что';
+    if (diffMins < 60) return `${diffMins} мин назад`;
+    if (diffHours < 24) return `${diffHours} ч назад`;
+    if (diffDays < 7) return `${diffDays} дн назад`;
+    
+    return date.toLocaleDateString('ru-RU', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  } catch {
+    return dateString;
   }
 }
 
@@ -380,44 +488,258 @@ async function getUserByIdAPI(req, res) {
   }
 }
 
+/**
+ * POST /api/admin/users — создание пользователя с автогенерацией пароля
+ */
 async function addUserAPI(req, res) {
   try {
-    const { username, email, full_name, department, phone } = req.body;
+    const { username, email, full_name, department, phone, role } = req.body;
     
+    // Валидация
     if (!username || !email) {
       return res.status(400).json({ 
         error: 'Логин и email обязательны' 
       });
     }
     
-    const result = await addUser({
-      username,
-      email,
-      full_name: full_name || '',
-      department: department || '',
-      phone: phone || ''
+    const usernameCheck = validateUsername(username);
+    if (!usernameCheck.valid) {
+      return res.status(400).json({ error: usernameCheck.errors.join('. ') });
+    }
+    
+    const emailCheck = validateEmail(email);
+    if (!emailCheck.valid) {
+      return res.status(400).json({ error: emailCheck.errors.join('. ') });
+    }
+    
+    // Проверяем, что пользователя нет
+    const existing = await checkUserExists(username.trim(), email.trim());
+    if (existing) {
+      if (existing.username === username.trim()) {
+        return res.status(400).json({ error: 'Пользователь с таким логином уже существует' });
+      }
+      return res.status(400).json({ error: 'Пользователь с таким email уже существует' });
+    }
+    
+    // Валидация роли
+    const userRole = ['admin', 'user'].includes(role) ? role : 'user';
+    
+    // Генерируем временный пароль
+    const tempPassword = generateTempPassword(12);
+    const passwordHash = await hashPassword(tempPassword);
+    
+    // Создаём пользователя
+    const result = await createUserWithPassword({
+      username: username.trim(),
+      email: email.trim(),
+      full_name: (full_name || '').trim(),
+      department: (department || '').trim(),
+      phone: (phone || '').trim(),
+      password_hash: passwordHash,
+      role: userRole,
+      must_change_password: 1
+    });
+    
+    // Логируем
+    await logAction({
+      req,
+      action: 'user_create',
+      entityType: 'user',
+      entityId: result.id,
+      details: JSON.stringify({ 
+        username: username.trim(), 
+        role: userRole 
+      })
+    });
+    
+    // Возвращаем сгенерированный пароль ОДИН РАЗ
+    res.json({ 
+      success: true, 
+      message: 'Пользователь создан успешно',
+      data: {
+        id: result.id,
+        username: username.trim(),
+        email: email.trim(),
+        full_name: full_name,
+        role: userRole
+      },
+      // ⚠️ Пароль показывается ТОЛЬКО ОДИН РАЗ!
+      tempPassword: tempPassword,
+      warning: 'Сохраните пароль! Он больше не будет показан.'
+    });
+  } catch (error) {
+    console.error('❌ Ошибка создания пользователя:', error);
+    res.status(500).json({ error: error.message });
+  }
+}
+
+/**
+ * POST /api/admin/users/:id/reset-password — сброс пароля
+ */
+async function resetUserPasswordAPI(req, res) {
+  try {
+    const id = parseInt(req.params.id);
+    
+    const user = await getUserById(id);
+    if (!user) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+    
+    // Генерируем новый временный пароль
+    const tempPassword = generateTempPassword(12);
+    const passwordHash = await hashPassword(tempPassword);
+    
+    // Обновляем пароль, устанавливаем must_change_password=1
+    const { updateUserPassword } = require('../database/db');
+    await updateUserPassword(id, passwordHash, 1);
+    
+    // Логируем
+    await logAction({
+      req,
+      action: 'user_password_reset',
+      entityType: 'user',
+      entityId: id,
+      details: JSON.stringify({ username: user.username })
     });
     
     res.json({ 
       success: true, 
-      message: 'Пользователь добавлен успешно',
-      data: result 
+      message: `Пароль пользователя "${user.full_name || user.username}" сброшен`,
+      tempPassword: tempPassword,
+      warning: 'Передайте пароль пользователю. Он должен сменить его при следующем входе.'
     });
   } catch (error) {
-    if (error.message.includes('UNIQUE constraint failed')) {
-      res.status(400).json({ 
-        error: 'Пользователь с таким логином или email уже существует' 
-      });
-    } else {
-      res.status(500).json({ error: error.message });
+    console.error('❌ Ошибка сброса пароля:', error);
+    res.status(500).json({ error: error.message });
+  }
+}
+
+/**
+ * POST /api/admin/users/:id/block — блокировка
+ */
+async function blockUserAPI(req, res) {
+  try {
+    const id = parseInt(req.params.id);
+    
+    // Нельзя заблокировать себя
+    if (id === req.session.userId) {
+      return res.status(400).json({ error: 'Нельзя заблокировать себя' });
     }
+    
+    const user = await getUserById(id);
+    if (!user) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+    
+    // Нельзя заблокировать последнего админа
+    if (user.role === 'admin') {
+      const { db } = require('../database/db');
+      const adminCount = await new Promise((resolve, reject) => {
+        db.get(
+          `SELECT COUNT(*) as count FROM users WHERE role = 'admin' AND is_active = 1`,
+          (err, row) => {
+            if (err) reject(err);
+            else resolve(row.count);
+          }
+        );
+      });
+      
+      if (adminCount <= 1) {
+        return res.status(400).json({ 
+          error: 'Нельзя заблокировать последнего активного администратора' 
+        });
+      }
+    }
+    
+    const { setUserActive } = require('../database/db');
+    await setUserActive(id, false);
+    
+    await logAction({
+      req,
+      action: 'user_block',
+      entityType: 'user',
+      entityId: id,
+      details: JSON.stringify({ username: user.username })
+    });
+    
+    res.json({ 
+      success: true, 
+      message: `Пользователь "${user.full_name || user.username}" заблокирован`
+    });
+  } catch (error) {
+    console.error('❌ Ошибка блокировки:', error);
+    res.status(500).json({ error: error.message });
+  }
+}
+
+/**
+ * POST /api/admin/users/:id/unblock — разблокировка
+ */
+async function unblockUserAPI(req, res) {
+  try {
+    const id = parseInt(req.params.id);
+    
+    const user = await getUserById(id);
+    if (!user) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+    
+    const { setUserActive } = require('../database/db');
+    await setUserActive(id, true);
+    
+    await logAction({
+      req,
+      action: 'user_unblock',
+      entityType: 'user',
+      entityId: id,
+      details: JSON.stringify({ username: user.username })
+    });
+    
+    res.json({ 
+      success: true, 
+      message: `Пользователь "${user.full_name || user.username}" разблокирован`
+    });
+  } catch (error) {
+    console.error('❌ Ошибка разблокировки:', error);
+    res.status(500).json({ error: error.message });
+  }
+}
+
+/**
+ * GET /api/admin/users/:id/details — детали пользователя
+ */
+async function getUserDetailsAPI(req, res) {
+  try {
+    const id = parseInt(req.params.id);
+    
+    const user = await getUserWithDetails(id);
+    if (!user) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+    
+    // Получаем активную технику
+    const { getUserActiveEquipment, getUserEquipmentHistory } = require('../database/db');
+    const activeEquipment = await getUserActiveEquipment(id);
+    const history = await getUserEquipmentHistory(id);
+    
+    // Убираем пароль из ответа
+    delete user.password_hash;
+    
+    res.json({
+      user,
+      activeEquipment,
+      history: history.slice(0, 20) // последние 20
+    });
+  } catch (error) {
+    console.error('❌ Ошибка получения деталей:', error);
+    res.status(500).json({ error: error.message });
   }
 }
 
 async function updateUserAPI(req, res) {
   try {
     const id = parseInt(req.params.id);
-    const { username, email, full_name, department, phone } = req.body;
+    const { username, email, full_name, department, phone, role } = req.body;
     
     if (!username || !email) {
       return res.status(400).json({ 
@@ -425,51 +747,149 @@ async function updateUserAPI(req, res) {
       });
     }
     
-    const result = await updateUser(id, {
-      username,
-      email,
-      full_name: full_name || '',
-      department: department || '',
-      phone: phone || ''
-    });
-    
-    res.json({ 
-      success: true, 
-      message: 'Пользователь обновлен успешно',
-      data: result 
-    });
-  } catch (error) {
-    if (error.message === 'Пользователь не найден') {
-      res.status(404).json({ error: error.message });
-    } else if (error.message.includes('UNIQUE constraint failed')) {
-      res.status(400).json({ 
-        error: 'Пользователь с таким логином или email уже существует' 
-      });
-    } else {
-      res.status(500).json({ error: error.message });
+    const usernameCheck = validateUsername(username);
+    if (!usernameCheck.valid) {
+      return res.status(400).json({ error: usernameCheck.errors.join('. ') });
     }
-  }
-}
-
-async function deleteUserAPI(req, res) {
-  try {
-    const id = parseInt(req.params.id);
+    
+    const emailCheck = validateEmail(email);
+    if (!emailCheck.valid) {
+      return res.status(400).json({ error: emailCheck.errors.join('. ') });
+    }
+    
+    // Проверяем, что нет другого пользователя с таким логином/email
+    const existing = await checkUserExists(username.trim(), email.trim(), id);
+    if (existing) {
+      if (existing.username === username.trim()) {
+        return res.status(400).json({ error: 'Логин уже используется' });
+      }
+      return res.status(400).json({ error: 'Email уже используется' });
+    }
+    
     const user = await getUserById(id);
     if (!user) {
       return res.status(404).json({ error: 'Пользователь не найден' });
     }
     
-    const result = await deleteUser(id);
+    // Проверяем смену роли
+    const newRole = ['admin', 'user'].includes(role) ? role : user.role;
     
-    if (result.deleted === 0) {
-      return res.status(404).json({ error: 'Пользователь не найден' });
+    // Если меняем админа на пользователя — проверяем, что это не последний админ
+    if (user.role === 'admin' && newRole === 'user') {
+      const { db } = require('../database/db');
+      const adminCount = await new Promise((resolve, reject) => {
+        db.get(
+          `SELECT COUNT(*) as count FROM users WHERE role = 'admin' AND is_active = 1`,
+          (err, row) => {
+            if (err) reject(err);
+            else resolve(row.count);
+          }
+        );
+      });
+      
+      if (adminCount <= 1) {
+        return res.status(400).json({ 
+          error: 'Нельзя изменить роль последнего администратора' 
+        });
+      }
     }
+    
+    // Обновляем
+    const { db } = require('../database/db');
+    await new Promise((resolve, reject) => {
+      db.run(
+        `UPDATE users 
+         SET username = ?, email = ?, full_name = ?, department = ?, phone = ?, role = ?, updated_at = CURRENT_TIMESTAMP 
+         WHERE id = ?`,
+        [username.trim(), email.trim(), full_name || '', department || '', phone || '', newRole, id],
+        function(err) {
+          if (err) reject(err);
+          else resolve(this.changes);
+        }
+      );
+    });
+    
+    // Логируем
+    await logAction({
+      req,
+      action: 'user_update',
+      entityType: 'user',
+      entityId: id,
+      details: JSON.stringify({ 
+        username: username.trim(),
+        role_changed: user.role !== newRole
+      })
+    });
     
     res.json({ 
       success: true, 
-      message: 'Пользователь удален успешно' 
+      message: 'Пользователь обновлён успешно'
     });
   } catch (error) {
+    console.error('❌ Ошибка обновления:', error);
+    res.status(500).json({ error: error.message });
+  }
+}
+
+/**
+ * DELETE /api/admin/users/:id — удаление с возвратом техники
+ */
+async function deleteUserAPI(req, res) {
+  try {
+    const id = parseInt(req.params.id);
+    
+    // Нельзя удалить себя
+    if (id === req.session.userId) {
+      return res.status(400).json({ error: 'Нельзя удалить себя' });
+    }
+    
+    const user = await getUserById(id);
+    if (!user) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+    
+    // Нельзя удалить последнего админа
+    if (user.role === 'admin') {
+      const { db } = require('../database/db');
+      const adminCount = await new Promise((resolve, reject) => {
+        db.get(
+          `SELECT COUNT(*) as count FROM users WHERE role = 'admin' AND is_active = 1`,
+          (err, row) => {
+            if (err) reject(err);
+            else resolve(row.count);
+          }
+        );
+      });
+      
+      if (adminCount <= 1) {
+        return res.status(400).json({ 
+          error: 'Нельзя удалить последнего активного администратора' 
+        });
+      }
+    }
+    
+    // Удаляем с возвратом техники
+    const result = await deleteUserWithEquipmentReturn(id);
+    
+    // Логируем
+    await logAction({
+      req,
+      action: 'user_delete',
+      entityType: 'user',
+      entityId: id,
+      details: JSON.stringify({ 
+        username: user.username,
+        equipment_returned: result.equipment_returned 
+      })
+    });
+    
+    res.json({ 
+      success: true, 
+      message: `Пользователь удалён. Возвращено техники: ${result.equipment_returned}`,
+      data: result
+    });
+  } catch (error) {
+    console.error('❌ Ошибка удаления:', error);
     res.status(500).json({ error: error.message });
   }
 }
@@ -499,16 +919,18 @@ async function renderEditUser(req, res) {
     const htmlPath = path.join(__dirname, '..', 'views', 'admin-user-edit.html');
     let html = fs.readFileSync(htmlPath, 'utf8');
     
-    html = html.replace('{{id}}', user.id);
-    html = html.replace('{{username}}', user.username || '');
-    html = html.replace('{{email}}', user.email || '');
-    html = html.replace('{{full_name}}', user.full_name || '');
-    html = html.replace('{{department}}', user.department || '');
-    html = html.replace('{{phone}}', user.phone || '');
+    html = html.replace(/\{\{id\}\}/g, user.id);
+    html = html.replace(/\{\{username\}\}/g, user.username || '');
+    html = html.replace(/\{\{email\}\}/g, user.email || '');
+    html = html.replace(/\{\{full_name\}\}/g, user.full_name || '');
+    html = html.replace(/\{\{department\}\}/g, user.department || '');
+    html = html.replace(/\{\{phone\}\}/g, user.phone || '');
+    html = html.replace(/\{\{role\}\}/g, user.role || 'user');
+    html = html.replace(/\{\{is_active\}\}/g, user.is_active ? 'true' : 'false');
     
     res.send(html);
   } catch (error) {
-    console.error('Ошибка:', error);
+    console.error('❌ Ошибка:', error);
     res.status(500).send('Ошибка при загрузке страницы');
   }
 }
@@ -516,19 +938,32 @@ async function renderEditUser(req, res) {
 // ===== ЭКСПОРТЫ =====
 
 module.exports = {
+  // Страницы
   renderAdmin,
+  
+  // API для техники
   getEquipmentAPI,
   getEquipmentByIdAPI,
   addEquipmentAPI,
   updateEquipmentAPI,
   deleteEquipmentAPI,
+  
+  // Страницы для техники
   renderAddEquipment,
   renderEditEquipment,
+  
+  // API для пользователей
   getUsersAPI,
   getUserByIdAPI,
   addUserAPI,
   updateUserAPI,
   deleteUserAPI,
+  resetUserPasswordAPI,
+  blockUserAPI,
+  unblockUserAPI,
+  getUserDetailsAPI,
+  
+  // Страницы для пользователей
   renderAddUser,
   renderEditUser
 };

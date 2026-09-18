@@ -1082,6 +1082,257 @@ function getUserStats(userId) {
     });
   });
 }
+
+// ===== ФУНКЦИИ ДЛЯ УПРАВЛЕНИЯ ПОЛЬЗОВАТЕЛЯМИ =====
+
+/**
+ * Создать пользователя с паролем
+ */
+function createUserWithPassword(userData) {
+  return new Promise((resolve, reject) => {
+    const { 
+      username, email, full_name, department, phone, 
+      password_hash, role = 'user', must_change_password = 1 
+    } = userData;
+    
+    db.run(
+      `INSERT INTO users 
+       (username, email, full_name, department, phone, password_hash, role, is_active, must_change_password) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)`,
+      [username, email, full_name, department, phone, password_hash, role, must_change_password],
+      function(err) {
+        if (err) {
+          reject(err);
+          return;
+        }
+        resolve({ id: this.lastID, ...userData });
+      }
+    );
+  });
+}
+
+/**
+ * Получить пользователя с расширенной информацией (включая количество техники)
+ */
+function getUserWithDetails(userId) {
+  return new Promise((resolve, reject) => {
+    db.get(`
+      SELECT 
+        u.*,
+        (SELECT COUNT(*) FROM user_equipment WHERE user_id = u.id AND returned_date IS NULL) as active_equipment_count,
+        (SELECT COUNT(*) FROM user_equipment WHERE user_id = u.id) as total_equipment_count
+      FROM users u
+      WHERE u.id = ?
+    `, [userId], (err, row) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+      resolve(row);
+    });
+  });
+}
+
+/**
+ * Получить всех пользователей с расширенной информацией
+ */
+function getAllUsersWithDetails() {
+  return new Promise((resolve, reject) => {
+    db.all(`
+      SELECT 
+        u.id,
+        u.username,
+        u.email,
+        u.full_name,
+        u.department,
+        u.phone,
+        u.role,
+        u.is_active,
+        u.must_change_password,
+        u.last_login,
+        u.created_at,
+        (SELECT COUNT(*) FROM user_equipment WHERE user_id = u.id AND returned_date IS NULL) as active_equipment_count,
+        (SELECT COUNT(*) FROM user_equipment WHERE user_id = u.id) as total_equipment_count
+      FROM users u
+      ORDER BY u.is_active DESC, u.full_name ASC
+    `, (err, rows) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+      resolve(rows);
+    });
+  });
+}
+
+/**
+ * Проверить, существует ли пользователь с таким логином или email
+ */
+function checkUserExists(username, email, excludeId = null) {
+  return new Promise((resolve, reject) => {
+    let sql = 'SELECT id, username, email FROM users WHERE (username = ? OR email = ?)';
+    const params = [username, email];
+    
+    if (excludeId) {
+      sql += ' AND id != ?';
+      params.push(excludeId);
+    }
+    
+    db.get(sql, params, (err, row) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+      resolve(row);
+    });
+  });
+}
+
+/**
+ * Удалить пользователя и вернуть всю его технику
+ * Используем транзакцию для атомарности
+ */
+function deleteUserWithEquipmentReturn(userId) {
+  return new Promise((resolve, reject) => {
+    db.serialize(() => {
+      db.run('BEGIN TRANSACTION');
+      
+      // 1. Находим всю активную технику пользователя
+      db.all(
+        `SELECT equipment_id FROM user_equipment 
+         WHERE user_id = ? AND returned_date IS NULL`,
+        [userId],
+        (err, rows) => {
+          if (err) {
+            db.run('ROLLBACK');
+            reject(err);
+            return;
+          }
+          
+          const equipmentIds = rows.map(r => r.equipment_id);
+          
+          // 2. Возвращаем технику (устанавливаем returned_date)
+          db.run(
+            `UPDATE user_equipment 
+             SET returned_date = CURRENT_TIMESTAMP, 
+                 condition_on_return = 'Возвращена при удалении пользователя',
+                 notes = COALESCE(notes, '') || ' | Автовозврат при удалении пользователя'
+             WHERE user_id = ? AND returned_date IS NULL`,
+            [userId],
+            function(err) {
+              if (err) {
+                db.run('ROLLBACK');
+                reject(err);
+                return;
+              }
+              
+              // 3. Обновляем статус техники на available
+              if (equipmentIds.length > 0) {
+                const placeholders = equipmentIds.map(() => '?').join(',');
+                db.run(
+                  `UPDATE equipment 
+                   SET status = 'available', updated_at = CURRENT_TIMESTAMP 
+                   WHERE id IN (${placeholders})`,
+                  equipmentIds,
+                  function(err) {
+                    if (err) {
+                      db.run('ROLLBACK');
+                      reject(err);
+                      return;
+                    }
+                    
+                    // 4. Удаляем пользователя
+                    db.run(
+                      'DELETE FROM users WHERE id = ?',
+                      [userId],
+                      function(err) {
+                        if (err) {
+                          db.run('ROLLBACK');
+                          reject(err);
+                          return;
+                        }
+                        
+                        db.run('COMMIT', (err) => {
+                          if (err) {
+                            reject(err);
+                            return;
+                          }
+                          
+                          resolve({
+                            deleted: this.changes,
+                            equipment_returned: equipmentIds.length
+                          });
+                        });
+                      }
+                    );
+                  }
+                );
+              } else {
+                // Нет активной техники — просто удаляем
+                db.run(
+                  'DELETE FROM users WHERE id = ?',
+                  [userId],
+                  function(err) {
+                    if (err) {
+                      db.run('ROLLBACK');
+                      reject(err);
+                      return;
+                    }
+                    
+                    db.run('COMMIT', (err) => {
+                      if (err) {
+                        reject(err);
+                        return;
+                      }
+                      
+                      resolve({
+                        deleted: this.changes,
+                        equipment_returned: 0
+                      });
+                    });
+                  }
+                );
+              }
+            }
+          );
+        }
+      );
+    });
+  });
+}
+
+/**
+ * Получить всех пользователей, у которых есть техника (для страницы "кто что держит")
+ */
+function getUsersWithActiveEquipment() {
+  return new Promise((resolve, reject) => {
+    db.all(`
+      SELECT 
+        u.id,
+        u.username,
+        u.full_name,
+        u.department,
+        u.role,
+        COUNT(ue.id) as equipment_count,
+        GROUP_CONCAT(
+          e.inventory_number || ' ' || e.name, 
+          ' | '
+        ) as equipment_list
+      FROM users u
+      JOIN user_equipment ue ON u.id = ue.user_id AND ue.returned_date IS NULL
+      JOIN equipment e ON ue.equipment_id = e.id
+      GROUP BY u.id
+      ORDER BY equipment_count DESC, u.full_name ASC
+    `, (err, rows) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+      resolve(rows);
+    });
+  });
+}
+
 // ===== ЭКСПОРТЫ =====
 
 module.exports = {
@@ -1125,5 +1376,12 @@ module.exports = {
   getUserActiveEquipment,
   getUserEquipmentHistory,
   updateUserProfile,
-  getUserStats
+  getUserStats,
+    // Управление пользователями
+  createUserWithPassword,
+  getUserWithDetails,
+  getAllUsersWithDetails,
+  checkUserExists,
+  deleteUserWithEquipmentReturn,
+  getUsersWithActiveEquipment
 };
