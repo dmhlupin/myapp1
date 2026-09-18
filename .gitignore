@@ -5,6 +5,8 @@ npm-debug.log
 # Database
 data/*.db
 data/*.db-journal
+data/*.db.backup
+data/sessions.db
 
 # Environment
 .env
