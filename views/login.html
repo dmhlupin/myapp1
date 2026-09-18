@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Вход в систему</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/auth.css">
+</head>
+<body class="auth-page">
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <div class="auth-icon">🔐</div>
+                <h1>Вход в систему</h1>
+                <p class="auth-subtitle">Система учёта техники</p>
+            </div>
+
+            <form id="loginForm" onsubmit="submitLogin(event)">
+                <div class="form-group">
+                    <label for="username">Логин</label>
+                    <div class="input-wrapper">
+                        <span class="input-icon">👤</span>
+                        <input 
+                            type="text" 
+                            id="username" 
+                            name="username" 
+                            required 
+                            autofocus
+                            autocomplete="username"
+                            placeholder="Введите логин"
+                        >
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Пароль</label>
+                    <div class="input-wrapper">
+                        <span class="input-icon">🔑</span>
+                        <input 
+                            type="password" 
+                            id="password" 
+                            name="password" 
+                            required
+                            autocomplete="current-password"
+                            placeholder="Введите пароль"
+                        >
+                        <button 
+                            type="button" 
+                            class="password-toggle" 
+                            onclick="togglePassword()"
+                            title="Показать/скрыть пароль"
+                        >👁️</button>
+                    </div>
+                </div>
+
+                <div class="error-message" id="errorMessage"></div>
+
+                <button type="submit" class="btn btn-primary btn-block" id="submitBtn">
+                    Войти
+                </button>
+            </form>
+
+            <div class="auth-footer">
+                <p>Нет учётной записи? Обратитесь к администратору.</p>
+            </div>
+        </div>
+
+        <div class="auth-info">
+            <div class="info-item">
+                <span class="info-icon">📦</span>
+                <span>Учёт техники</span>
+            </div>
+            <div class="info-item">
+                <span class="info-icon">👥</span>
+                <span>Управление пользователями</span>
+            </div>
+            <div class="info-item">
+                <span class="info-icon">📊</span>
+                <span>Отчёты и статистика</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="/js/main.js"></script>
+    <script src="/js/login.js"></script>
+</body>
+</html>

@@ -1,8 +1,12 @@
+// server.js
 const express = require('express');
 const session = require('express-session');
 const SQLiteStore = require('connect-sqlite3')(session);
 const path = require('path');
+
 const { initDatabase, closeDatabase } = require('./database/db');
+
+// Роуты
 const renderIndex = require('./routes/index');
 const renderUsers = require('./routes/users');
 const { renderPdfList, renderPdfFile } = require('./routes/pdf');
@@ -25,14 +29,34 @@ const {
   renderEditUser
 } = require('./routes/admin');
 
+// Роуты авторизации
+const {
+  renderLogin,
+  renderChangePassword,
+  logoutRedirect,
+  loginAPI,
+  logoutAPI,
+  changePasswordAPI,
+  getCurrentUserAPI
+} = require('./routes/auth');
+
+// Middleware
+const {
+  requireAuth,
+  requireAdmin,
+  requireGuest,
+  loadUser,
+  checkPasswordChange
+} = require('./middleware/auth');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware для парсинга JSON
+// ===== БАЗОВЫЕ MIDDLEWARE =====
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Настройка сессий
+// ===== НАСТРОЙКА СЕССИЙ =====
 app.use(session({
   store: new SQLiteStore({
     db: 'sessions.db',
@@ -50,12 +74,18 @@ app.use(session({
   name: 'equipment.sid'
 }));
 
-// Раздача статических файлов
+// ===== СТАТИЧЕСКИЕ ФАЙЛЫ =====
 app.use('/css', express.static(path.join(__dirname, 'public', 'css')));
 app.use('/js', express.static(path.join(__dirname, 'public', 'js')));
 app.use('/images', express.static(path.join(__dirname, 'public', 'images')));
 
-// Инициализация БД
+// ===== ЗАГРУЗКА ПОЛЬЗОВАТЕЛЯ В RES.LOCALS =====
+app.use(loadUser);
+
+// ===== ПРОВЕРКА НЕОБХОДИМОСТИ СМЕНЫ ПАРОЛЯ =====
+app.use(checkPasswordChange);
+
+// ===== ИНИЦИАЛИЗАЦИЯ БД =====
 initDatabase()
   .then(() => {
     console.log('✅ База данных инициализирована');
@@ -64,45 +94,76 @@ initDatabase()
     console.error('❌ Ошибка инициализации БД:', err);
   });
 
-// ===== ОСНОВНЫЕ МАРШРУТЫ =====
-app.get('/', renderIndex);
-app.get('/users', renderUsers);
-app.get('/pdf', renderPdfList);
-app.get('/pdf/:filename', renderPdfFile);
-app.get('/equipment', renderEquipmentDashboard);
+// ============================================
+// РОУТЫ АВТОРИЗАЦИИ (публичные)
+// ============================================
+app.get('/login', requireGuest, renderLogin);
+app.get('/logout', logoutRedirect);
+app.get('/change-password', requireAuth, renderChangePassword);
 
-// ===== АДМИН-ПАНЕЛЬ (СТРАНИЦЫ) =====
-app.get('/admin', renderAdmin);
-app.get('/admin/add', renderAddEquipment);
-app.get('/admin/edit/:id', renderEditEquipment);
-app.get('/admin/user/add', renderAddUser);
-app.get('/admin/user/edit/:id', renderEditUser);
+// API авторизации
+app.post('/api/auth/login', requireGuest, loginAPI);
+app.post('/api/auth/logout', logoutAPI);
+app.post('/api/auth/change-password', requireAuth, changePasswordAPI);
+app.get('/api/auth/me', requireAuth, getCurrentUserAPI);
 
-// ===== API ДЛЯ ТЕХНИКИ =====
-app.get('/api/admin/equipment', getEquipmentAPI);
-app.get('/api/admin/equipment/:id', getEquipmentByIdAPI);
-app.post('/api/admin/equipment', addEquipmentAPI);
-app.put('/api/admin/equipment/:id', updateEquipmentAPI);
-app.delete('/api/admin/equipment/:id', deleteEquipmentAPI);
+// ============================================
+// ОСНОВНЫЕ РОУТЫ (защищённые)
+// ============================================
+app.get('/', requireAuth, renderIndex);
+app.get('/users', requireAuth, renderUsers);
+app.get('/pdf', requireAuth, renderPdfList);
+app.get('/pdf/:filename', requireAuth, renderPdfFile);
+app.get('/equipment', requireAuth, renderEquipmentDashboard);
 
-// ===== API ДЛЯ ПОЛЬЗОВАТЕЛЕЙ =====
-app.get('/api/admin/users', getUsersAPI);
-app.get('/api/admin/users/:id', getUserByIdAPI);
-app.post('/api/admin/users', addUserAPI);
-app.put('/api/admin/users/:id', updateUserAPI);
-app.delete('/api/admin/users/:id', deleteUserAPI);
+// ============================================
+// АДМИН-ПАНЕЛЬ (пока только requireAuth, requireAdmin добавим на Этапе 4)
+// ============================================
+app.get('/admin', requireAuth, renderAdmin);
+app.get('/admin/add', requireAuth, renderAddEquipment);
+app.get('/admin/edit/:id', requireAuth, renderEditEquipment);
+app.get('/admin/user/add', requireAuth, renderAddUser);
+app.get('/admin/user/edit/:id', requireAuth, renderEditUser);
 
-// ===== ЗАПУСК СЕРВЕРА =====
+// ============================================
+// API ДЛЯ ТЕХНИКИ (пока только requireAuth)
+// ============================================
+app.get('/api/admin/equipment', requireAuth, getEquipmentAPI);
+app.get('/api/admin/equipment/:id', requireAuth, getEquipmentByIdAPI);
+app.post('/api/admin/equipment', requireAuth, addEquipmentAPI);
+app.put('/api/admin/equipment/:id', requireAuth, updateEquipmentAPI);
+app.delete('/api/admin/equipment/:id', requireAuth, deleteEquipmentAPI);
+
+// ============================================
+// API ДЛЯ ПОЛЬЗОВАТЕЛЕЙ (пока только requireAuth)
+// ============================================
+app.get('/api/admin/users', requireAuth, getUsersAPI);
+app.get('/api/admin/users/:id', requireAuth, getUserByIdAPI);
+app.post('/api/admin/users', requireAuth, addUserAPI);
+app.put('/api/admin/users/:id', requireAuth, updateUserAPI);
+app.delete('/api/admin/users/:id', requireAuth, deleteUserAPI);
+
+// ============================================
+// ЗАПУСК СЕРВЕРА
+// ============================================
 const server = app.listen(PORT, () => {
-  console.log(`🚀 Сервер запущен на http://localhost:${PORT}`);
-  console.log(`📖 Главная страница: http://localhost:${PORT}/`);
-  console.log(`👥 Учет пользователей: http://localhost:${PORT}/users`);
-  console.log(`📑 PDF инструкции: http://localhost:${PORT}/pdf`);
-  console.log(`🔧 Учет техники: http://localhost:${PORT}/equipment`);
-  console.log(`⚙️  Админ-панель: http://localhost:${PORT}/admin`);
+  console.log('');
+  console.log('🚀 ============================================');
+  console.log(`🚀  Сервер запущен: http://localhost:${PORT}`);
+  console.log('🚀 ============================================');
+  console.log(`📖  Главная:            http://localhost:${PORT}/`);
+  console.log(`🔐  Вход:               http://localhost:${PORT}/login`);
+  console.log(`👥  Пользователи:       http://localhost:${PORT}/users`);
+  console.log(`🔧  Техника:            http://localhost:${PORT}/equipment`);
+  console.log(`📑  PDF инструкции:     http://localhost:${PORT}/pdf`);
+  console.log(`⚙️   Админ-панель:       http://localhost:${PORT}/admin`);
+  console.log('🚀 ============================================');
+  console.log('');
 });
 
-// Graceful shutdown
+// ============================================
+// GRACEFUL SHUTDOWN
+// ============================================
 process.on('SIGINT', async () => {
   console.log('\n👋 Остановка сервера...');
   await closeDatabase();
