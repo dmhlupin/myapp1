@@ -15,10 +15,11 @@
                 <h1>👤 Личный кабинет</h1>
                 <div class="subtitle">Добро пожаловать, <strong>{{user.full_name}}</strong></div>
             </div>
-            <div class="header-actions">
-                <a href="/change-password" class="btn btn-back btn-sm">🔑 Сменить пароль</a>
-                <a href="/logout" class="btn btn-danger btn-sm">🚪 Выйти</a>
-            </div>
+        <div class="header-actions" id="headerActions" data-is-admin="{{isAdmin}}">
+            <span id="adminLinks"></span>
+            <a href="/change-password" class="btn btn-primary btn-sm">🔑 Сменить пароль</a>
+            <a href="/logout" class="btn btn-danger btn-sm">🚪 Выйти</a>
+        </div>
         </div>
 
         <!-- Статистика -->
@@ -164,7 +165,7 @@
         <!-- Footer -->
         <div class="help-footer">
             <div class="footer-info">
-                ⚡ Node.js + Express + SQLite &nbsp;·&nbsp; Версия 1.4.0
+                ⚡ Node.js + Express + SQLite &nbsp;·&nbsp; Версия 1.5.0
             </div>
             <div class="footer-links">
                 <a href="/pdf" class="footer-link">
@@ -183,6 +184,7 @@
 
     <div class="toast-container" id="toastContainer"></div>
 
+    
     <script src="/js/main.js"></script>
     <script src="/js/help.js"></script>
     <script src="/js/footer.js"></script>

@@ -1,5 +1,23 @@
 // public/js/profile.js — Логика личного кабинета
 
+// Показать админские ссылки, если пользователь — админ
+document.addEventListener('DOMContentLoaded', function() {
+    const headerActions = document.getElementById('headerActions');
+    const adminLinks = document.getElementById('adminLinks');
+    
+    if (!headerActions || !adminLinks) return;
+    
+    // Читаем роль из data-атрибута
+    const isAdmin = headerActions.getAttribute('data-is-admin') === 'true';
+    
+    if (isAdmin) {
+        adminLinks.innerHTML = `
+            <a href="/" class="btn btn-back btn-sm" title="Дашборд">📊 Дашборд</a>
+            <a href="/admin" class="btn btn-back btn-sm" title="Админ-панель">⚙️ Админ-панель</a>
+        `;
+    }
+});
+
 function toggleEditProfile() {
     const viewEl = document.getElementById('profileView');
     const formEl = document.getElementById('profileEditForm');

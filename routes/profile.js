@@ -39,11 +39,15 @@ async function renderProfile(req, res) {
     html = html.replace(/\{\{user\.role\}\}/g, user.role);
     html = html.replace(/\{\{user\.last_login\}\}/g, user.last_login || 'никогда');
     html = html.replace(/\{\{user\.created_at\}\}/g, user.created_at || '');
+
     
     // Статистика
     html = html.replace(/\{\{stats\.active_equipment\}\}/g, stats.active_equipment || 0);
     html = html.replace(/\{\{stats\.total_equipment\}\}/g, stats.total_equipment || 0);
     html = html.replace(/\{\{stats\.returned_equipment\}\}/g, stats.returned_equipment || 0);
+
+    // Роль пользователя для JS
+    html = html.replace(/\{\{isAdmin\}\}/g, user.role === 'admin' ? 'true' : 'false');
     
     // Активная техника
     let activeRows = '';

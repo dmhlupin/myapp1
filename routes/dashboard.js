@@ -144,15 +144,24 @@ async function renderDashboard(req, res) {
     }
     
     // 3. Просроченная гарантия
-    if (attention.warrantyExpiredCount > 0) {
-      attentionHtml += `
+    if (attention.warrantyExpired.length > 0) {
+    attentionHtml += `
         <div class="attention-block attention-info">
-          <div class="attention-header">
+        <div class="attention-header">
             <span class="attention-icon">📋</span>
-            <span class="attention-title">Просрочена гарантия: ${attention.warrantyExpiredCount}</span>
-          </div>
+            <span class="attention-title">Просрочена гарантия (${attention.warrantyExpired.length})</span>
         </div>
-      `;
+        <ul class="attention-list">
+            ${attention.warrantyExpired.map(eq => `
+            <li>
+                <span class="inv-num">${eq.inventory_number}</span>
+                <span class="inv-name">${eq.name}</span>
+                <span class="inv-extra">${eq.days_expired} дн. назад</span>
+            </li>
+            `).join('')}
+        </ul>
+        </div>
+    `;
     }
     
     // 4. Давно без владельца

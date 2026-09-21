@@ -1718,16 +1718,20 @@ function getEquipmentNeedingAttention() {
       });
     });
     
-    // Просроченная гарантия (для информации)
+    // Просроченная гарантия — список
     const warrantyExpiredPromise = new Promise((res, rej) => {
-      db.get(`
-        SELECT COUNT(*) as count
+      db.all(`
+        SELECT 
+          id, inventory_number, name, model, warranty_until,
+          CAST(julianday('now') - julianday(warranty_until) AS INTEGER) as days_expired
         FROM equipment
         WHERE warranty_until IS NOT NULL
           AND warranty_until < date('now')
-      `, (err, row) => {
+        ORDER BY warranty_until ASC
+        LIMIT 10
+      `, (err, rows) => {
         if (err) rej(err);
-        else res(row ? row.count : 0);
+        else res(rows || []);
       });
     });
     
@@ -1752,11 +1756,11 @@ function getEquipmentNeedingAttention() {
       warrantySoonPromise,
       warrantyExpiredPromise,
       longAvailablePromise
-    ]).then(([maintenance, warrantySoon, warrantyExpiredCount, longAvailable]) => {
+    ]).then(([maintenance, warrantySoon, warrantyExpired, longAvailable]) => {
       resolve({
         maintenance,
         warrantySoon,
-        warrantyExpiredCount,
+        warrantyExpired,
         longAvailable
       });
     }).catch(reject);
