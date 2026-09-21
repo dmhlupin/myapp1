@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Дашборд</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div>
+                <h1>📊 Дашборд</h1>
+                <div class="subtitle">Обзор системы учёта техники</div>
+            </div>
+            <div class="header-actions">
+                <a href="/equipment" class="btn btn-back btn-sm">📦 Техника</a>
+                <a href="/users" class="btn btn-back btn-sm">👥 Пользователи</a>
+                <a href="/admin" class="btn btn-primary btn-sm">⚙️ Админ-панель</a>
+                <a href="/profile" class="btn btn-back btn-sm">👤 Профиль</a>
+                <a href="/logout" class="btn btn-danger btn-sm">🚪 Выйти</a>
+            </div>
+        </div>
+
+        <!-- Основная статистика -->
+        <div class="stats-grid">
+            <a href="/equipment" class="stat-card stat-blue">
+                <span class="stat-icon">📦</span>
+                <div class="stat-body">
+                    <div class="stat-number">{{stats.total_equipment}}</div>
+                    <div class="stat-label">Всего техники</div>
+                </div>
+            </a>
+            <a href="/equipment" class="stat-card stat-green">
+                <span class="stat-icon">✅</span>
+                <div class="stat-body">
+                    <div class="stat-number">{{stats.available_equipment}}</div>
+                    <div class="stat-label">Доступно</div>
+                </div>
+            </a>
+            <a href="/equipment" class="stat-card stat-orange">
+                <span class="stat-icon">👤</span>
+                <div class="stat-body">
+                    <div class="stat-number">{{stats.assigned_equipment}}</div>
+                    <div class="stat-label">Назначено</div>
+                </div>
+            </a>
+            <a href="/equipment" class="stat-card stat-red">
+                <span class="stat-icon">🔧</span>
+                <div class="stat-body">
+                    <div class="stat-number">{{stats.maintenance_equipment}}</div>
+                    <div class="stat-label">В ремонте</div>
+                </div>
+            </a>
+            <a href="/users" class="stat-card stat-purple">
+                <span class="stat-icon">👥</span>
+                <div class="stat-body">
+                    <div class="stat-number">{{stats.active_users}}</div>
+                    <div class="stat-label">Активных пользователей</div>
+                </div>
+            </a>
+            <a href="/admin/logs" class="stat-card stat-teal">
+                <span class="stat-icon">📈</span>
+                <div class="stat-body">
+                    <div class="stat-number">{{stats.actions_today}}</div>
+                    <div class="stat-label">Действий за 24 часа</div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Быстрые действия -->
+        <div class="quick-actions">
+            <h2>⚡ Быстрые действия</h2>
+            <div class="quick-actions-grid">
+                <a href="/admin/add" class="quick-action">
+                    <span class="quick-icon">➕</span>
+                    <span>Добавить технику</span>
+                </a>
+                <a href="/admin/user/add" class="quick-action">
+                    <span class="quick-icon">👤</span>
+                    <span>Добавить пользователя</span>
+                </a>
+                <a href="/admin" class="quick-action">
+                    <span class="quick-icon">⚙️</span>
+                    <span>Админ-панель</span>
+                </a>
+                <a href="/admin/logs" class="quick-action">
+                    <span class="quick-icon">📊</span>
+                    <span>Логи</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Основная сетка -->
+        <div class="dashboard-grid">
+            
+            <!-- График активности -->
+            <div class="dashboard-card chart-card">
+                <div class="card-header">
+                    <h2>📈 Активность за 14 дней</h2>
+                </div>
+                <div class="chart-container">
+                    {{activity_chart}}
+                </div>
+            </div>
+
+            <!-- Последние действия -->
+            <div class="dashboard-card">
+                <div class="card-header">
+                    <h2>🕐 Последние действия</h2>
+                    <a href="/admin/logs" class="card-link">Все логи →</a>
+                </div>
+                <div class="activity-list">
+                    {{recent_activity}}
+                </div>
+            </div>
+
+            <!-- Требует внимания -->
+            <div class="dashboard-card">
+                <div class="card-header">
+                    <h2>⚠️ Требует внимания</h2>
+                </div>
+                <div class="attention-container">
+                    {{attention_blocks}}
+                </div>
+            </div>
+
+            <!-- Топ активных пользователей -->
+            <div class="dashboard-card">
+                <div class="card-header">
+                    <h2>🏆 Самые активные (30 дней)</h2>
+                </div>
+                <div class="top-users-list">
+                    {{top_users}}
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="/js/main.js"></script>
+    <script src="/js/dashboard.js"></script>
+</body>
+</html>

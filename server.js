@@ -7,8 +7,9 @@ const path = require('path');
 const { initDatabase, closeDatabase } = require('./database/db');
 
 // Роуты
-const renderIndex = require('./routes/index');
+
 const renderUsers = require('./routes/users');
+const renderDashboard = require('./routes/dashboard');
 const { renderPdfList, renderPdfFile } = require('./routes/pdf');
 const renderEquipmentDashboard = require('./routes/equipment');
 const {
@@ -131,7 +132,7 @@ app.post('/api/profile/update', requireAuth, updateProfileAPI);
 // ============================================
 // ОСНОВНЫЕ РОУТЫ (только авторизованные)
 // ============================================
-app.get('/', requireAuth, renderIndex);
+app.get('/', requireAdmin, renderDashboard);  // ← вместо requireAuth
 app.get('/users', requireAuth, renderUsers);
 app.get('/pdf', requireAuth, renderPdfList);
 app.get('/pdf/:filename', requireAuth, renderPdfFile);

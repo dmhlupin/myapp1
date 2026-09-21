@@ -1621,6 +1621,203 @@ function cleanOldLogs(days = 90) {
   });
 }
 
+// ===== ФУНКЦИИ ДЛЯ ДАШБОРДА =====
+
+/**
+ * Получить расширенную статистику для дашборда
+ */
+function getDashboardStats() {
+  return new Promise((resolve, reject) => {
+    db.get(`
+      SELECT 
+        (SELECT COUNT(*) FROM equipment) as total_equipment,
+        (SELECT COUNT(*) FROM equipment WHERE status = 'available') as available_equipment,
+        (SELECT COUNT(*) FROM equipment WHERE status = 'assigned') as assigned_equipment,
+        (SELECT COUNT(*) FROM equipment WHERE status = 'maintenance') as maintenance_equipment,
+        (SELECT COUNT(*) FROM equipment WHERE status = 'retired') as retired_equipment,
+        (SELECT COUNT(*) FROM users WHERE is_active = 1) as active_users,
+        (SELECT COUNT(*) FROM users WHERE role = 'admin' AND is_active = 1) as admins_count,
+        (SELECT COUNT(*) FROM users WHERE is_active = 0) as blocked_users,
+        (SELECT COUNT(*) FROM user_equipment WHERE returned_date IS NULL) as active_assignments,
+        (SELECT COUNT(*) FROM activity_log WHERE created_at >= datetime('now', '-1 day')) as actions_today
+    `, (err, row) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+      resolve(row);
+    });
+  });
+}
+
+/**
+ * Получить последние действия пользователей
+ */
+function getRecentActivity(limit = 10) {
+  return new Promise((resolve, reject) => {
+    db.all(`
+      SELECT 
+        al.id,
+        al.user_id,
+        al.username,
+        al.action,
+        al.entity_type,
+        al.entity_id,
+        al.details,
+        al.created_at,
+        u.full_name as user_full_name,
+        u.department as user_department
+      FROM activity_log al
+      LEFT JOIN users u ON al.user_id = u.id
+      ORDER BY al.id DESC
+      LIMIT ?
+    `, [limit], (err, rows) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+      resolve(rows || []);
+    });
+  });
+}
+
+/**
+ * Получить технику, требующую внимания
+ */
+function getEquipmentNeedingAttention() {
+  return new Promise((resolve, reject) => {
+    // Техника в ремонте
+    const maintenancePromise = new Promise((res, rej) => {
+      db.all(`
+        SELECT id, inventory_number, name, model, status
+        FROM equipment
+        WHERE status = 'maintenance'
+        ORDER BY updated_at DESC
+        LIMIT 5
+      `, (err, rows) => {
+        if (err) rej(err);
+        else res(rows || []);
+      });
+    });
+    
+    // Гарантия истекает в ближайшие 30 дней
+    const warrantySoonPromise = new Promise((res, rej) => {
+      db.all(`
+        SELECT 
+          id, inventory_number, name, model, warranty_until,
+          CAST(julianday(warranty_until) - julianday('now') AS INTEGER) as days_left
+        FROM equipment
+        WHERE warranty_until IS NOT NULL
+          AND warranty_until >= date('now')
+          AND warranty_until <= date('now', '+30 days')
+        ORDER BY warranty_until ASC
+        LIMIT 10
+      `, (err, rows) => {
+        if (err) rej(err);
+        else res(rows || []);
+      });
+    });
+    
+    // Просроченная гарантия (для информации)
+    const warrantyExpiredPromise = new Promise((res, rej) => {
+      db.get(`
+        SELECT COUNT(*) as count
+        FROM equipment
+        WHERE warranty_until IS NOT NULL
+          AND warranty_until < date('now')
+      `, (err, row) => {
+        if (err) rej(err);
+        else res(row ? row.count : 0);
+      });
+    });
+    
+    // Техника долго без владельца (available > 6 месяцев от покупки)
+    const longAvailablePromise = new Promise((res, rej) => {
+      db.all(`
+        SELECT id, inventory_number, name, model, purchase_date
+        FROM equipment
+        WHERE status = 'available'
+          AND purchase_date IS NOT NULL
+          AND purchase_date <= date('now', '-180 days')
+        ORDER BY purchase_date ASC
+        LIMIT 5
+      `, (err, rows) => {
+        if (err) rej(err);
+        else res(rows || []);
+      });
+    });
+    
+    Promise.all([
+      maintenancePromise,
+      warrantySoonPromise,
+      warrantyExpiredPromise,
+      longAvailablePromise
+    ]).then(([maintenance, warrantySoon, warrantyExpiredCount, longAvailable]) => {
+      resolve({
+        maintenance,
+        warrantySoon,
+        warrantyExpiredCount,
+        longAvailable
+      });
+    }).catch(reject);
+  });
+}
+
+/**
+ * Получить данные для графика активности (по дням за N дней)
+ */
+function getDashboardActivityByDay(days = 14) {
+  return new Promise((resolve, reject) => {
+    db.all(`
+      WITH RECURSIVE dates(d) AS (
+        SELECT date('now', '-' || (? - 1) || ' days')
+        UNION ALL
+        SELECT date(d, '+1 day') FROM dates WHERE d < date('now')
+      )
+      SELECT 
+        dates.d as date,
+        COALESCE(COUNT(al.id), 0) as count
+      FROM dates
+      LEFT JOIN activity_log al ON date(al.created_at) = dates.d
+      GROUP BY dates.d
+      ORDER BY dates.d ASC
+    `, [days], (err, rows) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+      resolve(rows || []);
+    });
+  });
+}
+
+/**
+ * Получить топ активных пользователей за 30 дней
+ */
+function getTopUsers(limit = 5) {
+  return new Promise((resolve, reject) => {
+    db.all(`
+      SELECT 
+        u.id,
+        u.username,
+        u.full_name,
+        u.department,
+        COUNT(al.id) as actions_count
+      FROM users u
+      JOIN activity_log al ON u.id = al.user_id
+      WHERE al.created_at >= datetime('now', '-30 days')
+      GROUP BY u.id
+      ORDER BY actions_count DESC
+      LIMIT ?
+    `, [limit], (err, rows) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+      resolve(rows || []);
+    });
+  });
+}
 // ===== ЭКСПОРТЫ =====
 
 module.exports = {
@@ -1678,5 +1875,12 @@ module.exports = {
   getUniqueActions,
   getActivityStats,
   getActivityByDay,
-  cleanOldLogs
+  cleanOldLogs,
+    // Dashboard
+  getDashboardStats,
+  getRecentActivity,
+  getEquipmentNeedingAttention,
+  getDashboardActivityByDay,
+  getTopUsers
+
 };

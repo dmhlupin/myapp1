@@ -138,13 +138,14 @@ async function loginAPI(req, res) {
     });
     
     // Определяем куда редиректить
-    let redirectUrl = '/profile';
-
+    let redirectUrl;
     if (user.must_change_password === 1) {
-      redirectUrl = '/change-password';
+        redirectUrl = '/change-password';
+    } else if (user.role === 'admin') {
+        redirectUrl = '/';        // ← админ → дашборд
+    } else {
+        redirectUrl = '/profile'; // ← пользователь → профиль
     }
-    // Все (и админ, и пользователь) после входа идут в профиль
-    // (админ может потом перейти в админку из шапки)
     
     res.json({
       success: true,
