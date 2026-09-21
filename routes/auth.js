@@ -37,20 +37,25 @@ function renderLogin(req, res) {
  */
 function renderChangePassword(req, res) {
   const htmlPath = path.join(__dirname, '..', 'views', 'change-password.html');
-  fs.readFile(htmlPath, 'utf8', (err, html) => {
-    if (err) {
-      console.error('Ошибка загрузки change-password.html:', err);
-      res.status(500).send('Ошибка загрузки страницы');
-      return;
-    }
-    
-    // Передаём флаг mustChangePassword
-    const mustChange = req.session.mustChangePassword ? 'true' : 'false';
-    html = html.replace('{{mustChangePassword}}', mustChange);
-    html = html.replace('{{username}}', req.session.username || '');
-    
-    res.send(html);
-  });
+  let html = fs.readFileSync(htmlPath, 'utf8');
+  
+  // Флаг обязательной смены
+  const mustChange = req.session.mustChangePassword ? 'true' : 'false';
+  html = html.replace(/\{\{mustChangePassword\}\}/g, mustChange);
+  
+  // Данные пользователя
+  const username = req.session.username || '';
+  const fullName = req.session.fullName || username;
+  const role = req.session.role || 'user';
+  const roleText = role === 'admin' ? 'Администратор' : 'Пользователь';
+  const roleIcon = role === 'admin' ? '👑' : '👤';
+  
+  html = html.replace(/\{\{username\}\}/g, username);
+  html = html.replace(/\{\{fullName\}\}/g, fullName);
+  html = html.replace(/\{\{roleText\}\}/g, roleText);
+  html = html.replace(/\{\{roleIcon\}\}/g, roleIcon);
+  
+  res.send(html);
 }
 
 // ===== API =====
@@ -124,6 +129,15 @@ async function loginAPI(req, res) {
     req.session.role = user.role;
     req.session.fullName = user.full_name;
     req.session.mustChangePassword = user.must_change_password === 1;
+
+    // 🆕 Сохраняем версию БД — для проверки валидности сессии
+    try {
+      const { getDbVersion } = require('../database/db');
+      const dbVersion = await getDbVersion();
+      req.session.dbVersion = dbVersion;
+    } catch (err) {
+      console.warn('⚠️ Не удалось получить версию БД:', err.message);
+    }
     
     // Обновляем время последнего входа
     await updateLastLogin(user.id);

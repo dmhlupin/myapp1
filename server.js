@@ -63,7 +63,8 @@ const {
   requireAdmin,
   requireGuest,
   loadUser,
-  checkPasswordChange
+  checkPasswordChange,
+  syncSession  // ← НОВОЕ
 } = require('./middleware/auth');
 
 const app = express();
@@ -98,6 +99,11 @@ app.use('/images', express.static(path.join(__dirname, 'public', 'images')));
 
 // ===== ЗАГРУЗКА ПОЛЬЗОВАТЕЛЯ В RES.LOCALS =====
 app.use(loadUser);
+
+// ===== СИНХРОНИЗАЦИЯ СЕССИИ С БД =====
+// На каждый запрос проверяем, что пользователь ещё существует,
+// активен и не был изменён
+app.use(syncSession);
 
 // ===== ПРОВЕРКА НЕОБХОДИМОСТИ СМЕНЫ ПАРОЛЯ =====
 app.use(checkPasswordChange);

@@ -146,6 +146,28 @@ async function migrate() {
     } else {
       console.log('⏭️  Таблица activity_log уже существует');
     }
+
+    // 4.5. Создаём таблицу app_meta для служебных данных
+    const metaExists = await tableExists('app_meta');
+    if (!metaExists) {
+      await run(`
+        CREATE TABLE app_meta (
+          key TEXT PRIMARY KEY,
+          value TEXT,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      console.log('✅ Таблица app_meta создана');
+      
+      // Устанавливаем начальную версию
+      await run(`
+        INSERT INTO app_meta (key, value) 
+        VALUES ('db_seed_version', ?)
+      `, [Date.now().toString()]);
+      console.log('✅ Установлена начальная версия БД');
+    } else {
+      console.log('⏭️  Таблица app_meta уже существует');
+    }
     
     // 5. Создаём индексы для логирования
     await run(`CREATE INDEX IF NOT EXISTS idx_activity_log_user ON activity_log(user_id)`);

@@ -198,6 +198,7 @@ async function clearData() {
   // Отключаем foreign keys на время очистки
   await run('PRAGMA foreign_keys = OFF');
   
+  // Удаляем данные
   await run('DELETE FROM activity_log');
   await run('DELETE FROM user_equipment');
   await run('DELETE FROM equipment');
@@ -208,7 +209,53 @@ async function clearData() {
   
   await run('PRAGMA foreign_keys = ON');
   
+  // 🆕 Обновляем версию БД — все старые сессии станут невалидными
+  const newVersion = Date.now().toString();
+  await run(`
+    INSERT INTO app_meta (key, value, updated_at) 
+    VALUES ('db_seed_version', ?, CURRENT_TIMESTAMP)
+    ON CONFLICT(key) DO UPDATE SET 
+      value = excluded.value,
+      updated_at = CURRENT_TIMESTAMP
+  `, [newVersion]);
+  log(`   ✅ Версия БД обновлена: ${newVersion}`, true);
+  
+  // 🆕 Удаляем файл сессий целиком
+  await clearSessionsFile();
+  
   log('   ✅ Данные очищены', true);
+}
+
+/**
+ * Удалить файл сессий
+ */
+async function clearSessionsFile() {
+  const sessionsPath = path.join(dataDir, 'sessions.db');
+  const sessionsJournalPath = sessionsPath + '-journal';
+  const sessionsWalPath = sessionsPath + '-wal';
+  const sessionsShmPath = sessionsPath + '-shm';
+  
+  const filesToDelete = [sessionsPath, sessionsJournalPath, sessionsWalPath, sessionsShmPath];
+  
+  let deletedCount = 0;
+  
+  for (const filePath of filesToDelete) {
+    if (fs.existsSync(filePath)) {
+      try {
+        fs.unlinkSync(filePath);
+        deletedCount++;
+      } catch (err) {
+        log(`   ⚠️  Не удалось удалить ${path.basename(filePath)}: ${err.message}`, true);
+        log(`      Возможно, сервер ещё запущен. Остановите его и повторите.`, true);
+      }
+    }
+  }
+  
+  if (deletedCount > 0) {
+    log(`   ✅ Файлы сессий удалены (${deletedCount})`, true);
+  } else {
+    log(`   ℹ️  Файлов сессий не найдено`, true);
+  }
 }
 
 async function createUsers() {

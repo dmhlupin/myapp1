@@ -1,5 +1,7 @@
 // middleware/auth.js
 
+const { validateSessionUser, getDbVersion } = require('../database/db');
+
 /**
  * Middleware: требуется авторизация
  * Если пользователь не авторизован — редирект на /login
@@ -168,10 +170,99 @@ function checkPasswordChange(req, res, next) {
   next();
 }
 
+
+
+/**
+ * Middleware: синхронизация сессии с БД
+ * 
+ * Проверяет:
+ * - существует ли ещё пользователь
+ * - активен ли он
+ * - не изменилась ли его роль
+ * - не изменился ли логин
+ * - не пересоздана ли БД (версия)
+ */
+async function syncSession(req, res, next) {
+  // Пропускаем неавторизованные запросы
+  if (!req.session || !req.session.userId) {
+    return next();
+  }
+  
+  try {
+    // 🆕 Проверяем версию БД
+    const currentDbVersion = await getDbVersion();
+    
+    if (req.session.dbVersion && currentDbVersion && req.session.dbVersion !== currentDbVersion) {
+      console.log(`🔒 Сессия устарела: версия БД изменилась`);
+      return destroySession(req, res, 
+        'Данные приложения были обновлены. Войдите заново.', 
+        'DB_VERSION_CHANGED'
+      );
+    }
+    
+    // Загружаем пользователя
+    const user = await validateSessionUser(req.session.userId);
+    
+    // Пользователь удалён
+    if (!user) {
+      return destroySession(req, res, 'Сессия устарела. Войдите заново.', 'USER_NOT_FOUND');
+    }
+    
+    // Пользователь заблокирован
+    if (!user.is_active) {
+      return destroySession(req, res, 'Ваша учётная запись заблокирована.', 'USER_BLOCKED');
+    }
+    
+    // Роль изменилась
+    if (user.role !== req.session.role) {
+      return destroySession(req, res, 'Ваша роль изменилась. Войдите заново.', 'ROLE_CHANGED');
+    }
+    
+    // Логин изменился
+    if (user.username !== req.session.username) {
+      return destroySession(req, res, 'Данные учётной записи изменились. Войдите заново.', 'USERNAME_CHANGED');
+    }
+    
+    // Обновляем поля сессии
+    req.session.fullName = user.full_name;
+    req.session.mustChangePassword = user.must_change_password === 1;
+    req.session.dbVersion = currentDbVersion;  // ← сохраняем версию
+    
+    next();
+  } catch (error) {
+    console.error('❌ Ошибка проверки сессии:', error);
+    next();
+  }
+}
+/**
+ * Уничтожить сессию и вернуть ответ
+ */
+function destroySession(req, res, message, code) {
+  req.session.destroy((err) => {
+    if (err) {
+      console.error('Ошибка уничтожения сессии:', err);
+    }
+    res.clearCookie('equipment.sid');
+    
+    // Для API — JSON
+    if (req.path.startsWith('/api/') || req.xhr || (req.headers.accept || '').includes('application/json')) {
+      return res.status(401).json({ 
+        error: message,
+        code: code,
+        redirect: '/login'
+      });
+    }
+    
+    // Для страниц — редирект
+    res.redirect('/login?reason=' + code);
+  });
+}
+
 module.exports = {
   requireAuth,
   requireAdmin,
   requireGuest,
   loadUser,
-  checkPasswordChange
+  checkPasswordChange,
+  syncSession // Новое
 };
