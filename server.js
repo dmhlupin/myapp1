@@ -117,6 +117,17 @@ initDatabase()
 app.get('/login', requireGuest, renderLogin);
 app.get('/logout', logoutRedirect);
 app.get('/change-password', requireAuth, renderChangePassword);
+// ============================================
+// API: Информация о версии (публичный)
+// ============================================
+app.get('/api/version', (req, res) => {
+  const pkg = require('./package.json');
+  res.json({
+    version: pkg.version,
+    name: pkg.name,
+    description: pkg.description
+  });
+});
 
 app.post('/api/auth/login', requireGuest, loginAPI);
 app.post('/api/auth/logout', logoutAPI);
