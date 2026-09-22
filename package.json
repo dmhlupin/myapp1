@@ -1,7 +1,7 @@
 {
   "name": "node-web-server-v2",
-  "version": "1.7.1",
-  "description": "Система учёта техники с авторизацией и ролями",
+  "version": "1.8.0",
+  "description": "Система учёта техники с авторизацией, ролями и справочником",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
