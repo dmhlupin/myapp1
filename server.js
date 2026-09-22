@@ -4,7 +4,7 @@ const session = require('express-session');
 const SQLiteStore = require('connect-sqlite3')(session);
 const path = require('path');
 
-const { initDatabase, closeDatabase } = require('./database/db');
+const { db, closeDatabase } = require('./database/db');
 
 // Роуты
 
@@ -109,13 +109,17 @@ app.use(syncSession);
 app.use(checkPasswordChange);
 
 // ===== ИНИЦИАЛИЗАЦИЯ БД =====
-initDatabase()
-  .then(() => {
-    console.log('✅ База данных инициализирована');
-  })
-  .catch(err => {
-    console.error('❌ Ошибка инициализации БД:', err);
-  });
+// ===== БД уже инициализирована через npm run migrate =====
+// Проверка подключения
+
+db.get('SELECT 1 as ok', (err) => {
+  if (err) {
+    console.error('❌ Не удалось подключиться к БД:', err.message);
+    console.error('   Запустите: npm run migrate');
+    process.exit(1);
+  }
+  console.log('✅ База данных подключена');
+});
 
 // ============================================
 // РОУТЫ АВТОРИЗАЦИИ (публичные)
