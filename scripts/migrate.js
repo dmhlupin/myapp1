@@ -124,6 +124,69 @@ async function migrate() {
       }
     }
     
+        // 4.5. Создаём таблицу категорий техники
+    const categoriesExists = await tableExists('equipment_categories');
+    if (!categoriesExists) {
+      await run(`
+        CREATE TABLE equipment_categories (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL UNIQUE,
+          description TEXT,
+          icon TEXT,
+          sort_order INTEGER DEFAULT 0,
+          is_active INTEGER NOT NULL DEFAULT 1,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      console.log('✅ Таблица equipment_categories создана');
+    } else {
+      console.log('⏭️  Таблица equipment_categories уже существует');
+    }
+
+    // 4.6. Создаём таблицу типов техники
+    const typesExists = await tableExists('equipment_types');
+    if (!typesExists) {
+      await run(`
+        CREATE TABLE equipment_types (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          category_id INTEGER NOT NULL,
+          name TEXT NOT NULL,
+          description TEXT,
+          icon TEXT,
+          sort_order INTEGER DEFAULT 0,
+          is_active INTEGER NOT NULL DEFAULT 1,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (category_id) REFERENCES equipment_categories(id) ON DELETE RESTRICT,
+          UNIQUE(category_id, name)
+        )
+      `);
+      console.log('✅ Таблица equipment_types создана');
+    } else {
+      console.log('⏭️  Таблица equipment_types уже существует');
+    }
+
+    // 4.7. Добавляем поля category_id и type_id в equipment
+    const equipmentTableExists = await tableExists('equipment');
+    if (equipmentTableExists) {
+      const categoryFieldExists = await columnExists('equipment', 'category_id');
+      if (!categoryFieldExists) {
+        await run(`ALTER TABLE equipment ADD COLUMN category_id INTEGER REFERENCES equipment_categories(id) ON DELETE SET NULL`);
+        console.log('  ✅ Добавлено поле: equipment.category_id');
+      } else {
+        console.log('  ⏭️  Поле equipment.category_id уже есть');
+      }
+      
+      const typeFieldExists = await columnExists('equipment', 'type_id');
+      if (!typeFieldExists) {
+        await run(`ALTER TABLE equipment ADD COLUMN type_id INTEGER REFERENCES equipment_types(id) ON DELETE SET NULL`);
+        console.log('  ✅ Добавлено поле: equipment.type_id');
+      } else {
+        console.log('  ⏭️  Поле equipment.type_id уже есть');
+      }
+    }
+
     // 4. Создаём таблицу activity_log для логирования
     const logExists = await tableExists('activity_log');
     if (!logExists) {
@@ -169,6 +232,14 @@ async function migrate() {
       console.log('⏭️  Таблица app_meta уже существует');
     }
     
+    // Индексы для категорий и типов
+    await run('CREATE INDEX IF NOT EXISTS idx_equipment_category ON equipment(category_id)');
+    await run('CREATE INDEX IF NOT EXISTS idx_equipment_type ON equipment(type_id)');
+    await run('CREATE INDEX IF NOT EXISTS idx_types_category ON equipment_types(category_id)');
+    await run('CREATE INDEX IF NOT EXISTS idx_categories_sort ON equipment_categories(sort_order)');
+    await run('CREATE INDEX IF NOT EXISTS idx_types_sort ON equipment_types(sort_order)');
+    console.log('✅ Индексы для категорий и типов созданы');
+
     // 5. Создаём индексы для логирования
     await run(`CREATE INDEX IF NOT EXISTS idx_activity_log_user ON activity_log(user_id)`);
     await run(`CREATE INDEX IF NOT EXISTS idx_activity_log_action ON activity_log(action)`);
@@ -202,6 +273,12 @@ async function migrate() {
       console.log(`\n👤 Администратор уже существует: ${adminExists.username}`);
     }
     
+    // Заполняем справочник категорий и типов
+    await seedCategoriesAndTypes();
+
+    // Привязываем существующую технику
+    await mapExistingEquipment();
+    
     console.log('✅ Миграция завершена успешно!\n');
     
   } catch (error) {
@@ -209,6 +286,190 @@ async function migrate() {
     process.exit(1);
   } finally {
     db.close();
+  }
+}
+
+/**
+ * Начальные данные для категорий и типов техники
+ */
+async function seedCategoriesAndTypes() {
+  // Проверяем, есть ли уже данные
+  const existing = await get('SELECT COUNT(*) as count FROM equipment_categories');
+  
+  if (existing.count > 0) {
+    console.log('\n📊 Категории уже существуют, пропускаем заполнение');
+    return;
+  }
+  
+  console.log('\n📝 Создание категорий и типов техники...');
+  
+  const catalog = [
+    {
+      name: 'Компьютерная техника',
+      icon: '💻',
+      description: 'Ноутбуки, системные блоки, моноблоки',
+      types: [
+        { name: 'Ноутбук', icon: '💻' },
+        { name: 'Системный блок', icon: '🖥️' },
+        { name: 'Моноблок', icon: '🖥️' },
+        { name: 'Планшет', icon: '📱' },
+        { name: 'Рабочая станция', icon: '🖥️' }
+      ]
+    },
+    {
+      name: 'Периферия',
+      icon: '🖱️',
+      description: 'Мониторы, клавиатуры, мыши, гарнитуры',
+      types: [
+        { name: 'Монитор', icon: '🖥️' },
+        { name: 'Клавиатура', icon: '⌨️' },
+        { name: 'Мышь', icon: '🖱️' },
+        { name: 'Гарнитура', icon: '🎧' },
+        { name: 'Веб-камера', icon: '📷' },
+        { name: 'Микрофон', icon: '🎤' }
+      ]
+    },
+    {
+      name: 'Оргтехника',
+      icon: '🖨️',
+      description: 'Принтеры, МФУ, сканеры',
+      types: [
+        { name: 'Принтер', icon: '🖨️' },
+        { name: 'МФУ', icon: '🖨️' },
+        { name: 'Сканер', icon: '📠' },
+        { name: 'Копир', icon: '📠' },
+        { name: 'Шредер', icon: '🗑️' }
+      ]
+    },
+    {
+      name: 'Мобильные устройства',
+      icon: '📱',
+      description: 'Смартфоны и планшеты',
+      types: [
+        { name: 'Смартфон', icon: '📱' },
+        { name: 'Планшет', icon: '📱' },
+        { name: 'Умные часы', icon: '⌚' }
+      ]
+    },
+    {
+      name: 'Сетевое оборудование',
+      icon: '🌐',
+      description: 'Коммутаторы, маршрутизаторы, точки доступа',
+      types: [
+        { name: 'Коммутатор', icon: '🔀' },
+        { name: 'Маршрутизатор', icon: '📡' },
+        { name: 'Точка доступа', icon: '📶' },
+        { name: 'Модем', icon: '📞' }
+      ]
+    },
+    {
+      name: 'Серверное оборудование',
+      icon: '🖧',
+      description: 'Серверы, СХД, ИБП',
+      types: [
+        { name: 'Сервер', icon: '🖥️' },
+        { name: 'СХД', icon: '💾' },
+        { name: 'ИБП', icon: '🔋' }
+      ]
+    },
+    {
+      name: 'Аксессуары',
+      icon: '📎',
+      description: 'Хабы, док-станции, кабели',
+      types: [
+        { name: 'USB-хаб', icon: '🔌' },
+        { name: 'Док-станция', icon: '🔌' },
+        { name: 'Кабель', icon: '🔌' },
+        { name: 'Переходник', icon: '🔌' },
+        { name: 'Сумка/чехол', icon: '👝' }
+      ]
+    },
+    {
+      name: 'Бытовое оборудование',
+      icon: '🏢',
+      description: 'Кондиционеры, холодильники, кулеры',
+      types: [
+        { name: 'Кондиционер', icon: '❄️' },
+        { name: 'Холодильник', icon: '🧊' },
+        { name: 'Кулер для воды', icon: '💧' },
+        { name: 'Микроволновка', icon: '🔥' }
+      ]
+    }
+  ];
+  
+  let totalCategories = 0;
+  let totalTypes = 0;
+  
+  for (const [catIndex, catData] of catalog.entries()) {
+    const catResult = await run(`
+      INSERT INTO equipment_categories (name, description, icon, sort_order, is_active)
+      VALUES (?, ?, ?, ?, 1)
+    `, [catData.name, catData.description, catData.icon, catIndex]);
+    
+    totalCategories++;
+    
+    for (const [typeIndex, typeData] of catData.types.entries()) {
+      await run(`
+        INSERT INTO equipment_types (category_id, name, icon, sort_order, is_active)
+        VALUES (?, ?, ?, ?, 1)
+      `, [catResult.lastID, typeData.name, typeData.icon || null, typeIndex]);
+      
+      totalTypes++;
+    }
+    
+    console.log(`   ✅ ${catData.icon} ${catData.name} (${catData.types.length} типов)`);
+  }
+  
+  console.log(`\n✅ Создано категорий: ${totalCategories}`);
+  console.log(`✅ Создано типов: ${totalTypes}`);
+}
+
+/**
+ * Автопривязка существующей техники к категориям и типам
+ * по совпадению с полем name
+ */
+async function mapExistingEquipment() {
+  // Проверяем, есть ли техника без типа
+  const untyped = await all(`
+    SELECT id, name FROM equipment WHERE type_id IS NULL
+  `);
+  
+  if (untyped.length === 0) {
+    console.log('\n⏭️  Вся техника уже имеет категории и типы');
+    return;
+  }
+  
+  console.log(`\n🔗 Привязка ${untyped.length} единиц техники к категориям...`);
+  
+  let mapped = 0;
+  let notMapped = 0;
+  
+  for (const eq of untyped) {
+    // Ищем тип по имени
+    const type = await get(`
+      SELECT t.id as type_id, t.category_id
+      FROM equipment_types t
+      WHERE LOWER(t.name) = LOWER(?)
+      LIMIT 1
+    `, [eq.name]);
+    
+    if (type) {
+      await run(`
+        UPDATE equipment 
+        SET type_id = ?, category_id = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `, [type.type_id, type.category_id, eq.id]);
+      mapped++;
+    } else {
+      console.log(`   ⚠️  Не найден тип для: "${eq.name}" (ID: ${eq.id})`);
+      notMapped++;
+    }
+  }
+  
+  console.log(`\n✅ Привязано: ${mapped}`);
+  if (notMapped > 0) {
+    console.log(`⚠️  Не привязано: ${notMapped} (тип не найден)`);
+    console.log(`   Их можно привязать вручную через админ-панель`);
   }
 }
 
