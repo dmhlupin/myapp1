@@ -1316,3 +1316,44 @@ tr:hover {
         padding: 6px 4px;
     }
 }
+
+/* ============================================================
+   БЕЙДЖИ КАТЕГОРИЙ И ТИПОВ
+   ============================================================ */
+
+.catalog-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    background: #ebf8ff;
+    color: #2a4365;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.catalog-badge.type {
+    background: #e6fffa;
+    color: #234e52;
+}
+
+/* Адаптивность */
+@media (max-width: 1100px) {
+    .catalog-badge {
+        font-size: 11px;
+        padding: 2px 8px;
+    }
+}
+
+@media (max-width: 900px) {
+    /* Скрываем категорию и тип на планшетах */
+    .equipment-table th:nth-child(5),
+    .equipment-table td:nth-child(5),
+    .equipment-table th:nth-child(6),
+    .equipment-table td:nth-child(6) {
+        display: none;
+    }
+}

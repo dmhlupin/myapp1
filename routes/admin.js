@@ -71,15 +71,16 @@ async function renderAdmin(req, res) {
     html = html.replace('{{assigned_equipment}}', stats.assigned_equipment || 0);
     html = html.replace('{{total_users}}', stats.total_users || 0);
     
-    // Таблица техники
+       // Таблица техники
+        
     let equipmentRows = '';
     equipment.forEach(item => {
       const statusClass = `status-${item.status}`;
       const deleteButton = item.status === 'available' 
-        ? `<button onclick="deleteEquipment(${item.id})" class="btn-delete" title="Удалить">🗑️</button>` 
+        ? `<button onclick="deleteEquipment(${item.id})" class="btn-icon btn-delete" title="Удалить">🗑️</button>` 
         : '';
       
-      // 🆕 Формируем информацию о том, кому назначена техника
+      // Информация о назначении
       let assignedInfo = '—';
       if (item.status === 'assigned' && item.user_name) {
         const initials = getInitials(item.user_name);
@@ -96,18 +97,29 @@ async function renderAdmin(req, res) {
         assignedInfo = '<span style="color: #a0aec0; font-size: 12px;">не найдено</span>';
       }
       
+      // 🆕 Категория и тип
+      const categoryCell = item.category_name 
+        ? `<span class="catalog-badge">${item.category_icon || '📁'} ${item.category_name}</span>`
+        : '<span style="color: #cbd5e0;">—</span>';
+      
+      const typeCell = item.type_name 
+        ? `<span class="catalog-badge type">${item.type_icon || '📦'} ${item.type_name}</span>`
+        : '<span style="color: #cbd5e0;">—</span>';
+      
       equipmentRows += `
         <tr>
           <td>${item.id}</td>
           <td><strong>${item.inventory_number}</strong></td>
           <td>${item.name}</td>
           <td>${item.model || '—'}</td>
+          <td>${categoryCell}</td>
+          <td>${typeCell}</td>
           <td><span class="status-badge ${statusClass}">${item.status}</span></td>
           <td>${assignedInfo}</td>
           <td>
             <div class="action-buttons">
               <button onclick="viewEquipment(${item.id})" class="btn-icon btn-info" title="Просмотр">👁️</button>
-              <button onclick="editEquipment(${item.id})" class="btn-edit" title="Редактировать">✏️</button>
+              <button onclick="editEquipment(${item.id})" class="btn-icon btn-edit" title="Редактировать">✏️</button>
               ${deleteButton}
             </div>
           </td>
@@ -259,7 +271,7 @@ async function addEquipmentAPI(req, res) {
     const { 
       inventory_number, name, model, serial_number, 
       manufacturer, purchase_date, warranty_until, 
-      status, description 
+      status, description, category_id, type_id 
     } = req.body;
     
     if (!inventory_number || !name) {
@@ -277,19 +289,9 @@ async function addEquipmentAPI(req, res) {
       purchase_date: purchase_date || null,
       warranty_until: warranty_until || null,
       status: status || 'available',
-      description: description || ''
-    });
-
-    const { logAction } = require('../utils/logger');
-    await logAction({
-        req,
-        action: 'equipment_create',
-        entityType: 'equipment',
-        entityId: result.id,
-        details: JSON.stringify({ 
-          inventory_number: inventory_number,
-          name: name 
-        })
+      description: description || '',
+      category_id: category_id ? parseInt(category_id) : null,
+      type_id: type_id ? parseInt(type_id) : null
     });
     
     res.json({ 
@@ -314,7 +316,8 @@ async function updateEquipmentAPI(req, res) {
     const { 
       inventory_number, name, model, serial_number, 
       manufacturer, purchase_date, warranty_until, 
-      status, description, assign_user_id, assign_condition 
+      status, description, assign_user_id, assign_condition,
+      category_id, type_id  // 🆕
     } = req.body;
     
     console.log(`📥 Получен запрос на обновление техники ID: ${id}`);
@@ -452,7 +455,9 @@ async function updateEquipmentAPI(req, res) {
       purchase_date: purchase_date || null,
       warranty_until: warranty_until || null,
       status: status || 'available',
-      description: description || ''
+      description: description || '',
+      category_id: category_id ? parseInt(category_id) : null,  // 🆕
+      type_id: type_id ? parseInt(type_id) : null                // 🆕
     });
     
     // Логируем обновление
@@ -541,8 +546,6 @@ async function renderEditEquipment(req, res) {
     }
     
     const equipment = await getEquipmentById(id);
-    const users = await getAllUsers();
-    
     if (!equipment) {
       return res.status(404).send('Техника не найдена');
     }
@@ -562,6 +565,10 @@ async function renderEditEquipment(req, res) {
     html = html.replace(/\{\{status\}\}/g, equipment.status || 'available');
     html = html.replace(/\{\{description\}\}/g, equipment.description || '');
     
+    // 🆕 Категория и тип
+    html = html.replace(/\{\{category_id\}\}/g, equipment.category_id || '');
+    html = html.replace(/\{\{type_id\}\}/g, equipment.type_id || '');
+    
     // Статусы
     const statuses = ['available', 'assigned', 'maintenance', 'retired'];
     let statusOptions = '';
@@ -571,20 +578,14 @@ async function renderEditEquipment(req, res) {
     });
     html = html.replace(/\{\{status_options\}\}/g, statusOptions);
     
-    // Пользователи для выбора при назначении
-    let userOptions = '<option value="">-- Выберите пользователя --</option>';
-    users.forEach(user => {
-      const fullName = user.full_name || user.username;
-      userOptions += `<option value="${user.id}">${fullName} (${user.department || 'без отдела'})</option>`;
-    });
-    html = html.replace(/\{\{user_options\}\}/g, userOptions);
-    
     res.send(html);
   } catch (error) {
     console.error('❌ Ошибка при загрузке страницы редактирования:', error);
     res.status(500).send('Ошибка при загрузке страницы');
   }
 }
+
+
 // ===== API ДЛЯ ПОЛЬЗОВАТЕЛЕЙ =====
 
 async function getUsersAPI(req, res) {

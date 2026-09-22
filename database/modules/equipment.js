@@ -8,17 +8,25 @@ module.exports = ({ db, run, get, all }) => ({
   // ============================================================
   
   /**
-   * Получить всю технику
+   * Получить всю технику с названиями категорий и типов
    */
   getAllEquipment() {
     return new Promise((resolve, reject) => {
-      db.all(
-        'SELECT * FROM equipment ORDER BY name',
-        (err, rows) => {
-          if (err) reject(err);
-          else resolve(rows || []);
-        }
-      );
+      db.all(`
+        SELECT 
+          e.*,
+          c.name as category_name,
+          c.icon as category_icon,
+          t.name as type_name,
+          t.icon as type_icon
+        FROM equipment e
+        LEFT JOIN equipment_categories c ON e.category_id = c.id
+        LEFT JOIN equipment_types t ON e.type_id = t.id
+        ORDER BY e.name
+      `, (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows || []);
+      });
     });
   },
   
