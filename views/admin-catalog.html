@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Справочник техники</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/admin.css">
+    <link rel="stylesheet" href="/css/catalog.css">
+    <link rel="stylesheet" href="/css/help.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div>
+                <h1>📚 Справочник техники</h1>
+                <div class="subtitle">Управление категориями и типами</div>
+            </div>
+            <div class="header-actions">
+                <a href="/admin" class="btn btn-back btn-sm">← Админ-панель</a>
+                <a href="/" class="btn btn-back btn-sm">📊 Дашборд</a>
+                <a href="/profile" class="btn btn-back btn-sm">👤 Профиль</a>
+                <a href="/logout" class="btn btn-danger btn-sm">🚪 Выйти</a>
+            </div>
+        </div>
+
+        <!-- Статистика (подставляется сервером) -->
+        <div class="stats">
+            <div class="stat-card">
+                <span class="icon">📁</span>
+                <div class="number" id="statCategories">{{total_categories}}</div>
+                <div class="label">Категорий</div>
+            </div>
+            <div class="stat-card">
+                <span class="icon">📦</span>
+                <div class="number green" id="statTypes">{{total_types}}</div>
+                <div class="label">Типов</div>
+            </div>
+            <div class="stat-card">
+                <span class="icon">🔧</span>
+                <div class="number orange" id="statEquipment">{{total_equipment}}</div>
+                <div class="label">Единиц техники</div>
+            </div>
+        </div>
+
+        <!-- Две колонки -->
+        <div class="catalog-layout">
+            
+            <!-- КАТЕГОРИИ -->
+            <div class="catalog-panel">
+                <div class="panel-header">
+                    <h2>📁 Категории</h2>
+                    <button onclick="openCategoryModal()" class="btn btn-success btn-sm">
+                        ➕ Добавить
+                    </button>
+                </div>
+                <div id="categoriesList" class="catalog-list">
+                    <div class="catalog-loading">⏳ Загрузка...</div>
+                </div>
+            </div>
+
+            <!-- ТИПЫ -->
+            <div class="catalog-panel">
+                <div class="panel-header">
+                    <h2>📦 Типы</h2>
+                    <button onclick="openTypeModal()" class="btn btn-success btn-sm" id="addTypeBtn">
+                        ➕ Добавить
+                    </button>
+                </div>
+                
+                <div class="types-filter">
+                    <select id="categoryFilter" onchange="filterTypes()">
+                        <option value="">Все категории</option>
+                    </select>
+                </div>
+                
+                <div id="typesList" class="catalog-list">
+                    <div class="catalog-loading">⏳ Загрузка...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div id="footer-container"></div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- МОДАЛЬНОЕ ОКНО: КАТЕГОРИЯ -->
+    <!-- ============================================================ -->
+    <div class="modal-overlay" id="categoryModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="categoryModalTitle">Добавить категорию</h3>
+                <button onclick="closeCategoryModal()" class="modal-close">✕</button>
+            </div>
+            <form id="categoryForm" onsubmit="saveCategory(event)">
+                <input type="hidden" id="categoryId">
+                
+                <div class="form-group">
+                    <label>Иконка (эмодзи)</label>
+                    <input 
+                        type="text" 
+                        id="categoryIcon" 
+                        placeholder="💻" 
+                        maxlength="4"
+                        style="font-size: 20px; text-align: center;"
+                    >
+                    <div class="help-text">Один эмодзи: 💻 📱 🖨️ 🖱️ 📎</div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Название <span class="required">*</span></label>
+                    <input 
+                        type="text" 
+                        id="categoryName" 
+                        required 
+                        placeholder="Например: Компьютерная техника"
+                    >
+                </div>
+                
+                <div class="form-group">
+                    <label>Описание</label>
+                    <textarea 
+                        id="categoryDescription" 
+                        placeholder="Краткое описание категории..."
+                    ></textarea>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary" id="categorySaveBtn">
+                        💾 Сохранить
+                    </button>
+                    <button type="button" class="btn btn-back" onclick="closeCategoryModal()">
+                        Отмена
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- МОДАЛЬНОЕ ОКНО: ТИП -->
+    <!-- ============================================================ -->
+    <div class="modal-overlay" id="typeModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="typeModalTitle">Добавить тип</h3>
+                <button onclick="closeTypeModal()" class="modal-close">✕</button>
+            </div>
+            <form id="typeForm" onsubmit="saveType(event)">
+                <input type="hidden" id="typeId">
+                
+                <div class="form-group">
+                    <label>Категория <span class="required">*</span></label>
+                    <select id="typeCategory" required>
+                        <!-- Заполняется через JS -->
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Иконка (эмодзи)</label>
+                    <input 
+                        type="text" 
+                        id="typeIcon" 
+                        placeholder="💻" 
+                        maxlength="4"
+                        style="font-size: 20px; text-align: center;"
+                    >
+                    <div class="help-text">Один эмодзи: 💻 🖥️ 📱 ⌨️ 🖱️</div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Название <span class="required">*</span></label>
+                    <input 
+                        type="text" 
+                        id="typeName" 
+                        required 
+                        placeholder="Например: Ноутбук"
+                    >
+                </div>
+                
+                <div class="form-group">
+                    <label>Описание</label>
+                    <textarea 
+                        id="typeDescription" 
+                        placeholder="Краткое описание типа..."
+                    ></textarea>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary" id="typeSaveBtn">
+                        💾 Сохранить
+                    </button>
+                    <button type="button" class="btn btn-back" onclick="closeTypeModal()">
+                        Отмена
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- МОДАЛЬНОЕ ОКНО: УДАЛЕНИЕ -->
+    <!-- ============================================================ -->
+    <div class="modal-overlay" id="deleteModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>🗑️ Подтверждение удаления</h3>
+                <button onclick="closeDeleteModal()" class="modal-close">✕</button>
+            </div>
+            <p id="deleteMessage">Вы уверены?</p>
+            <div class="modal-actions">
+                <button onclick="closeDeleteModal()" class="btn btn-back">Отмена</button>
+                <button onclick="confirmDelete()" class="btn btn-danger">Удалить</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="/js/main.js"></script>
+    <script src="/js/help.js"></script>
+    <script src="/js/footer.js"></script>
+    <script src="/js/catalog.js"></script>
+</body>
+</html>

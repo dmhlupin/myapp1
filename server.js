@@ -40,6 +40,23 @@ const {
   cleanLogsAPI
 } = require('./routes/admin');
 
+// Роуты каталога
+const {
+  renderCatalog,
+  getCategoriesAPI,
+  getCategoryAPI,
+  createCategoryAPI,
+  updateCategoryAPI,
+  deleteCategoryAPI,
+  reorderCategoriesAPI,
+  getTypesAPI,
+  getTypeAPI,
+  createTypeAPI,
+  updateTypeAPI,
+  deleteTypeAPI,
+  reorderTypesAPI,
+} = require('./routes/catalog');
+
 // Роуты авторизации
 const {
   renderLogin,
@@ -185,6 +202,29 @@ app.get('/admin/logs', requireAdmin, renderLogs);
 app.get('/api/admin/logs', requireAdmin, getLogsAPI);
 app.get('/api/admin/logs/stats', requireAdmin, getLogsStatsAPI);
 app.post('/api/admin/logs/clean', requireAdmin, cleanLogsAPI);
+
+// ============================================
+// СПРАВОЧНИК (только администраторы!)
+// ============================================
+
+// Страница
+app.get('/admin/catalog', requireAdmin, renderCatalog);
+
+// API категорий
+app.get('/api/admin/categories', requireAdmin, getCategoriesAPI);
+app.post('/api/admin/categories', requireAdmin, createCategoryAPI);
+app.post('/api/admin/categories/reorder', requireAdmin, reorderCategoriesAPI); // ← ПЕРЕД :id
+app.get('/api/admin/categories/:id', requireAdmin, getCategoryAPI);
+app.put('/api/admin/categories/:id', requireAdmin, updateCategoryAPI);
+app.delete('/api/admin/categories/:id', requireAdmin, deleteCategoryAPI);
+
+// API типов
+app.get('/api/admin/types', requireAdmin, getTypesAPI);
+app.post('/api/admin/types', requireAdmin, createTypeAPI);
+app.post('/api/admin/types/reorder', requireAdmin, reorderTypesAPI); // ← ПЕРЕД :id
+app.get('/api/admin/types/:id', requireAdmin, getTypeAPI);
+app.put('/api/admin/types/:id', requireAdmin, updateTypeAPI);
+app.delete('/api/admin/types/:id', requireAdmin, deleteTypeAPI);
 
 // ============================================
 // API ДЛЯ ПОЛЬЗОВАТЕЛЕЙ (только администраторы!)
