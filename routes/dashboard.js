@@ -6,21 +6,26 @@ const {
   getRecentActivity,
   getEquipmentNeedingAttention,
   getDashboardActivityByDay,
-  getTopUsers
+  getTopUsers,
+  getCategoryStats,           // 🆕
+  getEquipmentWithoutCategory // 🆕
 } = require('../database/db');
 
 /**
  * GET / — Дашборд (главная страница)
  */
+
 async function renderDashboard(req, res) {
   try {
     // Загружаем все данные параллельно
-    const [stats, recentActivity, attention, activityByDay, topUsers] = await Promise.all([
+    const [stats, recentActivity, attention, activityByDay, topUsers, categoryStats, withoutCategory] = await Promise.all([
       getDashboardStats(),
       getRecentActivity(10),
       getEquipmentNeedingAttention(),
       getDashboardActivityByDay(14),
-      getTopUsers(5)
+      getTopUsers(5),
+      getCategoryStats(),
+      getEquipmentWithoutCategory()
     ]);
     
     // Читаем HTML
@@ -34,7 +39,6 @@ async function renderDashboard(req, res) {
     html = html.replace(/\{\{stats\.maintenance_equipment\}\}/g, stats.maintenance_equipment || 0);
     html = html.replace(/\{\{stats\.active_users\}\}/g, stats.active_users || 0);
     html = html.replace(/\{\{stats\.actions_today\}\}/g, stats.actions_today || 0);
-    html = html.replace(/\{\{stats\.active_assignments\}\}/g, stats.active_assignments || 0);
     
     // ===== Последние действия =====
     let activityHtml = '';
@@ -62,7 +66,13 @@ async function renderDashboard(req, res) {
         'equipment_update': { icon: '✏️', text: 'Изменена техника', class: 'action-update' },
         'equipment_delete': { icon: '🗑️', text: 'Удалена техника', class: 'action-delete' },
         'equipment_assign': { icon: '📦', text: 'Назначена техника', class: 'action-create' },
-        'equipment_return': { icon: '↩️', text: 'Возвращена техника', class: 'action-update' }
+        'equipment_return': { icon: '↩️', text: 'Возвращена техника', class: 'action-update' },
+        'category_create': { icon: '📁', text: 'Создана категория', class: 'action-create' },
+        'category_update': { icon: '📁', text: 'Изменена категория', class: 'action-update' },
+        'category_delete': { icon: '📁', text: 'Удалена категория', class: 'action-delete' },
+        'type_create': { icon: '📦', text: 'Создан тип', class: 'action-create' },
+        'type_update': { icon: '📦', text: 'Изменён тип', class: 'action-update' },
+        'type_delete': { icon: '📦', text: 'Удалён тип', class: 'action-delete' }
       };
       
       recentActivity.forEach(log => {
@@ -71,13 +81,13 @@ async function renderDashboard(req, res) {
         const initials = getInitials(userName);
         const timeAgo = timeAgoRu(log.created_at);
         
-        // Детали
         let detailsText = '';
         if (log.details) {
           try {
             const parsed = JSON.parse(log.details);
             if (parsed.inventory_number) detailsText = parsed.inventory_number;
             else if (parsed.username) detailsText = parsed.username;
+            else if (parsed.name) detailsText = parsed.name;
             else if (parsed.role) detailsText = `роль: ${parsed.role}`;
           } catch {}
         }
@@ -102,7 +112,6 @@ async function renderDashboard(req, res) {
     // ===== Требует внимания =====
     let attentionHtml = '';
     
-    // 1. В ремонте
     if (attention.maintenance.length > 0) {
       attentionHtml += `
         <div class="attention-block attention-maintenance">
@@ -122,7 +131,6 @@ async function renderDashboard(req, res) {
       `;
     }
     
-    // 2. Гарантия истекает
     if (attention.warrantySoon.length > 0) {
       attentionHtml += `
         <div class="attention-block attention-warning">
@@ -143,28 +151,26 @@ async function renderDashboard(req, res) {
       `;
     }
     
-    // 3. Просроченная гарантия
     if (attention.warrantyExpired.length > 0) {
-    attentionHtml += `
+      attentionHtml += `
         <div class="attention-block attention-info">
-        <div class="attention-header">
+          <div class="attention-header">
             <span class="attention-icon">📋</span>
             <span class="attention-title">Просрочена гарантия (${attention.warrantyExpired.length})</span>
-        </div>
-        <ul class="attention-list">
+          </div>
+          <ul class="attention-list">
             ${attention.warrantyExpired.map(eq => `
-            <li>
+              <li>
                 <span class="inv-num">${eq.inventory_number}</span>
                 <span class="inv-name">${eq.name}</span>
                 <span class="inv-extra">${eq.days_expired} дн. назад</span>
-            </li>
+              </li>
             `).join('')}
-        </ul>
+          </ul>
         </div>
-    `;
+      `;
     }
     
-    // 4. Давно без владельца
     if (attention.longAvailable.length > 0) {
       attentionHtml += `
         <div class="attention-block attention-info">
@@ -184,7 +190,6 @@ async function renderDashboard(req, res) {
       `;
     }
     
-    // Если ничего нет
     if (!attentionHtml) {
       attentionHtml = `
         <div class="empty-block">
@@ -229,6 +234,79 @@ async function renderDashboard(req, res) {
       });
     }
     html = html.replace('{{top_users}}', topUsersHtml);
+    
+    // ===== 🆕 Статистика по категориям =====
+    let categoryStatsHtml = '';
+    if (categoryStats.categories.length === 0 || categoryStats.total === 0) {
+      categoryStatsHtml = `
+        <div class="empty-block">
+          <span>📭</span>
+          <p>Нет техники с категориями</p>
+        </div>
+      `;
+    } else {
+      // Цвета для категорий
+      const colors = [
+        '#667eea', '#48bb78', '#ed8936', '#f56565',
+        '#9f7aea', '#38b2ac', '#ed64a6', '#d69e2e'
+      ];
+      
+      categoryStats.categories.forEach((cat, index) => {
+        if (cat.equipment_count === 0) return; // Пропускаем пустые
+        
+        const color = colors[index % colors.length];
+        
+        categoryStatsHtml += `
+          <a href="/admin/catalog" class="category-stat-item" title="Перейти в справочник">
+            <div class="category-stat-icon" style="background: ${color}20; color: ${color};">
+              ${cat.icon || '📁'}
+            </div>
+            <div class="category-stat-info">
+              <div class="category-stat-name">${cat.name}</div>
+              <div class="category-stat-meta">
+                ${cat.equipment_count} ед. · ${cat.types_count} типов
+              </div>
+            </div>
+            <div class="category-stat-bar">
+              <div class="category-stat-bar-fill" style="width: ${cat.percent}%; background: ${color};"></div>
+            </div>
+            <div class="category-stat-count" style="color: ${color};">
+              ${cat.percent}%
+            </div>
+          </a>
+        `;
+      });
+    }
+    html = html.replace('{{category_stats}}', categoryStatsHtml);
+    
+    // ===== Техника без категории =====
+    let withoutCategoryHtml = '';
+    if (withoutCategory.length === 0) {
+      withoutCategoryHtml = `
+        <div class="empty-block" style="padding: 20px;">
+          <span style="font-size: 32px;">✅</span>
+          <p>Вся техника имеет категорию</p>
+        </div>
+      `;
+    } else {
+      withoutCategoryHtml = `
+        <div class="attention-block attention-warning" style="margin: 0;">
+          <div class="attention-header">
+            <span class="attention-icon">⚠️</span>
+            <span class="attention-title">Без категории (${withoutCategory.length})</span>
+          </div>
+          <ul class="attention-list">
+            ${withoutCategory.map(eq => `
+              <li>
+                <span class="inv-num">${eq.inventory_number}</span>
+                <span class="inv-name">${eq.name}</span>
+              </li>
+            `).join('')}
+          </ul>
+        </div>
+      `;
+    }
+    html = html.replace('{{without_category}}', withoutCategoryHtml);
     
     // ===== График активности (SVG) =====
     const chartSvg = generateActivityChart(activityByDay);

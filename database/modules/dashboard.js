@@ -195,5 +195,62 @@ module.exports = ({ db, run, get, all }) => ({
       });
     });
   }
+
+    ,
+  
+  /**
+   * Получить статистику по категориям для дашборда
+   * Возвращает: список категорий с количеством техники и процентом
+   */
+  getCategoryStats() {
+    return new Promise((resolve, reject) => {
+      db.all(`
+        SELECT 
+          c.id,
+          c.name,
+          c.icon,
+          c.sort_order,
+          (SELECT COUNT(*) FROM equipment WHERE category_id = c.id) as equipment_count,
+          (SELECT COUNT(*) FROM equipment_types WHERE category_id = c.id AND is_active = 1) as types_count
+        FROM equipment_categories c
+        WHERE c.is_active = 1
+        ORDER BY equipment_count DESC, c.sort_order ASC
+      `, (err, rows) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        
+        // Общее количество техники в категориях
+        const total = (rows || []).reduce((sum, r) => sum + (r.equipment_count || 0), 0);
+        
+        // Добавляем процент
+        const result = (rows || []).map(r => ({
+          ...r,
+          percent: total > 0 ? Math.round((r.equipment_count / total) * 100) : 0
+        }));
+        
+        resolve({ categories: result, total });
+      });
+    });
+  },
+  
+  /**
+   * Получить технику без категории
+   */
+  getEquipmentWithoutCategory() {
+    return new Promise((resolve, reject) => {
+      db.all(`
+        SELECT id, inventory_number, name, model
+        FROM equipment
+        WHERE category_id IS NULL
+        ORDER BY inventory_number
+        LIMIT 20
+      `, (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows || []);
+      });
+    });
+  }
   
 });

@@ -98,6 +98,7 @@
         </div>
 
         <!-- Основная сетка -->
+        <!-- Основная сетка -->
         <div class="dashboard-grid">
             
             <!-- График активности -->
@@ -107,6 +108,17 @@
                 </div>
                 <div class="chart-container">
                     {{activity_chart}}
+                </div>
+            </div>
+
+            <!-- 🆕 Техника по категориям -->
+            <div class="dashboard-card">
+                <div class="card-header">
+                    <h2>📚 Техника по категориям</h2>
+                    <a href="/admin/catalog" class="card-link">Справочник →</a>
+                </div>
+                <div class="category-stats-list">
+                    {{category_stats}}
                 </div>
             </div>
 
@@ -128,6 +140,16 @@
                 </div>
                 <div class="attention-container">
                     {{attention_blocks}}
+                </div>
+            </div>
+
+            <!-- 🆕 Техника без категории -->
+            <div class="dashboard-card">
+                <div class="card-header">
+                    <h2>🏷️ Техника без категории</h2>
+                </div>
+                <div>
+                    {{without_category}}
                 </div>
             </div>
 

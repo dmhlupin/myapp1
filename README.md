@@ -1,18 +1,18 @@
-# 📦 Система учёта техники
+# 📦 MoveIT service
 
-**Веб-приложение для учёта ТМЦ с авторизацией, ролями, справочником и логированием**
+**Веб-приложение для учёта ТМЦ с авторизацией, ролями, справочником и статистикой**
 
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![Express](https://img.shields.io/badge/Express-4.18-000000?logo=express&logoColor=white)](https://expressjs.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-5.1-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.8.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.9.0-blue.svg)](CHANGELOG.md)
 
 ---
 
 ## 📖 О проекте
 
-**Система учёта техники** — полнофункциональное веб-приложение для управления материально-техническими ресурсами (ТМЦ) организации. Позволяет вести учёт оборудования с иерархическим справочником, назначать технику сотрудникам, отслеживать историю использования и контролировать гарантийные сроки.
+**MoveIT service** — полнофункциональное веб-приложение для управления материально-техническими ресурсами (ТМЦ) организации. Включает иерархический справочник категорий и типов, интеграцию справочника во все формы, фильтрацию и статистику.
 
 ### 🎯 Для кого
 
@@ -32,12 +32,14 @@
 - Обязательная смена пароля при первом входе
 - Блокировка пользователей без удаления
 - Автогенерация временных паролей
-- Автоматическая синхронизация сессии с БД
+- Синхронизация сессии с БД на каждом запросе
 - Роли: 👑 администратор и 👤 пользователь
 
 ### 📊 Дашборд (для админов)
 - 6 карточек ключевой статистики
 - SVG-график активности за 14 дней
+- **📚 Техника по категориям** — с цветными полосами и процентами
+- **🏷️ Техника без категории** — список для исправления
 - Последние 10 действий пользователей
 - Раздел "Требует внимания":
   - 🔧 Техника в ремонте
@@ -47,6 +49,36 @@
 - Топ-5 активных пользователей за 30 дней
 - Быстрые действия
 
+### 📚 Справочник техники
+- **Категории и типы** (иерархия 2 уровней)
+- 8 предустановленных категорий
+- 35 предустановленных типов
+- CRUD через удобный интерфейс
+- **Интеграция в формы техники**:
+  - Селекты "Категория → Тип"
+  - Динамическая загрузка
+  - Предзаполнение при редактировании
+  - Автосброс типа при смене категории
+- **Фильтрация техники** в справочнике
+- **Поиск** по 6 полям (номер, название, модель, S/N, ФИО, логин)
+- Счётчики техники по категориям
+
+### 🔧 Учёт техники
+- Полный CRUD
+- **Категория и тип** (обязательные)
+- Инвентарные номера, модели, S/N
+- Даты покупки и гарантии
+- 4 статуса: `available`, `assigned`, `maintenance`, `retired`
+- Карточка техники с историей использования
+- Авто-возврат при переназначении
+
+### 🔍 Фильтры и поиск (страница /equipment)
+- **Фильтр по категории** — динамический
+- **Фильтр по типу** — обновляется при смене категории
+- **Фильтр по статусу**
+- Кнопка "Сбросить"
+- Пустое состояние
+
 ### 👤 Личный кабинет
 - Просмотр и редактирование профиля
 - Своя активная техника
@@ -54,58 +86,29 @@
 - Смена пароля
 - Персональная статистика
 
-### 📚 Справочник техники (для админов)
-- **Категории и типы** техники (иерархия 2 уровней)
-- 8 предустановленных категорий:
-  💻 Компьютерная техника, 🖱️ Периферия, 🖨️ Оргтехника,
-  📱 Мобильные устройства, 🌐 Сетевое оборудование,
-  🖧 Серверное оборудование, 📎 Аксессуары, 🏢 Бытовое
-- 35 предустановленных типов
-- CRUD через удобный интерфейс
-- **Фильтрация техники** по категории/типу
-- **Поиск** по 6 полям (номер, название, модель, S/N, ФИО, логин)
-- **Пагинация** по 20 записей
-- Счётчики техники по категориям
-- Защита: нельзя удалить категорию с типами или тип с техникой
-- Карточка техники с историей использования
-
-### 🔧 Учёт техники
-- Полный CRUD
-- Инвентарные номера, модели, серийные номера
-- Даты покупки и гарантии
-- 4 статуса: `available`, `assigned`, `maintenance`, `retired`
-- Привязка к категории и типу
-- Карточка техники с полной информацией
-- История использования (кто, когда, в каком состоянии)
-- Текущий владелец
-- Авто-возврат при переназначении
-- Поиск и фильтры
-
-### 👥 Управление пользователями (для админов)
+### 👥 Управление пользователями
 - Создание с автогенерацией пароля
 - Показ временного пароля **один раз**
-- Редактирование профиля
 - Сброс пароля
 - Блокировка / разблокировка
-- Изменение роли
-- Удаление с авто-возвратом всей техники
-- Защита: нельзя удалить/заблокировать себя или последнего админа
+- Удаление с авто-возвратом техники
+- Защита: нельзя удалить себя или последнего админа
 - Карточка пользователя со всей его техникой
 
 ### 📈 Логирование
 - Все действия записываются в БД
+- 22+ типа действий (включая категории/типы)
 - Фильтры: по пользователю, действию, дате
 - Поиск по логам
 - Статистика за 30 дней
 - Пагинация
-- 15+ типов действий
 
 ### 📑 Дополнительно
-- PDF-инструкции (демо-страницы)
+- PDF-инструкции (демо)
 - Модальное окно помощи (FAQ)
 - Адаптивный дизайн
 - Русскоязычный интерфейс
-- Скрипты seed и migrate для быстрого старта
+- Скрипты seed и migrate
 
 ---
 
@@ -144,7 +147,7 @@
 ```bash
 # 1. Клонировать репозиторий
 git clone https://github.com/dmhlupin/myapp1.git
-cd equipment-management
+cd myapp1
 
 # 2. Установить зависимости
 npm install
@@ -156,11 +159,8 @@ npm run setup
 ### Запуск
 
 ```bash
-# Режим разработки (автоперезагрузка)
-npm run dev
-
-# Production
-npm start
+npm run dev    # режим разработки
+npm start      # production
 ```
 
 Приложение откроется на **http://localhost:3000**
@@ -192,14 +192,6 @@ npm run check-db          # Проверить структуру БД
 npm run check-catalog     # Проверить справочник
 npm run create-admin      # Создать администратора
 npm run reset-admin       # Сбросить пароль админа
-npm run fix-assignments   # Исправить дубли назначений
-```
-
-### Docker
-
-```bash
-docker build -t equipment-management .
-docker run -d --name equipment -p 3000:3000 -v $(pwd)/data:/app/data equipment-management
 ```
 
 ---
@@ -214,7 +206,8 @@ docker run -d --name equipment -p 3000:3000 -v $(pwd)/data:/app/data equipment-m
 | Своя техника и история | ✅ |
 | Редактирование профиля | ✅ |
 | Смена пароля | ✅ |
-| Просмотр техники | ✅ |
+| Просмотр техники /equipment | ✅ |
+| **Фильтры на /equipment** | ✅ |
 | Просмотр пользователей | ✅ |
 | PDF-инструкции | ✅ |
 | Дашборд / | ❌ |
@@ -233,11 +226,12 @@ docker run -d --name equipment -p 3000:3000 -v $(pwd)/data:/app/data equipment-m
 | Админ-панель /admin | ✅ |
 | **Справочник /admin/catalog** | ✅ |
 | Управление техникой (CRUD) | ✅ |
+| **Управление категориями и типами** | ✅ |
 | Управление пользователями (CRUD) | ✅ |
 | Назначение и возврат техники | ✅ |
 | Сброс паролей | ✅ |
 | Блокировка пользователей | ✅ |
-| Просмотр логов /admin/logs | ✅ |
+| Просмотр логов | ✅ |
 
 ### 🚫 Ограничения
 - ❌ Нельзя заблокировать или удалить себя
@@ -276,7 +270,7 @@ docker run -d --name equipment -p 3000:3000 -v $(pwd)/data:/app/data equipment-m
 | GET | /api/admin/equipment/:id | Техника по ID |
 | GET | /api/admin/equipment/:id/details | Детали + история |
 | GET | /api/admin/equipment/filtered | Фильтр + пагинация |
-| GET | /api/admin/equipment/counts | Счётчики по категориям |
+| GET | /api/admin/equipment/counts | Счётчики |
 | POST | /api/admin/equipment | Создать |
 | PUT | /api/admin/equipment/:id | Обновить |
 | DELETE | /api/admin/equipment/:id | Удалить |
@@ -298,7 +292,7 @@ docker run -d --name equipment -p 3000:3000 -v $(pwd)/data:/app/data equipment-m
 
 | Метод | Endpoint | Описание |
 |-------|----------|----------|
-| GET | /api/admin/types | Все типы (фильтр ?category_id=) |
+| GET | /api/admin/types | Все типы (?category_id=X) |
 | GET | /api/admin/types/:id | По ID |
 | POST | /api/admin/types | Создать |
 | PUT | /api/admin/types/:id | Обновить |
@@ -312,9 +306,9 @@ docker run -d --name equipment -p 3000:3000 -v $(pwd)/data:/app/data equipment-m
 | GET | /api/admin/users | Все пользователи |
 | GET | /api/admin/users/:id | По ID |
 | GET | /api/admin/users/:id/details | Детали + техника |
-| POST | /api/admin/users | Создать (авто-пароль) |
+| POST | /api/admin/users | Создать |
 | PUT | /api/admin/users/:id | Обновить |
-| DELETE | /api/admin/users/:id | Удалить (с возвратом) |
+| DELETE | /api/admin/users/:id | Удалить |
 | POST | /api/admin/users/:id/reset-password | Сброс пароля |
 | POST | /api/admin/users/:id/block | Заблокировать |
 | POST | /api/admin/users/:id/unblock | Разблокировать |
@@ -327,26 +321,12 @@ docker run -d --name equipment -p 3000:3000 -v $(pwd)/data:/app/data equipment-m
 | GET | /api/admin/logs/stats | Статистика |
 | POST | /api/admin/logs/clean | Очистка старых |
 
-### Пример запроса
-
-```bash
-# Вход
-curl -X POST http://localhost:3000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"username": "admin", "password": "Admin123!"}' \
-  -c cookies.txt
-
-# Получить технику категории 1
-curl "http://localhost:3000/api/admin/equipment/filtered?category_id=1&limit=10" \
-  -b cookies.txt
-```
-
 ---
 
 ## 📁 Структура проекта
 
 ```
-equipment-management/
+myapp1/
 │
 ├── data/                          # База данных (не в Git)
 │   ├── database.db
@@ -361,7 +341,7 @@ equipment-management/
 │       ├── auth.js                # Пароли, роли, сессии
 │       ├── profile.js             # Личный кабинет
 │       ├── logs.js                # Логи активности
-│       ├── dashboard.js           # Дашборд
+│       ├── dashboard.js           # Дашборд + статистика
 │       ├── stats.js               # Общая статистика
 │       └── meta.js                # app_meta
 │
@@ -369,22 +349,22 @@ equipment-management/
 │   └── auth.js                    # requireAuth, requireAdmin, syncSession
 │
 ├── utils/
-│   ├── auth.js                    # Хеширование, генерация паролей
+│   ├── auth.js                    # Хеширование, пароли
 │   └── logger.js                  # Логирование
 │
 ├── routes/
 │   ├── admin.js                   # Админ-панель + API
 │   ├── auth.js                    # Вход, выход, смена пароля
-│   ├── catalog.js                 # Справочник (CRUD категорий/типов)
+│   ├── catalog.js                 # Справочник
 │   ├── dashboard.js               # Дашборд
-│   ├── equipment.js               # Просмотр техники
+│   ├── equipment.js               # Просмотр + фильтры
 │   ├── pdf.js                     # PDF-инструкции
 │   ├── profile.js                 # Личный кабинет
 │   └── users.js                   # Список пользователей
 │
 ├── scripts/
 │   ├── migrate.js                 # Миграция БД
-│   ├── seed.js                    # Заполнение тестовыми данными
+│   ├── seed.js                    # Тестовые данные
 │   ├── check-db.js                # Проверка структуры
 │   ├── check-catalog.js           # Проверка справочника
 │   ├── create-admin.js            # Создание админа
@@ -395,20 +375,24 @@ equipment-management/
 │   ├── css/
 │   │   ├── style.css              # Общие стили
 │   │   ├── auth.css               # Вход, смена пароля
-│   │   ├── dashboard.css          # Дашборд
+│   │   ├── dashboard.css          # Дашборд + статистика
 │   │   ├── profile.css            # Личный кабинет
 │   │   ├── admin.css              # Админ-панель
 │   │   ├── catalog.css            # Справочник
+│   │   ├── equipment.css          # Страница /equipment
 │   │   ├── logs.css               # Логи
 │   │   └── help.css               # Футер, помощь
 │   └── js/
-│       ├── main.js                # Общие функции
+│       ├── main.js
 │       ├── login.js
 │       ├── change-password.js
 │       ├── dashboard.js
 │       ├── profile.js
 │       ├── admin.js
+│       ├── admin-add.js
+│       ├── admin-edit.js
 │       ├── catalog.js             # Логика справочника
+│       ├── equipment-filter.js    # Фильтры /equipment
 │       ├── logs.js
 │       ├── help.js
 │       └── footer.js
@@ -422,7 +406,7 @@ equipment-management/
 │   ├── users.html
 │   ├── pdf.html
 │   ├── admin.html
-│   ├── admin-catalog.html         # Справочник
+│   ├── admin-catalog.html
 │   ├── admin-logs.html
 │   ├── admin-add.html
 │   ├── admin-edit.html
@@ -441,86 +425,45 @@ equipment-management/
 
 ---
 
-## 🔒 Безопасность
-
-### Реализовано
-
-- ✅ **Хеширование паролей** — bcryptjs, 10 раундов
-- ✅ **Сессии** — httpOnly cookies, SameSite=Lax
-- ✅ **Проверка на каждом запросе** — `syncSession`:
-  - Пользователь существует
-  - Активен (is_active = 1)
-  - Роль совпадает
-  - Логин совпадает
-  - Версия БД совпадает
-- ✅ **Транзакции** — при удалении пользователя
-- ✅ **Защита от self-delete** — нельзя удалить себя
-- ✅ **Защита последнего админа**
-- ✅ **Защита от удаления связанных данных** (категории/типы)
-- ✅ **XSS-экранирование** — escapeHtml/escapeAttr
-- ✅ **Логирование** всех действий
-- ✅ **Валидация** логина, email, пароля
-
-### Рекомендации для production
-
-1. **Смените SESSION_SECRET** в .env:
-   ```bash
-   node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
-   ```
-2. **Включите HTTPS** и установите `cookie.secure = true`
-3. **Настройте reverse proxy** (nginx, Caddy)
-4. **Ограничьте доступ к БД**
-5. **Регулярные бэкапы** `data/database.db`
-6. **Rate limiting** для `/api/auth/login`
-7. **Обновляйте зависимости** — `npm audit fix`
-
----
-
 ## 📝 История версий
 
-### [1.8.0] - 2026-09-22 — Текущая
+### [1.9.0] - 2026-09-22 — Текущая
 
-**📚 Справочник техники**
-- Категории и типы (CRUD в админке)
-- Фильтрация техники по категории/типу
+**Интеграция справочника + статистика**
+- Формы техники с категориями и типами
+- Фильтры на /equipment
+- Статистика по категориям на дашборде
+- Отображение категорий/типов в списках
+
+### [1.8.0] - 2026-09-22
+
+**Справочник техники**
+- CRUD категорий и типов
+- Таблица техники в справочнике
 - Поиск по 6 полям
-- Пагинация, карточка техники с историей
-- Счётчики и защита от удаления связанных
+- Пагинация
 
 ### [1.7.1] - 2026-09-22
 
 **Рефакторинг database/db.js**
 - Разбит на 9 модулей (~110 строк вместо 1500+)
-- Удалено 14 мёртвых функций
 
 ### [1.7.0] - 2026-09-22
 
 **Справочник — этап 1 (БД)**
 - Таблицы equipment_categories, equipment_types
-- 8 категорий + 35 типов
 
 ### [1.6.0] - 2026-09-21
 
-**Seed + централизация версии + безопасность сессий**
-- Скрипт seed: 16 пользователей, 40 техники
-- Централизованное управление версией
-- Синхронизация сессии с БД
+**Seed + централизация версии + безопасность**
 
 ### [1.5.0] - 2026-09-21
 
-**Дашборд как главная для админов**
+**Дашборд для админов**
 
 ### [1.4.0] - 2026-09-18
 
-**Полная авторизация с ролями и логированием**
-
-### [1.3.0] - 2026-07-01
-
-**Назначение техники пользователям**
-
-### [1.0.0] - 2026-07-01
-
-**Базовая версия**
+**Авторизация с ролями**
 
 > 📋 Полный changelog — [CHANGELOG.md](CHANGELOG.md)
 
@@ -528,15 +471,10 @@ equipment-management/
 
 ## 🗺️ Roadmap
 
-### v1.9.0 (в планах)
-- [ ] 📝 Интеграция категорий/типов в формы техники
-- [ ] 🔍 Фильтры на странице /equipment
-- [ ] 📊 Статистика по категориям на дашборде
-- [ ] 📧 Email-уведомления
-
 ### v2.0.0
 - [ ] 📤 Экспорт в Excel/CSV
 - [ ] 🖨️ Печать актов приёма-передачи
+- [ ] 📧 Email-уведомления
 - [ ] 🎨 Тёмная тема
 - [ ] 🌐 Многоязычность (RU/EN)
 - [ ] 📱 REST API + JWT
@@ -565,18 +503,68 @@ Pull request'ы приветствуются! Для крупных измене
 
 ## 🐛 Известные проблемы
 
-- ⚠️ PDF-файлы демонстрационные
+- ⚠️ PDF-файлы демонстрационные (не генерируются реально)
 - ⚠️ Нет восстановления пароля по email
 - ⚠️ Сессии в SQLite (для production — Redis)
-- ⚠️ Нет rate limiting
+- ⚠️ Нет rate limiting на `/api/auth/login`
+
+---
+
+## 🔒 Безопасность
+
+### Реализовано
+
+- ✅ **Хеширование паролей** — bcryptjs, 10 раундов
+- ✅ **Сессии** — httpOnly cookies, SameSite=Lax
+- ✅ **Проверка на каждом запросе** — `syncSession`:
+  - Пользователь существует
+  - Активен (is_active = 1)
+  - Роль совпадает
+  - Логин совпадает
+  - Версия БД совпадает
+- ✅ **Транзакции** при удалении пользователя
+- ✅ **Защита от self-delete**
+- ✅ **Защита последнего админа**
+- ✅ **Защита связанных данных** (категории/типы)
+- ✅ **XSS-экранирование** — escapeHtml/escapeAttr
+- ✅ **Логирование** всех действий
+- ✅ **Валидация** логина, email, пароля
+
+### Рекомендации для production
+
+1. **Смените SESSION_SECRET** в .env:
+   ```bash
+   node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+   ```
+2. **Включите HTTPS** и установите `cookie.secure = true`
+3. **Настройте reverse proxy** (nginx, Caddy)
+4. **Ограничьте доступ к БД**
+5. **Регулярные бэкапы** `data/database.db`
+6. **Rate limiting** для `/api/auth/login`
+7. **Обновляйте зависимости** — `npm audit fix`
+
+---
+
+## 📸 Скриншоты
+
+> Скриншоты будут добавлены позже. Создайте папку `docs/screenshots/` и добавьте:
+
+- 🔐 **Вход** — `docs/screenshots/login.png`
+- 📊 **Дашборд** — `docs/screenshots/dashboard.png`
+- 📚 **Справочник** — `docs/screenshots/catalog.png`
+- 👤 **Профиль** — `docs/screenshots/profile.png`
+- ⚙️ **Админ-панель** — `docs/screenshots/admin.png`
 
 ---
 
 ## 📄 Лицензия
 
+Этот проект распространяется под лицензией **MIT**.
+
+```
 MIT License
 
-Copyright (c) 2026 Equipment Management
+Copyright (c) 2026 Дмитрий Хлюпин
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -590,7 +578,12 @@ copies or substantial portions of the Software.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
 
 ---
 
@@ -604,14 +597,28 @@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
 
 ## 🙏 Благодарности
 
-- [Express.js](https://expressjs.com/)
-- [SQLite](https://www.sqlite.org/)
-- [bcryptjs](https://github.com/dcodeIO/bcrypt.js)
-- [express-session](https://github.com/expressjs/session)
-- [connect-sqlite3](https://github.com/rawberg/connect-sqlite3)
-- сыну Никите, самому объективному тестировщику 
-- Никите и Ульяне, за то что они у меня есть
-- Ирине за любовь и заботу
+**Особая благодарность:**
+
+- **Никите** — самому объективному тестировщику 🧪
+- **Никите и Ульяне** — за то, что они у меня есть ❤️
+- **Ирине** — за любовь и заботу 💖
+
+**Технологии:**
+
+- [Express.js](https://expressjs.com/) — веб-фреймворк
+- [SQLite](https://www.sqlite.org/) — база данных
+- [bcryptjs](https://github.com/dcodeIO/bcrypt.js) — хеширование паролей
+- [express-session](https://github.com/expressjs/session) — сессии
+- [connect-sqlite3](https://github.com/rawberg/connect-sqlite3) — хранилище сессий
+- [Node.js](https://nodejs.org/) — runtime
+
+---
+
+## 📞 Поддержка
+
+- 🐛 **Нашли баг?** [Создайте issue](https://github.com/dmhlupin/myapp1/issues)
+- 💡 **Есть идея?** [Откройте discussion](https://github.com/dmhlupin/myapp1/discussions)
+- 📧 **Email:** dmhlupin@gmail.com
 
 ---
 
@@ -621,6 +628,8 @@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
 
 Сделано с ❤️ на Node.js
 
-[⬆ Наверх](#-система-учёта-техники)
+**MoveIT service** © 2026 Дмитрий Хлюпин
+
+[⬆ Наверх](#-moveit-service)
 
 </div>

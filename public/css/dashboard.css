@@ -370,6 +370,10 @@
 }
 
 /* ===== Топ пользователей ===== */
+/* ============================================================
+   ТОП ПОЛЬЗОВАТЕЛЕЙ (grid-выравнивание)
+   ============================================================ */
+
 .top-users-list {
     display: flex;
     flex-direction: column;
@@ -377,7 +381,8 @@
 }
 
 .top-user-item {
-    display: flex;
+    display: grid;
+    grid-template-columns: 24px 34px 160px 1fr 40px;
     align-items: center;
     gap: 10px;
     padding: 8px 5px;
@@ -385,9 +390,7 @@
 
 .top-user-medal {
     font-size: 18px;
-    width: 24px;
     text-align: center;
-    flex-shrink: 0;
 }
 
 .top-user-avatar {
@@ -401,12 +404,11 @@
     justify-content: center;
     font-weight: 600;
     font-size: 12px;
-    flex-shrink: 0;
 }
 
 .top-user-info {
-    min-width: 110px;
-    flex-shrink: 0;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .top-user-name {
@@ -427,12 +429,10 @@
 }
 
 .top-user-bar {
-    flex: 1;
     height: 8px;
     background: #edf2f7;
     border-radius: 4px;
     overflow: hidden;
-    min-width: 60px;
 }
 
 .top-user-bar-fill {
@@ -446,8 +446,41 @@
     font-size: 14px;
     font-weight: 700;
     color: #667eea;
-    min-width: 30px;
     text-align: right;
+}
+
+/* ============================================================
+   АДАПТИВНОСТЬ
+   ============================================================ */
+
+@media (max-width: 640px) {
+    .top-user-item {
+        grid-template-columns: 20px 30px 120px 1fr 30px;
+        gap: 8px;
+        padding: 6px 3px;
+    }
+    
+    .top-user-medal {
+        font-size: 14px;
+    }
+    
+    .top-user-avatar {
+        width: 30px;
+        height: 30px;
+        font-size: 11px;
+    }
+    
+    .top-user-name {
+        font-size: 12px;
+    }
+    
+    .top-user-dept {
+        font-size: 10px;
+    }
+    
+    .top-user-count {
+        font-size: 12px;
+    }
 }
 
 /* ===== Пустое состояние ===== */
@@ -515,5 +548,132 @@
     
     .top-user-info {
         min-width: 80px;
+    }
+}
+
+/* ============================================================
+   СТАТИСТИКА ПО КАТЕГОРИЯМ
+   ============================================================ */
+
+.category-stats-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 380px;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+.category-stat-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+}
+
+.category-stat-item:hover {
+    background: #f7fafc;
+    border-color: #e2e8f0;
+    transform: translateX(3px);
+}
+
+.category-stat-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.category-stat-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.category-stat-name {
+    font-weight: 600;
+    color: #2d3748;
+    font-size: 14px;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.category-stat-meta {
+    font-size: 11px;
+    color: #a0aec0;
+}
+
+.category-stat-bar {
+    width: 80px;
+    height: 6px;
+    background: #edf2f7;
+    border-radius: 3px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.category-stat-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.5s ease;
+}
+
+.category-stat-count {
+    font-size: 13px;
+    font-weight: 700;
+    min-width: 40px;
+    text-align: right;
+    flex-shrink: 0;
+}
+
+/* ============================================================
+   СКРОЛЛБАР ДЛЯ КАТЕГОРИЙ
+   ============================================================ */
+
+.category-stats-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.category-stats-list::-webkit-scrollbar-thumb {
+    background: #cbd5e0;
+    border-radius: 3px;
+}
+
+.category-stats-list::-webkit-scrollbar-thumb:hover {
+    background: #a0aec0;
+}
+
+/* ============================================================
+   АДАПТИВНОСТЬ
+   ============================================================ */
+
+@media (max-width: 640px) {
+    .category-stat-item {
+        padding: 8px 10px;
+        gap: 8px;
+    }
+    
+    .category-stat-icon {
+        width: 32px;
+        height: 32px;
+        font-size: 16px;
+    }
+    
+    .category-stat-name {
+        font-size: 13px;
+    }
+    
+    .category-stat-bar {
+        display: none;
     }
 }
