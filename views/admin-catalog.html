@@ -80,6 +80,49 @@
             </div>
         </div>
 
+        <!-- ============================================================ -->
+        <!-- ТЕХНИКА В ВЫБРАННОЙ КАТЕГОРИИ/ТИПЕ                          -->
+        <!-- ============================================================ -->
+        <div class="equipment-section" id="equipmentSection">
+            <div class="equipment-section-header">
+                <div>
+                    <h2>🔧 Техника в выбранной категории</h2>
+                    <div class="equipment-section-subtitle" id="equipmentSubtitle">
+                        Выберите категорию или тип, чтобы увидеть технику
+                    </div>
+                </div>
+                <div class="equipment-search">
+                    <input 
+                        type="text" 
+                        id="equipmentSearch" 
+                        placeholder="🔍 Поиск по технике или владельцу..."
+                        onkeydown="onEquipmentSearchKeydown(event)"
+                    >
+                    <button 
+                        type="button" 
+                        onclick="applyEquipmentSearch()" 
+                        class="btn btn-primary btn-sm"
+                        title="Найти"
+                    >🔍 Найти</button>
+                    <button 
+                        type="button" 
+                        onclick="resetEquipmentSearch()" 
+                        class="btn btn-back btn-sm"
+                        title="Сбросить поиск"
+                    >✕</button>
+                </div>
+            </div>
+            
+            <div id="equipmentTableContainer">
+                <!-- Заполняется через JS -->
+                <div class="catalog-empty">
+                    <span class="empty-icon">👆</span>
+                    <div class="empty-text">Выберите категорию слева или тип справа</div>
+                    <div class="empty-hint">Техника появится здесь</div>
+                </div>
+            </div>
+        </div>
+
         <!-- Footer -->
         <div id="footer-container"></div>
     </div>
@@ -212,6 +255,20 @@
             <div class="modal-actions">
                 <button onclick="closeDeleteModal()" class="btn btn-back">Отмена</button>
                 <button onclick="confirmDelete()" class="btn btn-danger">Удалить</button>
+            </div>
+        </div>
+    </div>
+        <!-- ============================================================ -->
+    <!-- МОДАЛЬНОЕ ОКНО: ПРОСМОТР ТЕХНИКИ -->
+    <!-- ============================================================ -->
+    <div class="modal-overlay" id="viewEquipmentModal">
+        <div class="modal view-user-modal">
+            <div class="modal-header">
+                <h3>🔧 Информация о технике</h3>
+                <button onclick="closeViewEquipmentModal()" class="modal-close">✕</button>
+            </div>
+            <div class="modal-body" id="viewEquipmentBody">
+                <!-- Заполняется через JS -->
             </div>
         </div>
     </div>

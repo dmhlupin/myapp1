@@ -55,6 +55,8 @@ const {
   updateTypeAPI,
   deleteTypeAPI,
   reorderTypesAPI,
+  getFilteredEquipmentAPI,   // 🆕
+  getEquipmentCountsAPI,     // 🆕
 } = require('./routes/catalog');
 
 // Роуты авторизации
@@ -189,6 +191,10 @@ app.get('/admin/user/edit/:id', requireAdmin, renderEditUser);
 // API ДЛЯ ТЕХНИКИ (только администраторы!)
 // ============================================
 app.get('/api/admin/equipment', requireAdmin, getEquipmentAPI);
+// Сначала конкретные
+app.get('/api/admin/equipment/filtered', requireAdmin, getFilteredEquipmentAPI);
+app.get('/api/admin/equipment/counts', requireAdmin, getEquipmentCountsAPI);
+
 app.get('/api/admin/equipment/:id/details', requireAdmin, getEquipmentDetailsAPI);  // ← НОВОЕ (до :id!)
 app.get('/api/admin/equipment/:id', requireAdmin, getEquipmentByIdAPI);
 app.post('/api/admin/equipment', requireAdmin, addEquipmentAPI);

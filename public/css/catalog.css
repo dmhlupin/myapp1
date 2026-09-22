@@ -411,6 +411,376 @@
     }
 }
 
+
+/* ============================================================
+   СЕКЦИЯ ТЕХНИКИ В ВЫБРАННОЙ КАТЕГОРИИ/ТИПЕ
+   ============================================================ */
+
+.equipment-section {
+    background: white;
+    border-radius: 12px;
+    padding: 20px 25px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.equipment-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #e2e8f0;
+    flex-wrap: wrap;
+}
+
+.equipment-section-header h2 {
+    color: #2d3748;
+    font-size: 18px;
+    margin: 0 0 4px 0;
+}
+
+.equipment-section-subtitle {
+    color: #718096;
+    font-size: 13px;
+}
+
+.equipment-search {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+
+.equipment-search input {
+    padding: 8px 15px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    width: 300px;
+    max-width: 100%;
+    transition: all 0.2s;
+    background: white;
+}
+
+.equipment-search input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+@media (max-width: 768px) {
+    .equipment-search {
+        width: 100%;
+    }
+    
+    .equipment-search input {
+        width: 100%;
+    }
+}
+
+/* ============================================================
+   ТАБЛИЦА ТЕХНИКИ
+   ============================================================ */
+
+.equipment-table-wrapper {
+    overflow-x: auto;
+    border-radius: 8px;
+}
+
+.equipment-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.equipment-table thead {
+    background: #f7fafc;
+}
+
+.equipment-table th {
+    padding: 12px 15px;
+    text-align: left;
+    color: #4a5568;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.equipment-table td {
+    padding: 12px 15px;
+    border-bottom: 1px solid #f0f4f8;
+    color: #2d3748;
+    vertical-align: middle;
+}
+
+.equipment-table tr:hover {
+    background: #f7fafc;
+}
+
+.equipment-table tr:last-child td {
+    border-bottom: none;
+}
+
+/* Инвентарный номер */
+.eq-inv {
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+    color: #667eea;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+/* Название + модель */
+.eq-name {
+    font-weight: 500;
+    color: #2d3748;
+}
+
+.eq-model {
+    font-size: 12px;
+    color: #718096;
+    margin-top: 2px;
+}
+
+/* Статус */
+.eq-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.eq-status.status-available {
+    background: #c6f6d5;
+    color: #22543d;
+}
+
+.eq-status.status-assigned {
+    background: #bee3f8;
+    color: #2a4365;
+}
+
+.eq-status.status-maintenance {
+    background: #fefcbf;
+    color: #744210;
+}
+
+.eq-status.status-retired {
+    background: #fed7d7;
+    color: #742a2a;
+}
+
+/* Владелец */
+.eq-owner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.eq-owner-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.eq-owner-info {
+    min-width: 0;
+}
+
+.eq-owner-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: #2d3748;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.eq-owner-dept {
+    font-size: 11px;
+    color: #a0aec0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.eq-owner-empty {
+    color: #a0aec0;
+    font-size: 13px;
+    font-style: italic;
+}
+
+/* Кнопки действий */
+.eq-actions {
+    display: flex;
+    gap: 5px;
+    justify-content: flex-end;
+}
+
+.eq-btn {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    background: white;
+    cursor: pointer;
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    text-decoration: none;
+}
+
+.eq-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+}
+
+.eq-btn.view {
+    color: #2c7a7b;
+}
+
+.eq-btn.view:hover {
+    background: #e6fffa;
+    border-color: #81e6d9;
+}
+
+.eq-btn.edit {
+    color: #2b6cb0;
+}
+
+.eq-btn.edit:hover {
+    background: #ebf8ff;
+    border-color: #90cdf4;
+}
+
+/* ============================================================
+   ПАГИНАЦИЯ
+   ============================================================ */
+
+.equipment-pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 0 5px;
+    flex-wrap: wrap;
+    gap: 10px;
+    border-top: 1px solid #e2e8f0;
+    margin-top: 15px;
+}
+
+.equipment-pagination-info {
+    color: #718096;
+    font-size: 13px;
+}
+
+.equipment-pagination-buttons {
+    display: flex;
+    gap: 5px;
+}
+
+.equipment-pagination-btn {
+    padding: 6px 12px;
+    border: 1px solid #e2e8f0;
+    background: white;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-family: inherit;
+    color: #4a5568;
+    transition: all 0.2s;
+    min-width: 36px;
+}
+
+.equipment-pagination-btn:hover:not(:disabled) {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+}
+
+.equipment-pagination-btn.active {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+    font-weight: 600;
+}
+
+.equipment-pagination-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* ============================================================
+   АДАПТИВНОСТЬ ТАБЛИЦЫ ТЕХНИКИ
+   ============================================================ */
+
+@media (max-width: 768px) {
+    .equipment-section-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .equipment-search input {
+        width: 100%;
+    }
+    
+    /* Скрываем менее важные колонки на мобильных */
+    .equipment-table th.col-model,
+    .equipment-table td.col-model,
+    .equipment-table th.col-serial,
+    .equipment-table td.col-serial {
+        display: none;
+    }
+    
+    .equipment-table {
+        font-size: 13px;
+    }
+    
+    .equipment-table th,
+    .equipment-table td {
+        padding: 10px 8px;
+    }
+    
+    .eq-owner-avatar {
+        width: 24px;
+        height: 24px;
+        font-size: 10px;
+    }
+    
+    .eq-btn {
+        width: 28px;
+        height: 28px;
+        font-size: 12px;
+    }
+}
+.type-item.selected {
+    background: white;
+    border-color: #48bb78;
+    box-shadow: 0 4px 12px rgba(72, 187, 120, 0.25);
+}
+
 /* ============================================================
    ТЁМНЫЕ ЭЛЕМЕНТЫ (для будущего)
    ============================================================ */

@@ -209,31 +209,137 @@ module.exports = ({ db, run, get, all }) => ({
   
   /**
    * Получить технику с информацией о текущем владельце
+   * Поддерживает фильтры: category_id, type_id, search + пагинацию
    */
-  getEquipmentWithUsers() {
+  getEquipmentWithUsers(filters = {}) {
     return new Promise((resolve, reject) => {
-      db.all(`
+      const {
+        category_id = null,
+        type_id = null,
+        search = null,
+        limit = null,
+        offset = 0,
+        include_total = false,
+      } = filters;
+      
+      let sql = `
         SELECT 
-          e.*,
+          e.id,
+          e.inventory_number,
+          e.name,
+          e.model,
+          e.serial_number,
+          e.manufacturer,
+          e.status,
+          e.category_id,
+          e.type_id,
+          c.name as category_name,
+          c.icon as category_icon,
+          t.name as type_name,
+          t.icon as type_icon,
           u.id as user_id,
           u.full_name as user_name,
           u.department as user_department,
           ue.assigned_date,
           ue.condition_on_assign,
-          ue.notes as assignment_notes,
-          CASE 
-            WHEN ue.returned_date IS NULL AND e.status = 'assigned' THEN 'active'
-            WHEN ue.returned_date IS NOT NULL THEN 'returned'
-            ELSE 'available'
-          END as assignment_status
+          ue.notes as assignment_notes
         FROM equipment e
+        LEFT JOIN equipment_categories c ON e.category_id = c.id
+        LEFT JOIN equipment_types t ON e.type_id = t.id
         LEFT JOIN user_equipment ue ON e.id = ue.equipment_id AND ue.returned_date IS NULL
         LEFT JOIN users u ON ue.user_id = u.id
-        ORDER BY e.name
-      `, (err, rows) => {
-        if (err) reject(err);
-        else resolve(rows || []);
-      });
+        WHERE 1=1
+      `;
+      const params = [];
+      
+      if (category_id) {
+        sql += ' AND e.category_id = ?';
+        params.push(category_id);
+      }
+      
+      if (type_id) {
+        sql += ' AND e.type_id = ?';
+        params.push(type_id);
+      }
+      
+      if (search) {
+        sql += ` AND (
+          e.inventory_number LIKE ? OR 
+          e.name LIKE ? OR 
+          e.model LIKE ? OR 
+          e.serial_number LIKE ? OR
+          u.full_name LIKE ? OR
+          u.username LIKE ?
+        )`;
+        const term = `%${search}%`;
+        params.push(term, term, term, term, term, term);
+      }
+      
+      sql += ' ORDER BY e.inventory_number ASC';
+      
+      // Пагинация
+      if (limit) {
+        sql += ' LIMIT ? OFFSET ?';
+        params.push(limit, offset);
+      }
+      
+      // Если нужен общий счётчик — делаем два запроса
+      if (include_total) {
+        let countSql = `
+          SELECT COUNT(*) as total
+          FROM equipment e
+          LEFT JOIN user_equipment ue ON e.id = ue.equipment_id AND ue.returned_date IS NULL
+          LEFT JOIN users u ON ue.user_id = u.id
+          WHERE 1=1
+        `;
+        const countParams = [];
+        
+        if (category_id) {
+          countSql += ' AND e.category_id = ?';
+          countParams.push(category_id);
+        }
+        if (type_id) {
+          countSql += ' AND e.type_id = ?';
+          countParams.push(type_id);
+        }
+        if (search) {
+          countSql += ` AND (
+            e.inventory_number LIKE ? OR 
+            e.name LIKE ? OR 
+            e.model LIKE ? OR 
+            e.serial_number LIKE ? OR
+            u.full_name LIKE ? OR
+            u.username LIKE ?
+          )`;
+          const term = `%${search}%`;
+          countParams.push(term, term, term, term, term, term);
+        }
+        
+        db.get(countSql, countParams, (err, countRow) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+          
+          db.all(sql, params, (err, rows) => {
+            if (err) {
+              reject(err);
+              return;
+            }
+            resolve({
+              items: rows || [],
+              total: countRow ? countRow.total : 0,
+              limit: limit,
+              offset: offset,
+            });
+          });
+        });
+      } else {
+        db.all(sql, params, (err, rows) => {
+          if (err) reject(err);
+          else resolve(rows || []);
+        });
+      }
     });
   },
   
@@ -433,12 +539,59 @@ module.exports = ({ db, run, get, all }) => ({
         }
       );
     });
-  }
+  },
   
+  
+  /**
+   * Получить количество техники по категориям
+   * Возвращает: { category_id: count, ... }
+   */
+  getEquipmentCountsByCategory() {
+    return new Promise((resolve, reject) => {
+      db.all(`
+        SELECT category_id, COUNT(*) as count
+        FROM equipment
+        WHERE category_id IS NOT NULL
+        GROUP BY category_id
+      `, (err, rows) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        
+        const counts = {};
+        (rows || []).forEach(row => {
+          counts[row.category_id] = row.count;
+        });
+        resolve(counts);
+      });
+    });
+  },
+  
+  /**
+   * Получить количество техники по типам
+   * Возвращает: { type_id: count, ... }
+   */
+  getEquipmentCountsByType() {
+    return new Promise((resolve, reject) => {
+      db.all(`
+        SELECT type_id, COUNT(*) as count
+        FROM equipment
+        WHERE type_id IS NOT NULL
+        GROUP BY type_id
+      `, (err, rows) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        
+        const counts = {};
+        (rows || []).forEach(row => {
+          counts[row.type_id] = row.count;
+        });
+        resolve(counts);
+      });
+    });
+  }
 });
-
-// ============================================================
-// ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ
-// ============================================================
-// Вынесена за пределы объекта, так как вызывается внутри updateEquipment
 

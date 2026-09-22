@@ -116,7 +116,7 @@ function renderTypes() {
     }
     
     container.innerHTML = filtered.map(type => `
-        <div class="type-item" data-id="${type.id}">
+        <div class="type-item" data-id="${type.id}" onclick="selectType(${type.id})">
             <div class="type-icon">${type.icon || '📦'}</div>
             <div class="type-info">
                 <div class="type-name">${escapeHtml(type.name)}</div>
@@ -175,10 +175,12 @@ function updateCategorySelectInTypeModal() {
 function filterTypes() {
     const filter = document.getElementById('categoryFilter');
     currentFilter = filter.value;
-    renderCategories(); // для подсветки selected
+    renderCategories();
     renderTypes();
+    
+    // 🆕 Обновляем фильтр техники
+    setEquipmentCategoryFilter(currentFilter || null);
 }
-
 /**
  * Клик по категории — устанавливает фильтр
  */
@@ -194,6 +196,35 @@ function selectCategory(id) {
     }
     renderCategories();
     renderTypes();
+    
+    // 🆕 Обновляем фильтр техники
+    setEquipmentCategoryFilter(currentFilter || null);
+}
+/**
+ * Клик по типу — устанавливает фильтр техники по типу
+ */
+function selectType(typeId) {
+    // Проверяем, не кликнули ли на кнопки внутри
+    if (event) event.stopPropagation();
+    
+    const container = document.getElementById('typesList');
+    const items = container.querySelectorAll('.type-item');
+    
+    // Сбрасываем выделение со всех
+    items.forEach(item => item.classList.remove('selected'));
+    
+    // Если клик по тому же — сбрасываем фильтр
+    if (currentEquipmentFilters.type_id === typeId) {
+        currentEquipmentFilters.type_id = null;
+        setEquipmentCategoryFilter(currentEquipmentFilters.category_id);
+    } else {
+        currentEquipmentFilters.type_id = typeId;
+        // Находим элемент и подсвечиваем
+        const target = container.querySelector(`.type-item[data-id="${typeId}"]`);
+        if (target) target.classList.add('selected');
+        
+        loadFilteredEquipment(1);
+    }
 }
 
 // ============================================================
@@ -477,6 +508,575 @@ function escapeAttr(str) {
 }
 
 // ============================================================
+// ТЕХНИКА В ВЫБРАННОЙ КАТЕГОРИИ/ТИПЕ
+// ============================================================
+
+let currentEquipmentPage = 1;
+let currentEquipmentFilters = {
+    category_id: null,
+    type_id: null,
+    search: null,
+};
+
+
+/**
+ * Загрузить технику с текущими фильтрами
+ */
+async function loadFilteredEquipment(page = 1) {
+    currentEquipmentPage = page;
+    
+    const container = document.getElementById('equipmentTableContainer');
+    if (!container) return;
+    
+    // Показываем загрузку
+    container.innerHTML = '<div class="catalog-loading">⏳ Загрузка техники...</div>';
+    
+    try {
+        // Формируем URL
+        const params = new URLSearchParams();
+        if (currentEquipmentFilters.category_id) {
+            params.set('category_id', currentEquipmentFilters.category_id);
+        }
+        if (currentEquipmentFilters.type_id) {
+            params.set('type_id', currentEquipmentFilters.type_id);
+        }
+        if (currentEquipmentFilters.search) {
+            params.set('search', currentEquipmentFilters.search);
+        }
+        params.set('page', page);
+        params.set('limit', 20);
+        
+        const response = await fetch(`/api/admin/equipment/filtered?${params}`);
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || 'Ошибка загрузки');
+        }
+        
+        renderEquipmentTable(data);
+        updateEquipmentSubtitle(data);
+    } catch (error) {
+        console.error('Ошибка загрузки техники:', error);
+        container.innerHTML = `
+            <div class="catalog-empty">
+                <span class="empty-icon">❌</span>
+                <div class="empty-text">Ошибка загрузки: ${escapeHtml(error.message)}</div>
+            </div>
+        `;
+    }
+}
+
+/**
+ * Обновить подзаголовок секции
+ */
+function updateEquipmentSubtitle(data) {
+    const subtitle = document.getElementById('equipmentSubtitle');
+    if (!subtitle) return;
+    
+    const parts = [];
+    
+    if (currentEquipmentFilters.type_id) {
+        const type = types.find(t => t.id === currentEquipmentFilters.type_id);
+        if (type) parts.push(`📦 ${type.name}`);
+    } else if (currentEquipmentFilters.category_id) {
+        const cat = categories.find(c => c.id === currentEquipmentFilters.category_id);
+        if (cat) parts.push(`📁 ${cat.name}`);
+    }
+    
+    if (currentEquipmentFilters.search) {
+        parts.push(`🔍 "${currentEquipmentFilters.search}"`);
+    }
+    
+    if (parts.length === 0) {
+        subtitle.textContent = 'Выберите категорию слева или тип справа';
+    } else {
+        subtitle.innerHTML = `Показано: ${data.total} единиц — ${parts.join(' → ')}`;
+    }
+}
+
+/**
+ * Отрисовать таблицу техники
+ */
+function renderEquipmentTable(data) {
+    const container = document.getElementById('equipmentTableContainer');
+    if (!container) return;
+    
+    if (data.items.length === 0) {
+        container.innerHTML = `
+            <div class="catalog-empty">
+                <span class="empty-icon">📭</span>
+                <div class="empty-text">Техника не найдена</div>
+                <div class="empty-hint">Попробуйте изменить фильтр или поиск</div>
+            </div>
+        `;
+        return;
+    }
+    
+    // Таблица
+    let html = `
+        <div class="equipment-table-wrapper">
+            <table class="equipment-table">
+                <thead>
+                    <tr>
+                        <th>Инв. номер</th>
+                        <th>Название</th>
+                        <th class="col-model">Модель</th>
+                        <th>Статус</th>
+                        <th>Владелец</th>
+                        <th style="text-align: right;">Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    data.items.forEach(eq => {
+        // Инициалы владельца
+        const ownerInitials = eq.user_name 
+            ? eq.user_name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
+            : '';
+        
+        // Статус
+        const statusLabels = {
+            'available': '✅ Доступна',
+            'assigned': '👤 Назначена',
+            'maintenance': '🔧 В ремонте',
+            'retired': '❌ Списана',
+        };
+        const statusText = statusLabels[eq.status] || eq.status;
+        
+        // Владелец
+        let ownerHtml;
+        if (eq.user_name) {
+            ownerHtml = `
+                <div class="eq-owner">
+                    <span class="eq-owner-avatar">${ownerInitials}</span>
+                    <div class="eq-owner-info">
+                        <div class="eq-owner-name">${escapeHtml(eq.user_name)}</div>
+                        ${eq.user_department ? `<div class="eq-owner-dept">${escapeHtml(eq.user_department)}</div>` : ''}
+                    </div>
+                </div>
+            `;
+        } else {
+            ownerHtml = '<span class="eq-owner-empty">—</span>';
+        }
+        
+        html += `
+            <tr>
+                <td><span class="eq-inv">${escapeHtml(eq.inventory_number)}</span></td>
+                <td>
+                    <div class="eq-name">${escapeHtml(eq.name)}</div>
+                </td>
+                <td class="col-model">
+                    <div class="eq-model">${escapeHtml(eq.model || '—')}</div>
+                </td>
+                <td>
+                    <span class="eq-status status-${eq.status}">${statusText}</span>
+                </td>
+                <td>${ownerHtml}</td>
+                <td>
+                    <div class="eq-actions">
+                        <button onclick="viewEquipment(${eq.id})" 
+                                class="eq-btn view" 
+                                title="Просмотр карточки">👁️</button>
+                        <a href="/admin/edit/${eq.id}" 
+                           class="eq-btn edit" 
+                           title="Редактировать">✏️</a>
+                    </div>
+                </td>
+            </tr>
+        `;
+    });
+    
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+    
+    // Пагинация
+    if (data.totalPages > 1) {
+        html += renderPagination(data);
+    } else {
+        html += `
+            <div class="equipment-pagination">
+                <div class="equipment-pagination-info">
+                    Показано ${data.items.length} из ${data.total}
+                </div>
+            </div>
+        `;
+    }
+    
+    container.innerHTML = html;
+}
+
+/**
+ * Отрисовать пагинацию
+ */
+function renderPagination(data) {
+    const { page, totalPages, total, items } = data;
+    const from = (page - 1) * data.limit + 1;
+    const to = Math.min(page * data.limit, total);
+    
+    let buttons = '';
+    
+    // Кнопка "Назад"
+    buttons += `
+        <button 
+            class="equipment-pagination-btn" 
+            onclick="loadFilteredEquipment(${page - 1})"
+            ${page <= 1 ? 'disabled' : ''}
+        >←</button>
+    `;
+    
+    // Номера страниц (сокращённые)
+    const pages = [];
+    const maxVisible = 5;
+    let start = Math.max(1, page - 2);
+    let end = Math.min(totalPages, start + maxVisible - 1);
+    
+    if (end - start < maxVisible - 1) {
+        start = Math.max(1, end - maxVisible + 1);
+    }
+    
+    if (start > 1) {
+        pages.push(`<button class="equipment-pagination-btn" onclick="loadFilteredEquipment(1)">1</button>`);
+        if (start > 2) pages.push('<span style="padding: 6px;">…</span>');
+    }
+    
+    for (let i = start; i <= end; i++) {
+        pages.push(`
+            <button 
+                class="equipment-pagination-btn ${i === page ? 'active' : ''}" 
+                onclick="loadFilteredEquipment(${i})"
+            >${i}</button>
+        `);
+    }
+    
+    if (end < totalPages) {
+        if (end < totalPages - 1) pages.push('<span style="padding: 6px;">…</span>');
+        pages.push(`<button class="equipment-pagination-btn" onclick="loadFilteredEquipment(${totalPages})">${totalPages}</button>`);
+    }
+    
+    buttons += pages.join('');
+    
+    // Кнопка "Вперёд"
+    buttons += `
+        <button 
+            class="equipment-pagination-btn" 
+            onclick="loadFilteredEquipment(${page + 1})"
+            ${page >= totalPages ? 'disabled' : ''}
+        >→</button>
+    `;
+    
+    return `
+        <div class="equipment-pagination">
+            <div class="equipment-pagination-info">
+                Показано ${from}–${to} из ${total}
+            </div>
+            <div class="equipment-pagination-buttons">
+                ${buttons}
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Обработка нажатия клавиш в поиске
+ * Enter — применить поиск
+ * Escape — очистить
+ */
+function onEquipmentSearchKeydown(event) {
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        applyEquipmentSearch();
+    } else if (event.key === 'Escape') {
+        event.preventDefault();
+        resetEquipmentSearch();
+    }
+}
+
+/**
+ * Применить поиск (по кнопке или Enter)
+ */
+function applyEquipmentSearch() {
+    const input = document.getElementById('equipmentSearch');
+    if (!input) return;
+    
+    const searchTerm = input.value.trim() || null;
+    
+    // Если поиск не изменился — не делаем запрос
+    if (searchTerm === currentEquipmentFilters.search) {
+        return;
+    }
+    
+    currentEquipmentFilters.search = searchTerm;
+    loadFilteredEquipment(1);
+}
+
+/**
+ * Сбросить поиск
+ */
+function resetEquipmentSearch() {
+    const input = document.getElementById('equipmentSearch');
+    if (input) input.value = '';
+    
+    if (currentEquipmentFilters.search) {
+        currentEquipmentFilters.search = null;
+        loadFilteredEquipment(1);
+    }
+}
+
+/**
+ * Установить фильтр по категории
+ */
+function setEquipmentCategoryFilter(categoryId) {
+    currentEquipmentFilters.category_id = categoryId || null;
+    currentEquipmentFilters.type_id = null; // сбрасываем тип
+    
+    // 🆕 Не сбрасываем поиск автоматически — оставляем как есть
+    // Если хотите сбрасывать — раскомментируйте:
+    currentEquipmentFilters.search = null;
+    const input = document.getElementById('equipmentSearch');
+    if (input) input.value = '';
+    
+    loadFilteredEquipment(1);
+}
+
+/**
+ * Установить фильтр по типу
+ */
+function setEquipmentTypeFilter(typeId) {
+    currentEquipmentFilters.type_id = typeId || null;
+    loadFilteredEquipment(1);
+}
+
+// ============================================================
+// ПРОСМОТР ТЕХНИКИ (карточка)
+// ============================================================
+
+/**
+ * Открыть карточку техники
+ */
+async function viewEquipment(id) {
+    try {
+        const response = await fetch(`/api/admin/equipment/${id}/details`);
+        const data = await response.json();
+        
+        if (!data.equipment) {
+            showToast('❌ Техника не найдена', 'error');
+            return;
+        }
+        
+        const { equipment, stats, history } = data;
+        
+        // Даты
+        const purchaseDate = equipment.purchase_date 
+            ? new Date(equipment.purchase_date).toLocaleDateString('ru-RU')
+            : '—';
+        const warrantyDate = equipment.warranty_until 
+            ? new Date(equipment.warranty_until).toLocaleDateString('ru-RU')
+            : '—';
+        
+        // Проверка гарантии
+        const warrantyExpired = equipment.warranty_until && new Date(equipment.warranty_until) < new Date();
+        const warrantyBadge = warrantyExpired 
+            ? '<span style="color: #c53030; font-size: 12px;">⚠️ Истекла</span>'
+            : (equipment.warranty_until ? '<span style="color: #2f855a; font-size: 12px;">✅ Действует</span>' : '');
+        
+        // Статус
+        const statusLabels = {
+            'available': { label: 'Доступна', class: 'status-available', icon: '✅' },
+            'assigned': { label: 'Назначена', class: 'status-assigned', icon: '👤' },
+            'maintenance': { label: 'В ремонте', class: 'status-maintenance', icon: '🔧' },
+            'retired': { label: 'Списана', class: 'status-retired', icon: '❌' }
+        };
+        const statusInfo = statusLabels[equipment.status] || statusLabels.available;
+        const statusBadge = `<span class="status-badge ${statusInfo.class}">${statusInfo.icon} ${statusInfo.label}</span>`;
+        
+        // Категория / тип
+        const categoryHtml = equipment.category_name 
+            ? `<span class="eq-status" style="background: #e2e8f0; color: #4a5568;">📁 ${escapeHtml(equipment.category_name)}</span>` 
+            : '';
+        const typeHtml = equipment.type_name 
+            ? `<span class="eq-status" style="background: #e2e8f0; color: #4a5568;">📦 ${escapeHtml(equipment.type_name)}</span>` 
+            : '';
+        
+        // Текущий владелец
+        let currentUserHtml = '';
+        if (stats.current_user) {
+            const u = stats.current_user;
+            const initials = getInitials(u.full_name || u.username);
+            const assignedDate = new Date(u.assigned_date).toLocaleDateString('ru-RU');
+            currentUserHtml = `
+                <div class="current-user-card">
+                    <div class="current-user-avatar">${initials}</div>
+                    <div class="current-user-info">
+                        <div class="current-user-name">${escapeHtml(u.full_name || u.username)}</div>
+                        <div class="current-user-dept">${escapeHtml(u.department || 'Без отдела')} · @${escapeHtml(u.username)}</div>
+                        <div class="current-user-date">📅 Выдано: ${assignedDate}</div>
+                    </div>
+                    <span class="current-user-status">Активно</span>
+                </div>
+            `;
+        } else {
+            currentUserHtml = `
+                <div class="empty-equipment">
+                    <span class="empty-icon">📭</span>
+                    <p>Техника не назначена пользователю</p>
+                </div>
+            `;
+        }
+        
+        // История
+        let historyHtml = '';
+        if (history.length === 0) {
+            historyHtml = '<p style="color: #a0aec0; text-align: center; padding: 15px;">История пуста</p>';
+        } else {
+            historyHtml = `
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>Пользователь</th>
+                            <th>Отдел</th>
+                            <th>Выдано</th>
+                            <th>Возвращено</th>
+                            <th>Состояние</th>
+                            <th>Статус</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            history.forEach(h => {
+                const assignedDate = h.assigned_date 
+                    ? new Date(h.assigned_date).toLocaleDateString('ru-RU') 
+                    : '—';
+                const returnedDate = h.returned_date 
+                    ? new Date(h.returned_date).toLocaleDateString('ru-RU') 
+                    : '—';
+                const statusBadge = h.status === 'active'
+                    ? '<span class="status-badge status-assigned">Активна</span>'
+                    : '<span class="status-badge status-available">Возвращена</span>';
+                
+                historyHtml += `
+                    <tr>
+                        <td>
+                            <div class="history-user">
+                                <span class="history-user-avatar">${getInitials(h.full_name || h.username)}</span>
+                                <span>${escapeHtml(h.full_name || h.username)}</span>
+                            </div>
+                        </td>
+                        <td>${escapeHtml(h.department || '—')}</td>
+                        <td>${assignedDate}</td>
+                        <td>${returnedDate}</td>
+                        <td>${escapeHtml(h.condition_on_assign || '—')}</td>
+                        <td>${statusBadge}</td>
+                    </tr>
+                `;
+            });
+            historyHtml += '</tbody></table>';
+        }
+        
+        // Собираем
+        const body = document.getElementById('viewEquipmentBody');
+        body.innerHTML = `
+            <div class="equipment-header-card">
+                <div class="equipment-header-icon">🔧</div>
+                <div class="equipment-header-info">
+                    <h2>${escapeHtml(equipment.name)}</h2>
+                    <div class="equipment-header-inv">${escapeHtml(equipment.inventory_number)}</div>
+                    <div class="equipment-header-badges">
+                        ${statusBadge}
+                        ${categoryHtml}
+                        ${typeHtml}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="user-stats">
+                <div class="user-stat">
+                    <div class="user-stat-number active">${stats.active}</div>
+                    <div class="user-stat-label">Сейчас назначена</div>
+                </div>
+                <div class="user-stat">
+                    <div class="user-stat-number total">${stats.total}</div>
+                    <div class="user-stat-label">Всего выдач</div>
+                </div>
+                <div class="user-stat">
+                    <div class="user-stat-number returned">${stats.returned}</div>
+                    <div class="user-stat-label">Возвращено</div>
+                </div>
+            </div>
+            
+            <div class="user-detail-section">
+                <h4>📋 Информация о технике</h4>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <label>Название</label>
+                        <div class="value">${escapeHtml(equipment.name)}</div>
+                    </div>
+                    <div class="detail-item">
+                        <label>Модель</label>
+                        <div class="value">${escapeHtml(equipment.model || '—')}</div>
+                    </div>
+                    <div class="detail-item">
+                        <label>Производитель</label>
+                        <div class="value">${escapeHtml(equipment.manufacturer || '—')}</div>
+                    </div>
+                    <div class="detail-item">
+                        <label>Серийный номер</label>
+                        <div class="value">${escapeHtml(equipment.serial_number || '—')}</div>
+                    </div>
+                    <div class="detail-item">
+                        <label>Дата покупки</label>
+                        <div class="value">${purchaseDate}</div>
+                    </div>
+                    <div class="detail-item">
+                        <label>Гарантия до</label>
+                        <div class="value">${warrantyDate} ${warrantyBadge}</div>
+                    </div>
+                </div>
+                ${equipment.description ? `
+                    <div class="detail-item" style="margin-top: 12px;">
+                        <label>Описание</label>
+                        <div class="value">${escapeHtml(equipment.description)}</div>
+                    </div>
+                ` : ''}
+            </div>
+            
+            <div class="user-detail-section">
+                <h4>👤 Текущий владелец</h4>
+                ${currentUserHtml}
+            </div>
+            
+            <div class="user-detail-section">
+                <h4>📜 История использования (${stats.total})</h4>
+                ${historyHtml}
+            </div>
+        `;
+        
+        document.getElementById('viewEquipmentModal').classList.add('active');
+    } catch (error) {
+        console.error('Ошибка:', error);
+        showToast('❌ Ошибка загрузки данных', 'error');
+    }
+}
+
+function closeViewEquipmentModal() {
+    document.getElementById('viewEquipmentModal').classList.remove('active');
+}
+
+/**
+ * Получить инициалы из имени
+ */
+function getInitials(name) {
+    if (!name) return '?';
+    const parts = String(name).trim().split(/\s+/).filter(p => p);
+    if (parts.length === 0) return '?';
+    if (parts.length === 1) return parts[0][0].toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+// ============================================================
 // ЗАКРЫТИЕ МОДАЛОК ПО ESC И КЛИКУ НА ОВЕРЛЕЙ
 // ============================================================
 
@@ -485,6 +1085,7 @@ document.addEventListener('click', function(e) {
         if (e.target.id === 'categoryModal') closeCategoryModal();
         if (e.target.id === 'typeModal') closeTypeModal();
         if (e.target.id === 'deleteModal') closeDeleteModal();
+        if (e.target.id === 'viewEquipmentModal') closeViewEquipmentModal();
     }
 });
 
@@ -493,5 +1094,6 @@ document.addEventListener('keydown', function(e) {
         closeCategoryModal();
         closeTypeModal();
         closeDeleteModal();
+        closeViewEquipmentModal();
     }
 });

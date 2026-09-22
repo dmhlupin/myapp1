@@ -18,6 +18,10 @@ const {
   updateType,
   deleteType,
   reorderTypes,
+  // 🆕 Для фильтра техники
+  getEquipmentWithUsers,
+  getEquipmentCountsByCategory,
+  getEquipmentCountsByType,
 } = require('../database/db');
 const { logAction } = require('../utils/logger');
 
@@ -446,6 +450,80 @@ async function reorderTypesAPI(req, res) {
 }
 
 // ============================================================
+// API — ТЕХНИКА В КАТЕГОРИИ/ТИПЕ
+// ============================================================
+
+/**
+ * GET /api/admin/equipment/filtered
+ * Возвращает технику с фильтром по category_id/type_id + пагинация
+ * 
+ * Query params:
+ *   ?category_id=X — фильтр по категории
+ *   ?type_id=Y — фильтр по типу
+ *   ?search=Z — поиск по номеру/названию/модели
+ *   ?page=1 — номер страницы (по умолчанию 1)
+ *   ?limit=20 — элементов на странице (по умолчанию 20, макс 100)
+ */
+async function getFilteredEquipmentAPI(req, res) {
+  try {
+    const category_id = req.query.category_id ? parseInt(req.query.category_id) : null;
+    const type_id = req.query.type_id ? parseInt(req.query.type_id) : null;
+    const search = req.query.search ? String(req.query.search).trim() : null;
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
+    const offset = (page - 1) * limit;
+    
+    const result = await getEquipmentWithUsers({
+      category_id,
+      type_id,
+      search,
+      limit,
+      offset,
+      include_total: true,
+    });
+    
+    const totalPages = Math.ceil(result.total / limit);
+    
+    res.json({
+      items: result.items,
+      total: result.total,
+      page,
+      limit,
+      totalPages,
+      filters: {
+        category_id,
+        type_id,
+        search,
+      },
+    });
+  } catch (error) {
+    console.error('❌ Ошибка получения техники:', error);
+    res.status(500).json({ error: error.message });
+  }
+}
+
+/**
+ * GET /api/admin/equipment/counts
+ * Возвращает количество техники по категориям и типам
+ */
+async function getEquipmentCountsAPI(req, res) {
+  try {
+    const [byCategory, byType] = await Promise.all([
+      getEquipmentCountsByCategory(),
+      getEquipmentCountsByType(),
+    ]);
+    
+    res.json({
+      by_category: byCategory,
+      by_type: byType,
+    });
+  } catch (error) {
+    console.error('❌ Ошибка получения счётчиков:', error);
+    res.status(500).json({ error: error.message });
+  }
+}
+
+// ============================================================
 // ЭКСПОРТ
 // ============================================================
 
@@ -468,4 +546,8 @@ module.exports = {
   updateTypeAPI,
   deleteTypeAPI,
   reorderTypesAPI,
+  
+  // 🆕 API техники в категории/типе
+  getFilteredEquipmentAPI,
+  getEquipmentCountsAPI,
 };
