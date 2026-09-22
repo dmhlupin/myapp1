@@ -1,15 +1,23 @@
 // scripts/seed.js
-// Заполнение БД тестовыми данными
+// Заполнение базы данных тестовыми данными
+// ВАЖНО: Перед запуском должен быть выполнен `npm run migrate`
 
 const path = require('path');
 const fs = require('fs');
 const sqlite3 = require('sqlite3').verbose();
 const bcrypt = require('bcryptjs');
 
-// Парсим аргументы
+// ============================================================
+// АРГУМЕНТЫ КОМАНДНОЙ СТРОКИ
+// ============================================================
+
 const args = process.argv.slice(2);
 const force = args.includes('--force') || args.includes('-f');
 const quiet = args.includes('--quiet') || args.includes('-q');
+
+// ============================================================
+// ИНИЦИАЛИЗАЦИЯ
+// ============================================================
 
 const dataDir = path.join(__dirname, '..', 'data');
 if (!fs.existsSync(dataDir)) {
@@ -19,10 +27,17 @@ if (!fs.existsSync(dataDir)) {
 const dbPath = path.join(dataDir, 'database.db');
 const db = new sqlite3.Database(dbPath);
 
-// Утилиты
-function log(msg, force = false) {
-  if (!quiet || force) console.log(msg);
+// ============================================================
+// УТИЛИТЫ ДЛЯ ВЫВОДА
+// ============================================================
+
+function log(msg, always = false) {
+  if (!quiet || always) console.log(msg);
 }
+
+// ============================================================
+// ПРОМИС-ОБЁРТКИ ДЛЯ SQLITE
+// ============================================================
 
 function run(sql, params = []) {
   return new Promise((resolve, reject) => {
@@ -51,7 +66,13 @@ function all(sql, params = []) {
   });
 }
 
-// Генерация случайной даты в прошлом
+// ============================================================
+// УТИЛИТЫ ДЛЯ ГЕНЕРАЦИИ ДАННЫХ
+// ============================================================
+
+/**
+ * Случайная дата в прошлом
+ */
 function randomDate(daysAgoMin, daysAgoMax) {
   const daysAgo = Math.floor(Math.random() * (daysAgoMax - daysAgoMin)) + daysAgoMin;
   const date = new Date();
@@ -60,18 +81,20 @@ function randomDate(daysAgoMin, daysAgoMax) {
   return date.toISOString().slice(0, 19).replace('T', ' ');
 }
 
-// Генерация случайного элемента массива
+/**
+ * Случайный элемент массива
+ */
 function random(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
 // ============================================================
-// ДАННЫЕ
+// СПРАВОЧНЫЕ ДАННЫЕ
 // ============================================================
 
+// ВНИМАНИЕ: admin НЕ включён — он создаётся в migrate.js
 const USERS_DATA = [
-  // Администраторы
-  { username: 'admin', email: 'admin@company.com', full_name: 'Администратор системы', department: 'Администрация', phone: '+7(999)000-00-01', role: 'admin' },
+  // Администраторы (кроме admin — он уже есть)
   { username: 'manager', email: 'manager@company.com', full_name: 'Смирнов Алексей Петрович', department: 'Администрация', phone: '+7(999)000-00-02', role: 'admin' },
   
   // IT-отдел
@@ -101,60 +124,62 @@ const USERS_DATA = [
   { username: 'fedorov', email: 'fedorov@company.com', full_name: 'Фёдоров Игорь Валентинович', department: 'Логистика', phone: '+7(999)555-66-78', role: 'user' },
 ];
 
+// Каждая запись — это "name" (тип из справочника) + модель
+// Тип будет найден в справочнике по полю name
 const EQUIPMENT_DATA = [
   // Ноутбуки
-  { name: 'Ноутбук', model: 'Dell Latitude 5540', manufacturer: 'Dell', serial: 'DL5540-001', price_range: 'high' },
-  { name: 'Ноутбук', model: 'Dell Latitude 5540', manufacturer: 'Dell', serial: 'DL5540-002', price_range: 'high' },
-  { name: 'Ноутбук', model: 'HP ProBook 450 G10', manufacturer: 'HP', serial: 'HP450-001', price_range: 'high' },
-  { name: 'Ноутбук', model: 'HP ProBook 450 G10', manufacturer: 'HP', serial: 'HP450-002', price_range: 'high' },
-  { name: 'Ноутбук', model: 'Lenovo ThinkPad E15', manufacturer: 'Lenovo', serial: 'LNE15-001', price_range: 'high' },
-  { name: 'Ноутбук', model: 'Lenovo ThinkPad E15', manufacturer: 'Lenovo', serial: 'LNE15-002', price_range: 'high' },
-  { name: 'Ноутбук', model: 'Apple MacBook Air 13" M2', manufacturer: 'Apple', serial: 'MBA-M2-001', price_range: 'premium' },
-  { name: 'Ноутбук', model: 'Apple MacBook Pro 14" M3', manufacturer: 'Apple', serial: 'MBP-M3-001', price_range: 'premium' },
-  { name: 'Ноутбук', model: 'Asus VivoBook 15', manufacturer: 'Asus', serial: 'ASUS-VB-001', price_range: 'mid' },
-  { name: 'Ноутбук', model: 'Acer Aspire 5', manufacturer: 'Acer', serial: 'ACER-AS-001', price_range: 'mid' },
+  { name: 'Ноутбук', model: 'Dell Latitude 5540', manufacturer: 'Dell', serial: 'DL5540-001' },
+  { name: 'Ноутбук', model: 'Dell Latitude 5540', manufacturer: 'Dell', serial: 'DL5540-002' },
+  { name: 'Ноутбук', model: 'HP ProBook 450 G10', manufacturer: 'HP', serial: 'HP450-001' },
+  { name: 'Ноутбук', model: 'HP ProBook 450 G10', manufacturer: 'HP', serial: 'HP450-002' },
+  { name: 'Ноутбук', model: 'Lenovo ThinkPad E15', manufacturer: 'Lenovo', serial: 'LNE15-001' },
+  { name: 'Ноутбук', model: 'Lenovo ThinkPad E15', manufacturer: 'Lenovo', serial: 'LNE15-002' },
+  { name: 'Ноутбук', model: 'Apple MacBook Air 13" M2', manufacturer: 'Apple', serial: 'MBA-M2-001' },
+  { name: 'Ноутбук', model: 'Apple MacBook Pro 14" M3', manufacturer: 'Apple', serial: 'MBP-M3-001' },
+  { name: 'Ноутбук', model: 'Asus VivoBook 15', manufacturer: 'Asus', serial: 'ASUS-VB-001' },
+  { name: 'Ноутбук', model: 'Acer Aspire 5', manufacturer: 'Acer', serial: 'ACER-AS-001' },
   
   // Мониторы
-  { name: 'Монитор', model: 'Dell UltraSharp U2723QE 27"', manufacturer: 'Dell', serial: 'DELL-U27-001', price_range: 'premium' },
-  { name: 'Монитор', model: 'Dell UltraSharp U2723QE 27"', manufacturer: 'Dell', serial: 'DELL-U27-002', price_range: 'premium' },
-  { name: 'Монитор', model: 'LG 27UP850 27"', manufacturer: 'LG', serial: 'LG-27UP-001', price_range: 'high' },
-  { name: 'Монитор', model: 'LG 27UP850 27"', manufacturer: 'LG', serial: 'LG-27UP-002', price_range: 'high' },
-  { name: 'Монитор', model: 'Samsung ViewFinity S8 27"', manufacturer: 'Samsung', serial: 'SAM-S8-001', price_range: 'high' },
-  { name: 'Монитор', model: 'Acer Nitro VG271 27"', manufacturer: 'Acer', serial: 'ACER-VG-001', price_range: 'mid' },
+  { name: 'Монитор', model: 'Dell UltraSharp U2723QE 27"', manufacturer: 'Dell', serial: 'DELL-U27-001' },
+  { name: 'Монитор', model: 'Dell UltraSharp U2723QE 27"', manufacturer: 'Dell', serial: 'DELL-U27-002' },
+  { name: 'Монитор', model: 'LG 27UP850 27"', manufacturer: 'LG', serial: 'LG-27UP-001' },
+  { name: 'Монитор', model: 'LG 27UP850 27"', manufacturer: 'LG', serial: 'LG-27UP-002' },
+  { name: 'Монитор', model: 'Samsung ViewFinity S8 27"', manufacturer: 'Samsung', serial: 'SAM-S8-001' },
+  { name: 'Монитор', model: 'Acer Nitro VG271 27"', manufacturer: 'Acer', serial: 'ACER-VG-001' },
   
   // Периферия
-  { name: 'Клавиатура', model: 'Logitech MX Keys', manufacturer: 'Logitech', serial: 'LOG-MXK-001', price_range: 'mid' },
-  { name: 'Клавиатура', model: 'Logitech MX Keys', manufacturer: 'Logitech', serial: 'LOG-MXK-002', price_range: 'mid' },
-  { name: 'Клавиатура', model: 'Logitech MX Keys', manufacturer: 'Logitech', serial: 'LOG-MXK-003', price_range: 'mid' },
-  { name: 'Мышь', model: 'Logitech MX Master 3S', manufacturer: 'Logitech', serial: 'LOG-MX3-001', price_range: 'mid' },
-  { name: 'Мышь', model: 'Logitech MX Master 3S', manufacturer: 'Logitech', serial: 'LOG-MX3-002', price_range: 'mid' },
-  { name: 'Мышь', model: 'Logitech MX Master 3S', manufacturer: 'Logitech', serial: 'LOG-MX3-003', price_range: 'mid' },
-  { name: 'Гарнитура', model: 'Jabra Evolve2 65', manufacturer: 'Jabra', serial: 'JAB-EV2-001', price_range: 'mid' },
-  { name: 'Гарнитура', model: 'Jabra Evolve2 65', manufacturer: 'Jabra', serial: 'JAB-EV2-002', price_range: 'mid' },
-  { name: 'Веб-камера', model: 'Logitech Brio 4K', manufacturer: 'Logitech', serial: 'LOG-BRIO-001', price_range: 'mid' },
+  { name: 'Клавиатура', model: 'Logitech MX Keys', manufacturer: 'Logitech', serial: 'LOG-MXK-001' },
+  { name: 'Клавиатура', model: 'Logitech MX Keys', manufacturer: 'Logitech', serial: 'LOG-MXK-002' },
+  { name: 'Клавиатура', model: 'Logitech MX Keys', manufacturer: 'Logitech', serial: 'LOG-MXK-003' },
+  { name: 'Мышь', model: 'Logitech MX Master 3S', manufacturer: 'Logitech', serial: 'LOG-MX3-001' },
+  { name: 'Мышь', model: 'Logitech MX Master 3S', manufacturer: 'Logitech', serial: 'LOG-MX3-002' },
+  { name: 'Мышь', model: 'Logitech MX Master 3S', manufacturer: 'Logitech', serial: 'LOG-MX3-003' },
+  { name: 'Гарнитура', model: 'Jabra Evolve2 65', manufacturer: 'Jabra', serial: 'JAB-EV2-001' },
+  { name: 'Гарнитура', model: 'Jabra Evolve2 65', manufacturer: 'Jabra', serial: 'JAB-EV2-002' },
+  { name: 'Веб-камера', model: 'Logitech Brio 4K', manufacturer: 'Logitech', serial: 'LOG-BRIO-001' },
   
   // Мобильные
-  { name: 'Смартфон', model: 'Apple iPhone 14', manufacturer: 'Apple', serial: 'IPH14-001', price_range: 'premium' },
-  { name: 'Смартфон', model: 'Samsung Galaxy S23', manufacturer: 'Samsung', serial: 'SAM-S23-001', price_range: 'premium' },
-  { name: 'Планшет', model: 'Apple iPad Air 5', manufacturer: 'Apple', serial: 'IPAD-5-001', price_range: 'high' },
-  { name: 'Планшет', model: 'Samsung Galaxy Tab S8', manufacturer: 'Samsung', serial: 'SAM-TABS8-001', price_range: 'high' },
+  { name: 'Смартфон', model: 'Apple iPhone 14', manufacturer: 'Apple', serial: 'IPH14-001' },
+  { name: 'Смартфон', model: 'Samsung Galaxy S23', manufacturer: 'Samsung', serial: 'SAM-S23-001' },
+  { name: 'Планшет', model: 'Apple iPad Air 5', manufacturer: 'Apple', serial: 'IPAD-5-001' },
+  { name: 'Планшет', model: 'Samsung Galaxy Tab S8', manufacturer: 'Samsung', serial: 'SAM-TABS8-001' },
   
   // Оргтехника
-  { name: 'Принтер', model: 'HP LaserJet Pro M404dn', manufacturer: 'HP', serial: 'HP-M404-001', price_range: 'mid' },
-  { name: 'Принтер', model: 'Canon i-SENSYS MF443dw', manufacturer: 'Canon', serial: 'CAN-MF443-001', price_range: 'mid' },
-  { name: 'МФУ', model: 'Kyocera ECOSYS M5526cdn', manufacturer: 'Kyocera', serial: 'KYO-M5526-001', price_range: 'high' },
-  { name: 'Сканер', model: 'Epson WorkForce DS-530 II', manufacturer: 'Epson', serial: 'EPS-DS530-001', price_range: 'mid' },
+  { name: 'Принтер', model: 'HP LaserJet Pro M404dn', manufacturer: 'HP', serial: 'HP-M404-001' },
+  { name: 'Принтер', model: 'Canon i-SENSYS MF443dw', manufacturer: 'Canon', serial: 'CAN-MF443-001' },
+  { name: 'МФУ', model: 'Kyocera ECOSYS M5526cdn', manufacturer: 'Kyocera', serial: 'KYO-M5526-001' },
+  { name: 'Сканер', model: 'Epson WorkForce DS-530 II', manufacturer: 'Epson', serial: 'EPS-DS530-001' },
   
   // Серверное/сетевое
-  { name: 'Сервер', model: 'Dell PowerEdge R450', manufacturer: 'Dell', serial: 'DELL-R450-001', price_range: 'premium' },
-  { name: 'Коммутатор', model: 'Cisco Catalyst 1000-24T', manufacturer: 'Cisco', serial: 'CIS-CAT-001', price_range: 'high' },
-  { name: 'Маршрутизатор', model: 'MikroTik CCR2004', manufacturer: 'MikroTik', serial: 'MIK-CCR-001', price_range: 'high' },
+  { name: 'Сервер', model: 'Dell PowerEdge R450', manufacturer: 'Dell', serial: 'DELL-R450-001' },
+  { name: 'Коммутатор', model: 'Cisco Catalyst 1000-24T', manufacturer: 'Cisco', serial: 'CIS-CAT-001' },
+  { name: 'Маршрутизатор', model: 'MikroTik CCR2004', manufacturer: 'MikroTik', serial: 'MIK-CCR-001' },
   
-  // Прочее
-  { name: 'USB-хаб', model: 'Anker PowerExpand 8-in-1', manufacturer: 'Anker', serial: 'ANK-PE8-001', price_range: 'low' },
-  { name: 'USB-хаб', model: 'Anker PowerExpand 8-in-1', manufacturer: 'Anker', serial: 'ANK-PE8-002', price_range: 'low' },
-  { name: 'Док-станция', model: 'Dell WD19S', manufacturer: 'Dell', serial: 'DELL-WD19-001', price_range: 'high' },
-  { name: 'Док-станция', model: 'Dell WD19S', manufacturer: 'Dell', serial: 'DELL-WD19-002', price_range: 'high' },
+  // Аксессуары
+  { name: 'USB-хаб', model: 'Anker PowerExpand 8-in-1', manufacturer: 'Anker', serial: 'ANK-PE8-001' },
+  { name: 'USB-хаб', model: 'Anker PowerExpand 8-in-1', manufacturer: 'Anker', serial: 'ANK-PE8-002' },
+  { name: 'Док-станция', model: 'Dell WD19S', manufacturer: 'Dell', serial: 'DELL-WD19-001' },
+  { name: 'Док-станция', model: 'Dell WD19S', manufacturer: 'Dell', serial: 'DELL-WD19-002' },
 ];
 
 const DESCRIPTIONS = {
@@ -176,40 +201,148 @@ const DESCRIPTIONS = {
   'Док-станция': 'Док-станция для ноутбука'
 };
 
-const CONDITIONS = ['В хорошем состоянии', 'Новая', 'Требуется внимание', 'С дефектами'];
+const CONDITIONS = [
+  'В хорошем состоянии',
+  'Новая',
+  'Требуется внимание',
+  'С дефектами'
+];
 
 // ============================================================
-// ОСНОВНАЯ ЛОГИКА
+// ПРОВЕРКА СТРУКТУРЫ БД
 // ============================================================
 
-async function checkExisting() {
-  const usersCount = await get('SELECT COUNT(*) as count FROM users');
-  const equipmentCount = await get('SELECT COUNT(*) as count FROM equipment');
+async function checkStructure() {
+  const requiredTables = [
+    'users',
+    'equipment',
+    'equipment_categories',
+    'equipment_types',
+    'user_equipment',
+    'activity_log',
+    'app_meta'
+  ];
+  
+  for (const table of requiredTables) {
+    const exists = await get(
+      `SELECT name FROM sqlite_master WHERE type='table' AND name=?`,
+      [table]
+    );
+    
+    if (!exists) {
+      console.error('');
+      console.error(`❌ Таблица "${table}" не найдена!`);
+      console.error('');
+      console.error('   Сначала запустите миграцию:');
+      console.error('   npm run migrate');
+      console.error('');
+      process.exit(1);
+    }
+  }
+  
+  // Проверяем, что админ существует
+  const admin = await get(`SELECT id, username FROM users WHERE role = 'admin' LIMIT 1`);
+  if (!admin) {
+    console.error('');
+    console.error('❌ Администратор не найден!');
+    console.error('');
+    console.error('   Сначала запустите миграцию:');
+    console.error('   npm run migrate');
+    console.error('');
+    process.exit(1);
+  }
+  
+  // Проверяем, что справочник заполнен
+  const categoriesCount = await get('SELECT COUNT(*) as count FROM equipment_categories');
+  if (categoriesCount.count === 0) {
+    console.error('');
+    console.error('❌ Справочник категорий пуст!');
+    console.error('');
+    console.error('   Сначала запустите миграцию:');
+    console.error('   npm run migrate');
+    console.error('');
+    process.exit(1);
+  }
+}
+
+// ============================================================
+// ПРОВЕРКА СУЩЕСТВУЮЩИХ ДАННЫХ
+// ============================================================
+
+async function checkExistingData() {
+  const users = await get(`SELECT COUNT(*) as count FROM users WHERE username != 'admin'`);
+  const equipment = await get('SELECT COUNT(*) as count FROM equipment');
   
   return {
-    users: usersCount.count,
-    equipment: equipmentCount.count
+    users: users.count,
+    equipment: equipment.count
   };
 }
 
-async function clearData() {
-  log('\n🗑️  Очистка старых данных...', true);
+// ============================================================
+// ОЧИСТКА ДЕМО-ДАННЫХ
+// ============================================================
+
+/**
+ * Удалить файл сессий
+ */
+async function clearSessionsFile() {
+  const sessionsPath = path.join(dataDir, 'sessions.db');
+  const filesToDelete = [
+    sessionsPath,
+    sessionsPath + '-journal',
+    sessionsPath + '-wal',
+    sessionsPath + '-shm'
+  ];
   
-  // Отключаем foreign keys на время очистки
+  let deleted = 0;
+  
+  for (const filePath of filesToDelete) {
+    if (fs.existsSync(filePath)) {
+      try {
+        fs.unlinkSync(filePath);
+        deleted++;
+      } catch (err) {
+        log(`   ⚠️  Не удалось удалить ${path.basename(filePath)}: ${err.message}`, true);
+      }
+    }
+  }
+  
+  if (deleted > 0) {
+    log(`   ✅ Файлы сессий удалены (${deleted})`, true);
+  }
+}
+
+/**
+ * Очистка демо-данных
+ * 
+ * ВАЖНО: НЕ трогаем:
+ * - admin (и других админов с role='admin')
+ * - equipment_categories
+ * - equipment_types
+ * - app_meta
+ */
+async function clearDemoData() {
+  log('\n🗑️  Очистка демо-данных...', true);
+  
   await run('PRAGMA foreign_keys = OFF');
   
-  // Удаляем данные
+  // Удаляем демо-данные
   await run('DELETE FROM activity_log');
   await run('DELETE FROM user_equipment');
   await run('DELETE FROM equipment');
-  await run('DELETE FROM users');
+  
+  // Удаляем всех пользователей КРОМЕ админов
+  const deleted = await run(`DELETE FROM users WHERE role != 'admin'`);
+  log(`   ✅ Удалено пользователей: ${deleted.changes}`, true);
   
   // Сбрасываем счётчики автоинкремента
+  // НЕ трогаем equipment_categories и equipment_types — там свои ID
   await run(`DELETE FROM sqlite_sequence WHERE name IN ('users', 'equipment', 'user_equipment', 'activity_log')`);
   
   await run('PRAGMA foreign_keys = ON');
   
-  // 🆕 Обновляем версию БД — все старые сессии станут невалидными
+  // Обновляем версию БД (все старые сессии станут невалидными)
   const newVersion = Date.now().toString();
   await run(`
     INSERT INTO app_meta (key, value, updated_at) 
@@ -218,45 +351,17 @@ async function clearData() {
       value = excluded.value,
       updated_at = CURRENT_TIMESTAMP
   `, [newVersion]);
-  log(`   ✅ Версия БД обновлена: ${newVersion}`, true);
+  log(`   ✅ Версия БД обновлена`, true);
   
-  // 🆕 Удаляем файл сессий целиком
+  // Удаляем сессии
   await clearSessionsFile();
   
-  log('   ✅ Данные очищены', true);
+  log('   ✅ Демо-данные очищены', true);
 }
 
-/**
- * Удалить файл сессий
- */
-async function clearSessionsFile() {
-  const sessionsPath = path.join(dataDir, 'sessions.db');
-  const sessionsJournalPath = sessionsPath + '-journal';
-  const sessionsWalPath = sessionsPath + '-wal';
-  const sessionsShmPath = sessionsPath + '-shm';
-  
-  const filesToDelete = [sessionsPath, sessionsJournalPath, sessionsWalPath, sessionsShmPath];
-  
-  let deletedCount = 0;
-  
-  for (const filePath of filesToDelete) {
-    if (fs.existsSync(filePath)) {
-      try {
-        fs.unlinkSync(filePath);
-        deletedCount++;
-      } catch (err) {
-        log(`   ⚠️  Не удалось удалить ${path.basename(filePath)}: ${err.message}`, true);
-        log(`      Возможно, сервер ещё запущен. Остановите его и повторите.`, true);
-      }
-    }
-  }
-  
-  if (deletedCount > 0) {
-    log(`   ✅ Файлы сессий удалены (${deletedCount})`, true);
-  } else {
-    log(`   ℹ️  Файлов сессий не найдено`, true);
-  }
-}
+// ============================================================
+// СОЗДАНИЕ ПОЛЬЗОВАТЕЛЕЙ
+// ============================================================
 
 async function createUsers() {
   log('\n👥 Создание пользователей...', true);
@@ -266,7 +371,29 @@ async function createUsers() {
   
   const createdUsers = [];
   
+  // Сначала добавляем существующего admin (создан migrate.js)
+  const admin = await get(`SELECT id, username, full_name, role, department FROM users WHERE username = 'admin'`);
+  if (admin) {
+    createdUsers.push({
+      id: admin.id,
+      username: admin.username,
+      full_name: admin.full_name,
+      role: admin.role,
+      department: admin.department || 'Администрация'
+    });
+  }
+  
+  // Создаём остальных пользователей
   for (const userData of USERS_DATA) {
+    // Проверяем, нет ли уже такого пользователя
+    const existing = await get('SELECT id FROM users WHERE username = ?', [userData.username]);
+    
+    if (existing) {
+      log(`   ⏭️  ${userData.username} уже существует`, true);
+      createdUsers.push({ ...userData, id: existing.id });
+      continue;
+    }
+    
     const hash = userData.role === 'admin' ? adminHash : userHash;
     
     const result = await run(`
@@ -283,39 +410,71 @@ async function createUsers() {
     ]);
     
     createdUsers.push({ ...userData, id: result.lastID });
-    log(`   ✅ ${userData.role === 'admin' ? '👑' : '👤'} ${userData.username} (${userData.full_name})`, true);
+    
+    const icon = userData.role === 'admin' ? '👑' : '👤';
+    log(`   ✅ ${icon} ${userData.username} (${userData.full_name})`, true);
   }
   
   return createdUsers;
 }
 
+// ============================================================
+// СОЗДАНИЕ ТЕХНИКИ
+// ============================================================
+
 async function createEquipment() {
   log('\n📦 Создание техники...', true);
   
+  // Загружаем справочник типов
+  const types = await all(`
+    SELECT t.id, t.name, t.category_id, c.name as category_name
+    FROM equipment_types t
+    JOIN equipment_categories c ON t.category_id = c.id
+  `);
+  
+  // Создаём карту: name → {type_id, category_id}
+  const typeMap = {};
+  for (const t of types) {
+    typeMap[t.name] = { type_id: t.id, category_id: t.category_id };
+  }
+  
   const createdEquipment = [];
   let counter = 1;
+  let notFoundTypes = 0;
   
   for (const eqData of EQUIPMENT_DATA) {
     const inventoryNumber = `EQ-${String(counter).padStart(4, '0')}`;
     
+    // Ищем тип в справочнике
+    const typeInfo = typeMap[eqData.name];
+    
+    if (!typeInfo) {
+      log(`   ⚠️  Тип не найден: "${eqData.name}" — пропускаем`, true);
+      notFoundTypes++;
+      counter++;
+      continue;
+    }
+    
     // Дата покупки: от 30 до 730 дней назад
     const purchaseDate = randomDate(30, 730);
     
-    // Гарантия: +1, +2 или +3 года от даты покупки
+    // Гарантия: +1, +2 или +3 года
     const warrantyYears = Math.floor(Math.random() * 3) + 1;
     const purchaseDateObj = new Date(purchaseDate);
     const warrantyDate = new Date(purchaseDateObj);
     warrantyDate.setFullYear(warrantyDate.getFullYear() + warrantyYears);
     const warrantyUntil = warrantyDate.toISOString().slice(0, 10);
     
+    // Статус: 60% assigned, 40% available
     const status = Math.random() < 0.6 ? 'assigned' : 'available';
     const description = DESCRIPTIONS[eqData.name] || 'Оборудование';
     
     const result = await run(`
       INSERT INTO equipment 
       (inventory_number, name, model, serial_number, manufacturer, 
-       purchase_date, warranty_until, status, description)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+       purchase_date, warranty_until, status, description,
+       category_id, type_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       inventoryNumber,
       eqData.name,
@@ -325,45 +484,59 @@ async function createEquipment() {
       purchaseDate.slice(0, 10),
       warrantyUntil,
       status,
-      description
+      description,
+      typeInfo.category_id,
+      typeInfo.type_id
     ]);
     
-    createdEquipment.push({ 
-      ...eqData, 
-      id: result.lastID, 
+    createdEquipment.push({
+      ...eqData,
+      id: result.lastID,
       inventory_number: inventoryNumber,
       status,
-      purchase_date: purchaseDate.slice(0, 10)
+      purchase_date: purchaseDate.slice(0, 10),
+      category_id: typeInfo.category_id,
+      type_id: typeInfo.type_id
     });
     
     counter++;
   }
   
   log(`   ✅ Создано ${createdEquipment.length} единиц техники`, true);
+  if (notFoundTypes > 0) {
+    log(`   ⚠️  Пропущено (тип не найден): ${notFoundTypes}`, true);
+  }
+  
   return createdEquipment;
 }
+
+// ============================================================
+// СОЗДАНИЕ НАЗНАЧЕНИЙ
+// ============================================================
 
 async function createAssignments(users, equipment) {
   log('\n📋 Создание назначений...', true);
   
-  // Отделяем админов и обычных пользователей
+  // Отделяем обычных пользователей от админов
   const regularUsers = users.filter(u => u.role === 'user');
   
-  let assignmentsCreated = 0;
-  let returnsCreated = 0;
+  if (regularUsers.length === 0) {
+    log('   ⚠️  Нет обычных пользователей для назначений', true);
+    return;
+  }
   
-  // Получаем только assigned технику
+  let activeCount = 0;
+  let returnedCount = 0;
+  
+  // ===== Активные назначения (для assigned техники) =====
   const assignedEquipment = equipment.filter(e => e.status === 'assigned');
   
   for (const eq of assignedEquipment) {
-    // Случайный пользователь (не админ)
     const user = random(regularUsers);
-    
     const assignedDate = randomDate(5, 180);
     const conditionOnAssign = random(CONDITIONS);
     
-    // Создаём активное назначение
-    const result = await run(`
+    await run(`
       INSERT INTO user_equipment (user_id, equipment_id, assigned_date, condition_on_assign, notes)
       VALUES (?, ?, ?, ?, ?)
     `, [
@@ -374,16 +547,15 @@ async function createAssignments(users, equipment) {
       'Назначено при первичном вводе'
     ]);
     
-    assignmentsCreated++;
+    activeCount++;
   }
   
-  // Добавляем историю (возвращённые назначения) для части техники
+  // ===== История (для available техники) =====
   const availableEquipment = equipment.filter(e => e.status === 'available');
+  const historyLimit = Math.min(15, availableEquipment.length);
   
-  for (let i = 0; i < Math.min(15, availableEquipment.length); i++) {
+  for (let i = 0; i < historyLimit; i++) {
     const eq = availableEquipment[i];
-    
-    // Одно или два возвращённых назначения
     const count = Math.floor(Math.random() * 2) + 1;
     
     for (let j = 0; j < count; j++) {
@@ -407,13 +579,17 @@ async function createAssignments(users, equipment) {
         'Возвращено при плановой замене'
       ]);
       
-      returnsCreated++;
+      returnedCount++;
     }
   }
   
-  log(`   ✅ Активных назначений: ${assignmentsCreated}`, true);
-  log(`   ✅ Возвращённых назначений: ${returnsCreated}`, true);
+  log(`   ✅ Активных назначений: ${activeCount}`, true);
+  log(`   ✅ Возвращённых назначений: ${returnedCount}`, true);
 }
+
+// ============================================================
+// СОЗДАНИЕ ЛОГОВ АКТИВНОСТИ
+// ============================================================
 
 async function createActivityLog(users) {
   log('\n📊 Создание логов активности...', true);
@@ -430,7 +606,7 @@ async function createActivityLog(users) {
     { action: 'password_change', weight: 3 },
   ];
   
-  // Разворачиваем в массив по весам
+  // Разворачиваем по весам
   const weightedActions = [];
   actions.forEach(a => {
     for (let i = 0; i < a.weight; i++) weightedActions.push(a.action);
@@ -445,7 +621,11 @@ async function createActivityLog(users) {
     const daysAgo = Math.random() * 30;
     const logDate = new Date();
     logDate.setDate(logDate.getDate() - daysAgo);
-    logDate.setHours(Math.floor(Math.random() * 24), Math.floor(Math.random() * 60), Math.floor(Math.random() * 60));
+    logDate.setHours(
+      Math.floor(Math.random() * 24),
+      Math.floor(Math.random() * 60),
+      Math.floor(Math.random() * 60)
+    );
     
     const createdAt = logDate.toISOString().slice(0, 19).replace('T', ' ');
     
@@ -453,7 +633,9 @@ async function createActivityLog(users) {
     if (action === 'login') {
       details = JSON.stringify({ role: user.role });
     } else if (action === 'equipment_assign' || action === 'equipment_return') {
-      details = JSON.stringify({ inventory_number: `EQ-${String(Math.floor(Math.random() * 40) + 1).padStart(4, '0')}` });
+      details = JSON.stringify({
+        inventory_number: `EQ-${String(Math.floor(Math.random() * 40) + 1).padStart(4, '0')}`
+      });
     } else if (action === 'user_create' || action === 'user_update') {
       details = JSON.stringify({ username: `user${Math.floor(Math.random() * 100)}` });
     }
@@ -476,19 +658,26 @@ async function createActivityLog(users) {
   log(`   ✅ Создано ${created} записей логов`, true);
 }
 
+// ============================================================
+// ГЛАВНАЯ ФУНКЦИЯ
+// ============================================================
+
 async function seed() {
   try {
     console.log('');
     console.log('🌱 ═══════════════════════════════════════════════════');
-    console.log('🌱  Заполнение базы данных тестовыми данными');
+    console.log('🌱  ЗАПОЛНЕНИЕ БАЗЫ ДАННЫХ ТЕСТОВЫМИ ДАННЫМИ');
     console.log('🌱 ═══════════════════════════════════════════════════');
     
-    // Проверяем, есть ли уже данные
-    const existing = await checkExisting();
+    // ===== 1. Проверка структуры БД =====
+    await checkStructure();
+    
+    // ===== 2. Проверка существующих данных =====
+    const existing = await checkExistingData();
     
     if ((existing.users > 0 || existing.equipment > 0) && !force) {
       console.log('');
-      console.log('⚠️  В базе данных уже есть данные:');
+      console.log('⚠️  В базе данных уже есть демо-данные:');
       console.log(`   👥 Пользователей: ${existing.users}`);
       console.log(`   📦 Техники:       ${existing.equipment}`);
       console.log('');
@@ -498,31 +687,36 @@ async function seed() {
       process.exit(0);
     }
     
+    // ===== 3. Очистка (если --force) =====
     if (force && (existing.users > 0 || existing.equipment > 0)) {
-      await clearData();
+      await clearDemoData();
     }
     
-    // Создаём данные
+    // ===== 4. Создание демо-данных =====
     const users = await createUsers();
     const equipment = await createEquipment();
     await createAssignments(users, equipment);
     await createActivityLog(users);
     
-    // Итоги
+    // ===== 5. Итоги =====
     console.log('');
     console.log('🌱 ═══════════════════════════════════════════════════');
-    console.log('✅ База данных успешно заполнена!');
+    console.log('✅ БАЗА ДАННЫХ УСПЕШНО ЗАПОЛНЕНА!');
     console.log('🌱 ═══════════════════════════════════════════════════');
     console.log('');
     console.log('👥 Пользователи:');
-    console.log('   👑 Админы (пароль Admin123!):');
-    console.log('      • admin');
+    console.log('');
+    console.log('   👑 Администраторы (пароль Admin123!):');
+    console.log('      • admin     (создан migrate.js)');
     console.log('      • manager');
     console.log('');
     console.log('   👤 Обычные пользователи (пароль ChangeMe123!):');
-    console.log('      • ivanov, kozlov, novikov, petrova, kuznetsova,');
-    console.log('      • sidorov, morozov, volkov, smirnova, sokolova,');
-    console.log('      • popov, lebedeva, orlov, fedorov');
+    console.log('      • ivanov, kozlov, novikov       (IT-отдел)');
+    console.log('      • petrova, kuznetsova           (Бухгалтерия)');
+    console.log('      • sidorov, morozov, volkov      (Отдел продаж)');
+    console.log('      • smirnova, sokolova            (HR-отдел)');
+    console.log('      • popov, lebedeva               (Маркетинг)');
+    console.log('      • orlov, fedorov                (Логистика)');
     console.log('');
     console.log('📦 Техника: 40 единиц (разные категории)');
     console.log('');
@@ -534,12 +728,20 @@ async function seed() {
     
   } catch (error) {
     console.error('');
-    console.error('❌ Ошибка при заполнении БД:', error);
+    console.error('❌ ОШИБКА ПРИ ЗАПОЛНЕНИИ БД:');
+    console.error('');
+    console.error('   ' + error.message);
+    console.error('');
+    console.error(error.stack);
     console.error('');
     process.exit(1);
   } finally {
     db.close();
   }
 }
+
+// ============================================================
+// ЗАПУСК
+// ============================================================
 
 seed();
