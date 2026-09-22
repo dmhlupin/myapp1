@@ -1,5 +1,38 @@
-# История изменений
+## [1.7.1] - 2026-09-22
 
+### Изменено
+- **Рефакторинг `database/db.js`** — разбит на 9 модулей:
+  - `modules/users.js` — CRUD пользователей
+  - `modules/equipment.js` — техника + назначения
+  - `modules/catalog.js` — категории и типы
+  - `modules/auth.js` — пароли, роли, сессии
+  - `modules/profile.js` — личный кабинет
+  - `modules/logs.js` — логи активности
+  - `modules/dashboard.js` — дашборд
+  - `modules/stats.js` — общая статистика
+  - `modules/meta.js` — app_meta
+- `db.js` теперь **~110 строк** вместо ~1500
+- Все функции разбиты по доменам, легко найти нужную
+
+### Удалено
+- 14 функций мёртвого кода:
+  - `initDatabase`, `insertTestData` (заменены на `migrate.js` и `seed.js`)
+  - `getUserByUsername`, `addUser`, `updateUser`, `deleteUser`
+  - `getUsersWithActiveEquipment`, `getEquipmentByInventory`
+  - `returnEquipment`, `getUserEquipment`
+  - `getUserByEmailWithPassword`, `getAvailableEquipment`
+  - `setUserRole`, `checkDataIntegrity`
+
+### Исправлено
+- `server.js`: убран вызов `initDatabase()` (заменён на `migrate.js`)
+- Добавлена проверка подключения к БД с понятным сообщением
+
+### Добавлено
+- `.gitignore`: правила для бэкапов (`*.backup`, `*.bak`, `*.old`)
+- Единый стиль JSDoc во всех модулях
+
+## [1.7.0] - 2026-09-22
+...
 ## [1.6.0] - 2026-09-21
 
 ### Добавлено
