@@ -8,7 +8,7 @@ module.exports = ({ db, run, get, all }) => ({
   // ============================================================
 
   /**
-   * Получить все склады с количеством зон и техники
+   * Получить все склады с количеством зон, стеллажей, ячеек и техники
    */
   getAllWarehouses() {
     return new Promise((resolve, reject) => {
@@ -23,6 +23,15 @@ module.exports = ({ db, run, get, all }) => ({
           w.created_at,
           w.updated_at,
           (SELECT COUNT(*) FROM zones WHERE warehouse_id = w.id AND is_active = 1) as zones_count,
+          (SELECT COUNT(*) FROM racks r 
+            JOIN zones z ON r.zone_id = z.id 
+            WHERE z.warehouse_id = w.id AND r.is_active = 1
+          ) as racks_count,
+          (SELECT COUNT(*) FROM cells c 
+            JOIN racks r ON c.rack_id = r.id
+            JOIN zones z ON r.zone_id = z.id
+            WHERE z.warehouse_id = w.id AND c.is_active = 1
+          ) as cells_count,
           (SELECT COUNT(*) FROM equipment e 
             JOIN cells c ON e.cell_id = c.id
             JOIN racks r ON c.rack_id = r.id

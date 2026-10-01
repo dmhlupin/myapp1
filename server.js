@@ -59,6 +59,21 @@ const {
   getEquipmentCountsAPI,     // 🆕
 } = require('./routes/catalog');
 
+// Роуты складов
+
+const {
+  renderWarehouses,
+  getWarehousesAPI,
+  getWarehouseAPI,
+  createWarehouseAPI,
+  updateWarehouseAPI,
+  deleteWarehouseAPI,
+  setDefaultWarehouseAPI,
+  getWarehouseTreeAPI,
+  getFullTreeAPI,
+  getWarehouseStatsAPI,
+} = require('./routes/warehouses');
+
 // Роуты авторизации
 const {
   renderLogin,
@@ -231,6 +246,24 @@ app.post('/api/admin/types/reorder', requireAdmin, reorderTypesAPI); // ← ПЕ
 app.get('/api/admin/types/:id', requireAdmin, getTypeAPI);
 app.put('/api/admin/types/:id', requireAdmin, updateTypeAPI);
 app.delete('/api/admin/types/:id', requireAdmin, deleteTypeAPI);
+
+// ============================================
+// СКЛАДЫ (только администраторы!)
+// ============================================
+
+// Страница
+app.get('/admin/warehouses', requireAdmin, renderWarehouses);
+
+// API складов
+app.get('/api/admin/warehouses', requireAdmin, getWarehousesAPI);
+app.get('/api/admin/warehouses/tree', requireAdmin, getFullTreeAPI);          // ← 1
+app.get('/api/admin/warehouses/stats', requireAdmin, getWarehouseStatsAPI);   // ← 2
+app.get('/api/admin/warehouses/:id/tree', requireAdmin, getWarehouseTreeAPI); // ← 3
+app.get('/api/admin/warehouses/:id', requireAdmin, getWarehouseAPI);          // ← 4
+app.post('/api/admin/warehouses', requireAdmin, createWarehouseAPI);
+app.put('/api/admin/warehouses/:id', requireAdmin, updateWarehouseAPI);
+app.delete('/api/admin/warehouses/:id', requireAdmin, deleteWarehouseAPI);
+app.post('/api/admin/warehouses/:id/set-default', requireAdmin, setDefaultWarehouseAPI);
 
 // ============================================
 // API ДЛЯ ПОЛЬЗОВАТЕЛЕЙ (только администраторы!)

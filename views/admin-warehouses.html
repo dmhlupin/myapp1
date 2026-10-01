@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Склады</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/admin.css">
+    <link rel="stylesheet" href="/css/warehouses.css">
+    <link rel="stylesheet" href="/css/help.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div>
+                <h1>🏢 Склады</h1>
+                <div class="subtitle">Управление складами и адресным хранением</div>
+            </div>
+            <div class="header-actions">
+                <a href="/admin" class="btn btn-back btn-sm">← Админ-панель</a>
+                <a href="/" class="btn btn-back btn-sm">📊 Дашборд</a>
+                <a href="/profile" class="btn btn-back btn-sm">👤 Профиль</a>
+                <a href="/logout" class="btn btn-danger btn-sm">🚪 Выйти</a>
+            </div>
+        </div>
+
+        <!-- Статистика -->
+        <div class="stats">
+            <div class="stat-card">
+                <span class="icon">🏢</span>
+                <div class="number">{{total_warehouses}}</div>
+                <div class="label">Складов</div>
+            </div>
+            <div class="stat-card">
+                <span class="icon">📍</span>
+                <div class="number green">{{total_zones}}</div>
+                <div class="label">Зон</div>
+            </div>
+            <div class="stat-card">
+                <span class="icon">🗄️</span>
+                <div class="number orange">{{total_racks}}</div>
+                <div class="label">Стеллажей</div>
+            </div>
+            <div class="stat-card">
+                <span class="icon">📦</span>
+                <div class="number pink">{{total_cells}}</div>
+                <div class="label">Ячеек</div>
+            </div>
+            <div class="stat-card">
+                <span class="icon">🔧</span>
+                <div class="number blue">{{equipment_on_stock}}</div>
+                <div class="label">Техники на складах</div>
+            </div>
+        </div>
+
+        <!-- Панель действий -->
+        <div class="actions-panel">
+            <h2>📋 Список складов</h2>
+            <button onclick="openWarehouseModal()" class="btn btn-success btn-sm">
+                ➕ Добавить склад
+            </button>
+        </div>
+
+        <!-- Список складов (карточки) -->
+        <div id="warehousesList" class="warehouses-grid">
+            <div class="catalog-loading">⏳ Загрузка складов...</div>
+        </div>
+
+        <!-- Footer -->
+        <div id="footer-container"></div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- МОДАЛЬНОЕ ОКНО: СКЛАД                                         -->
+    <!-- ============================================================ -->
+    <div class="modal-overlay" id="warehouseModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="warehouseModalTitle">Добавить склад</h3>
+                <button onclick="closeWarehouseModal()" class="modal-close">✕</button>
+            </div>
+            <form id="warehouseForm" onsubmit="saveWarehouse(event)">
+                <input type="hidden" id="warehouseId">
+
+                <div class="form-group">
+                    <label>Название <span class="required">*</span></label>
+                    <input 
+                        type="text" 
+                        id="warehouseName" 
+                        required 
+                        placeholder="Например: Основной офис"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label>Адрес</label>
+                    <input 
+                        type="text" 
+                        id="warehouseAddress" 
+                        placeholder="г. Москва, ул. Ленина, д. 10"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label>Описание</label>
+                    <textarea 
+                        id="warehouseDescription" 
+                        placeholder="Краткое описание склада..."
+                    ></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="warehouseIsDefault">
+                        <span>⭐ Склад по умолчанию</span>
+                    </label>
+                    <div class="help-text">
+                        Техника при возврате будет автоматически направляться на этот склад
+                    </div>
+                </div>
+
+                <div class="form-group" id="activeGroup" style="display: none;">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="warehouseIsActive" checked>
+                        <span>✅ Активен</span>
+                    </label>
+                    <div class="help-text">
+                        Неактивные склады не отображаются в выборе
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary" id="warehouseSaveBtn">
+                        💾 Сохранить
+                    </button>
+                    <button type="button" class="btn btn-back" onclick="closeWarehouseModal()">
+                        Отмена
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- МОДАЛЬНОЕ ОКНО: УДАЛЕНИЕ                                      -->
+    <!-- ============================================================ -->
+    <div class="modal-overlay" id="deleteModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>🗑️ Удаление склада</h3>
+                <button onclick="closeDeleteModal()" class="modal-close">✕</button>
+            </div>
+            <p id="deleteMessage">Вы уверены?</p>
+            <div id="deleteWarning" class="delete-warning" style="display: none;">
+                <span class="warning-icon">⚠️</span>
+                <div>
+                    <strong>Внимание!</strong>
+                    <p id="deleteWarningText"></p>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button onclick="closeDeleteModal()" class="btn btn-back">Отмена</button>
+                <button onclick="confirmDelete()" class="btn btn-danger">Удалить</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="/js/main.js"></script>
+    <script src="/js/help.js"></script>
+    <script src="/js/footer.js"></script>
+    <script src="/js/warehouses.js"></script>
+</body>
+</html>
