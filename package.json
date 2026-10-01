@@ -1,7 +1,7 @@
 {
   "name": "MoveIT service",
-  "version": "1.14.0",
-  "description": "Система учёта техники с адресным хранением, инвентаризацией и перемещением",
+  "version": "1.15.0",
+  "description": "MoveIT service — система учёта техники с адресным хранением на складах",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -29,12 +29,14 @@
   "keywords": [
     "equipment",
     "inventory",
+    "warehouse",
+    "storage",
     "management",
     "nodejs",
     "express",
     "sqlite",
     "auth"
   ],
-  "author": "Dmitry Hlupin",
+  "author": "Дмитрий Хлюпин",
   "license": "MIT"
 }
