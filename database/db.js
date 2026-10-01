@@ -91,6 +91,7 @@ const logs = require('./modules/logs')(ctx);
 const dashboard = require('./modules/dashboard')(ctx);
 const stats = require('./modules/stats')(ctx);
 const meta = require('./modules/meta')(ctx);
+const warehouses = require('./modules/warehouses')(ctx);
 
 // ============================================================
 // ЗАКРЫТИЕ БД
@@ -123,6 +124,7 @@ module.exports = {
   ...dashboard,
   ...stats,
   ...meta,
+  ...warehouses, //new
   
   // Управление БД
   closeDatabase

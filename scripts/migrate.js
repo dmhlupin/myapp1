@@ -1,5 +1,5 @@
 // scripts/migrate.js
-// Миграция базы данных: структура + наполнение справочника
+// Миграция базы данных: структура + наполнение справочника + склады
 
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
@@ -66,9 +66,6 @@ async function columnExists(table, column) {
   return columns.some(c => c.name === column);
 }
 
-/**
- * Добавить поле, если его нет
- */
 async function addColumnIfMissing(table, column, definition) {
   const exists = await columnExists(table, column);
   if (exists) {
@@ -80,9 +77,6 @@ async function addColumnIfMissing(table, column, definition) {
   return true;
 }
 
-/**
- * Создать индекс, если его нет
- */
 async function createIndexIfMissing(indexName, table, columns, extra = '') {
   await run(`CREATE INDEX IF NOT EXISTS ${indexName} ON ${table}(${columns}) ${extra}`);
 }
@@ -146,6 +140,7 @@ async function createEquipmentTable() {
         description TEXT,
         category_id INTEGER REFERENCES equipment_categories(id) ON DELETE SET NULL,
         type_id INTEGER REFERENCES equipment_types(id) ON DELETE SET NULL,
+        cell_id INTEGER REFERENCES cells(id) ON DELETE SET NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
@@ -291,8 +286,152 @@ async function createAppMetaTable() {
   console.log('⏭️  Таблица app_meta уже существует\n');
 }
 
+// ============================================================
+// ЭТАП 1.5: ТАБЛИЦЫ СКЛАДОВ
+// ============================================================
+
+async function createWarehousesTable() {
+  const exists = await tableExists('warehouses');
+  
+  if (exists) {
+    console.log('⏭️  Таблица warehouses уже существует\n');
+    return;
+  }
+  
+  console.log('📋 Создание таблицы warehouses (склады)...');
+  await run(`
+    CREATE TABLE warehouses (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE,
+      address TEXT,
+      description TEXT,
+      is_default INTEGER NOT NULL DEFAULT 0,
+      is_active INTEGER NOT NULL DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  console.log('✅ Таблица warehouses создана\n');
+}
+
+async function createZonesTable() {
+  const exists = await tableExists('zones');
+  
+  if (exists) {
+    console.log('⏭️  Таблица zones уже существует\n');
+    return;
+  }
+  
+  console.log('📋 Создание таблицы zones (зоны)...');
+  await run(`
+    CREATE TABLE zones (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      warehouse_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      description TEXT,
+      sort_order INTEGER DEFAULT 0,
+      is_active INTEGER NOT NULL DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (warehouse_id) REFERENCES warehouses(id) ON DELETE CASCADE,
+      UNIQUE(warehouse_id, name)
+    )
+  `);
+  console.log('✅ Таблица zones создана\n');
+}
+
+async function createRacksTable() {
+  const exists = await tableExists('racks');
+  
+  if (exists) {
+    console.log('⏭️  Таблица racks уже существует\n');
+    return;
+  }
+  
+  console.log('📋 Создание таблицы racks (стеллажи)...');
+  await run(`
+    CREATE TABLE racks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      zone_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      description TEXT,
+      sort_order INTEGER DEFAULT 0,
+      is_active INTEGER NOT NULL DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (zone_id) REFERENCES zones(id) ON DELETE CASCADE,
+      UNIQUE(zone_id, name)
+    )
+  `);
+  console.log('✅ Таблица racks создана\n');
+}
+
+async function createCellsTable() {
+  const exists = await tableExists('cells');
+  
+  if (exists) {
+    console.log('⏭️  Таблица cells уже существует\n');
+    return;
+  }
+  
+  console.log('📋 Создание таблицы cells (ячейки)...');
+  await run(`
+    CREATE TABLE cells (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      rack_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      code TEXT,
+      capacity INTEGER,
+      description TEXT,
+      sort_order INTEGER DEFAULT 0,
+      is_active INTEGER NOT NULL DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (rack_id) REFERENCES racks(id) ON DELETE CASCADE,
+      UNIQUE(rack_id, name)
+    )
+  `);
+  console.log('✅ Таблица cells создана\n');
+}
+
+async function addCellIdToEquipment() {
+  const exists = await tableExists('equipment');
+  if (!exists) return;
+  
+  console.log('📋 Проверка поля cell_id в equipment...');
+  const cellFieldExists = await columnExists('equipment', 'cell_id');
+  
+  if (!cellFieldExists) {
+    await run(`ALTER TABLE equipment ADD COLUMN cell_id INTEGER REFERENCES cells(id) ON DELETE SET NULL`);
+    console.log('  ✅ Добавлено поле: equipment.cell_id');
+  } else {
+    console.log('  ⏭️  Поле equipment.cell_id уже есть');
+  }
+  console.log('');
+}
+
+async function createWarehousesIndexes() {
+  console.log('📋 Создание индексов для складов...');
+  
+  await createIndexIfMissing('idx_warehouses_default', 'warehouses', 'is_default');
+  await createIndexIfMissing('idx_warehouses_active', 'warehouses', 'is_active');
+  await createIndexIfMissing('idx_zones_warehouse', 'zones', 'warehouse_id');
+  await createIndexIfMissing('idx_zones_sort', 'zones', 'sort_order');
+  await createIndexIfMissing('idx_racks_zone', 'racks', 'zone_id');
+  await createIndexIfMissing('idx_racks_sort', 'racks', 'sort_order');
+  await createIndexIfMissing('idx_cells_rack', 'cells', 'rack_id');
+  await createIndexIfMissing('idx_cells_sort', 'cells', 'sort_order');
+  await createIndexIfMissing('idx_equipment_cell', 'equipment', 'cell_id');
+  
+  console.log('✅ Индексы созданы\n');
+}
+
+// ============================================================
+// ЭТАП 1.6: ОБЩИЕ ИНДЕКСЫ
+// ============================================================
+
 async function createIndexes() {
-  console.log('📋 Создание индексов...');
+  console.log('📋 Создание общих индексов...');
   
   // Пользователи
   await createIndexIfMissing('idx_users_role', 'users', 'role');
@@ -319,11 +458,11 @@ async function createIndexes() {
   await createIndexIfMissing('idx_activity_log_action', 'activity_log', 'action');
   await createIndexIfMissing('idx_activity_log_created', 'activity_log', 'created_at DESC');
   
-  console.log('✅ Индексы созданы\n');
+  console.log('✅ Общие индексы созданы\n');
 }
 
 // ============================================================
-// ЭТАП 2: ДАННЫЕ
+// ЭТАП 2: ДАННЫЕ ПОЛЬЗОВАТЕЛЕЙ
 // ============================================================
 
 async function ensureAdminExists() {
@@ -560,6 +699,32 @@ async function mapExistingEquipment() {
 }
 
 // ============================================================
+// ЭТАП 4: НАЧАЛЬНЫЕ СКЛАДЫ (базовый склад)
+// ============================================================
+
+async function seedDefaultWarehouse() {
+  const existing = await get('SELECT COUNT(*) as count FROM warehouses');
+  
+  if (existing.count > 0) {
+    console.log(`📊 Склады уже существуют (${existing.count}), пропускаем заполнение\n`);
+    return;
+  }
+  
+  console.log('📝 Создание склада по умолчанию...');
+  
+  const result = await run(`
+    INSERT INTO warehouses (name, address, description, is_default, is_active)
+    VALUES (?, ?, ?, 1, 1)
+  `, [
+    'Основной офис',
+    'г. Москва, ул. Ленина, д. 10',
+    'Главный склад компании'
+  ]);
+  
+  console.log(`✅ Создан склад "Основной офис" (ID: ${result.lastID}, по умолчанию)\n`);
+}
+
+// ============================================================
 // ГЛАВНАЯ ФУНКЦИЯ МИГРАЦИИ
 // ============================================================
 
@@ -573,13 +738,22 @@ async function migrate() {
     console.log('📦 ЭТАП 1: Структура базы данных\n');
     
     await createUsersTable();
-    await createCategoriesTable();       // ← должно быть ДО equipment
-    await createTypesTable();            // ← должно быть ДО equipment
+    await createCategoriesTable();
+    await createTypesTable();
     await createEquipmentTable();
     await createUserEquipmentTable();
+    
+    // 🆕 Таблицы складов (порядок важен!)
+    await createWarehousesTable();
+    await createZonesTable();
+    await createRacksTable();
+    await createCellsTable();
+    await addCellIdToEquipment();
+    
     await createActivityLogTable();
     await createAppMetaTable();
     await createIndexes();
+    await createWarehousesIndexes();
     
     // ===== ЭТАП 2: Данные пользователей =====
     console.log('👥 ЭТАП 2: Пользователи\n');
@@ -593,6 +767,11 @@ async function migrate() {
     await seedCategoriesAndTypes();
     await mapExistingEquipment();
     
+    // ===== ЭТАП 4: Склады =====
+    console.log('🏢 ЭТАП 4: Склады\n');
+    
+    await seedDefaultWarehouse();
+    
     // ===== ИТОГИ =====
     console.log('═══════════════════════════════════════════════');
     console.log('✅ МИГРАЦИЯ ЗАВЕРШЕНА УСПЕШНО');
@@ -604,7 +783,11 @@ async function migrate() {
         (SELECT COUNT(*) FROM users) as users,
         (SELECT COUNT(*) FROM equipment_categories) as categories,
         (SELECT COUNT(*) FROM equipment_types) as types,
-        (SELECT COUNT(*) FROM equipment) as equipment
+        (SELECT COUNT(*) FROM equipment) as equipment,
+        (SELECT COUNT(*) FROM warehouses) as warehouses,
+        (SELECT COUNT(*) FROM zones) as zones,
+        (SELECT COUNT(*) FROM racks) as racks,
+        (SELECT COUNT(*) FROM cells) as cells
     `);
     
     console.log('📊 Итоговая статистика:');
@@ -612,6 +795,10 @@ async function migrate() {
     console.log(`   📁 Категорий:      ${stats.categories}`);
     console.log(`   📦 Типов:          ${stats.types}`);
     console.log(`   🔧 Единиц техники: ${stats.equipment}`);
+    console.log(`   🏢 Складов:        ${stats.warehouses}`);
+    console.log(`   📍 Зон:            ${stats.zones}`);
+    console.log(`   🗄️  Стеллажей:      ${stats.racks}`);
+    console.log(`   📦 Ячеек:          ${stats.cells}`);
     console.log('');
     
   } catch (error) {
