@@ -80,6 +80,54 @@
                 </select>
             </div>
 
+            <!-- ============================================================ -->
+            <!-- МЕСТО ХРАНЕНИЯ (для доступной техники)                        -->
+            <!-- ============================================================ -->
+            <div id="locationSection" class="location-section">
+                <h3 class="location-title">📍 Место хранения</h3>
+                <div class="help-text" style="margin-bottom: 15px;">
+                    Укажите, где будет храниться техника. Необязательно.
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Склад</label>
+                        <select id="warehouseId" onchange="onWarehouseChange()">
+                            <option value="">— Не указано —</option>
+                            <option value="__loading__" disabled>⏳ Загрузка...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Зона</label>
+                        <select id="zoneId" onchange="onZoneChange()" disabled>
+                            <option value="">— Сначала выберите склад —</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Стеллаж</label>
+                        <select id="rackId" onchange="onRackChange()" disabled>
+                            <option value="">— Сначала выберите зону —</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Ячейка</label>
+                        <select id="cellId" onchange="updateLocationPreview()" disabled>
+                            <option value="">— Сначала выберите стеллаж —</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="location-preview" id="locationPreview" style="display: none;">
+                    <span class="location-preview-icon">📍</span>
+                    <span id="locationPreviewText"></span>
+                </div>
+            </div>
+
             <div class="form-group">
                 <label>Описание</label>
                 <textarea id="description" placeholder="Дополнительная информация о технике..."></textarea>

@@ -121,7 +121,7 @@ function showEmptyStateIfNeeded(count) {
             emptyRow = document.createElement('tr');
             emptyRow.className = 'empty-row';
             emptyRow.innerHTML = `
-                <td colspan="7" class="empty-state">
+                <td colspan="8" class="empty-state">
                     <span class="emoji">🔍</span>
                     <h3>Ничего не найдено</h3>
                     <p>Попробуйте изменить фильтры</p>

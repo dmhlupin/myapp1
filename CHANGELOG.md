@@ -1,4 +1,56 @@
 # История изменений
+## [1.12.0] - 2026-10-01
+
+### Добавлено
+
+**Привязка техники к ячейкам (этап 5):**
+- **Форма создания/редактирования техники** — блок "📍 Место хранения":
+  - 4 каскадных селекта: Склад → Зона → Стеллаж → Ячейка
+  - Предзаполнение при редактировании
+  - Превью адреса
+- **Отображение места хранения**:
+  - В таблице `/admin` — колонка "Место хранения"
+  - В таблице `/equipment` — колонка "Место хранения"
+  - В карточке техники (модалка) — блок "📍 Место хранения"
+- **Логика "назначение обнуляет cell_id"**:
+  - При назначении пользователю → `cell_id = NULL`
+  - При возврате → `cell_id = NULL`
+  - При смене статуса `assigned → available` → `cell_id = NULL`
+- **API** `getEquipmentWithLocation`:
+  - Полный адрес (склад, зона, стеллаж, ячейка)
+  - Фильтры (category_id, type_id, status, warehouse_id, search)
+  - Пагинация
+  - Поиск по `cell.code`
+
+### Изменено
+- `database/modules/equipment.js`:
+  - `getEquipmentById` — JOIN с cells/racks/zones/warehouses
+  - `getEquipmentWithLocation` — новая функция
+  - `addEquipment`, `updateEquipment` — принимают `cell_id`
+  - `assignEquipment`, `returnEquipmentByEquipmentId` — обнуляют `cell_id`
+  - `updateEquipment` — при `assigned → available` принудительно `cell_id = NULL`
+- `routes/admin.js`:
+  - `renderAdmin` — использует `getEquipmentWithLocation`
+  - `addEquipmentAPI`, `updateEquipmentAPI` — принимают `cell_id`
+  - `updateEquipmentAPI` — `finalCellId` для логики назначения
+  - `renderEditEquipment` — передаёт `cell_id`
+  - `getEquipmentDetailsAPI` — для карточки техники
+- `routes/equipment.js` — использует `getEquipmentWithLocation`
+- `public/js/admin-add.js`, `admin-edit.js` — каскадные селекты
+- `public/js/admin.js` — место хранения в карточке
+- `views/admin-add.html`, `admin-edit.html` — блок "Место хранения"
+- `views/admin.html`, `equipment.html` — колонка "Место хранения"
+- `public/css/admin.css`, `equipment.css` — стили `.location-cell`
+- `public/js/equipment-filter.js` — `colspan="8"`
+
+### Проверено
+- Техника сохраняется с `cell_id`
+- Место хранения отображается везде
+- Назначение обнуляет `cell_id`
+- Возврат обнуляет `cell_id`
+- Прямое назначение через форму работает
+- История использования показывает владельца
+- Таблица админки корректно отображается
 
 ## [1.11.0] - 2026-10-01
 

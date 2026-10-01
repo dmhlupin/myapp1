@@ -1,46 +1,38 @@
+// routes/admin.js
+// Админ-панель: управление техникой, пользователями, логами
+
 const fs = require('fs');
 const path = require('path');
-
 const {
   // Equipment
   getAllEquipment,
-  getEquipmentWithUsers,
   getEquipmentById,
+  getEquipmentWithUsers,
+  getEquipmentWithLocation,
   addEquipment,
   updateEquipment,
   deleteEquipment,
-  getAvailableEquipment,
-  // Assignment ← ДОБАВЬТЕ ЭТИ
   assignEquipment,
   returnEquipmentByEquipmentId,
-  // Stats
-  getStats,
   // Users
   getAllUsers,
   getUserById,
-  addUser,
-  updateUser,
-  deleteUser,
-  getUsersWithEquipment,
-  // Admin users
-  createUserWithPassword,
   getUserWithDetails,
   getAllUsersWithDetails,
+  createUserWithPassword,
   checkUserExists,
   deleteUserWithEquipmentReturn,
-  getUsersWithActiveEquipment,
-  // Auth
-  getUserByUsernameWithPassword,
   updateUserPassword,
   setUserActive,
-  setUserRole,
   // Logs
   getActivityLogs,
   getActivityLogsCount,
   getUniqueActions,
   getActivityStats,
   getActivityByDay,
-  cleanOldLogs
+  cleanOldLogs,
+  // Stats
+  getStats,
 } = require('../database/db');
 
 // Утилиты
@@ -49,30 +41,33 @@ const {
   generateTempPassword,
   validateUsername,
   validateEmail,
-  validatePassword
 } = require('../utils/auth');
 
 const { logAction } = require('../utils/logger');
 
-// ===== СТРАНИЦЫ =====
+// ============================================================
+// СТРАНИЦЫ
+// ============================================================
 
+/**
+ * GET /admin — админ-панель
+ */
 async function renderAdmin(req, res) {
   try {
     const stats = await getStats();
-    const equipment = await getEquipmentWithUsers();
+    const equipment = await getEquipmentWithLocation();  // ← изменено на getEquipmentWithLocation
     const users = await getAllUsersWithDetails();
     
     const htmlPath = path.join(__dirname, '..', 'views', 'admin.html');
     let html = fs.readFileSync(htmlPath, 'utf8');
     
     // Статистика
-    html = html.replace('{{total_equipment}}', stats.total_equipment || 0);
-    html = html.replace('{{available_equipment}}', stats.available_equipment || 0);
-    html = html.replace('{{assigned_equipment}}', stats.assigned_equipment || 0);
-    html = html.replace('{{total_users}}', stats.total_users || 0);
+    html = html.replace(/\{\{total_equipment\}\}/g, stats.total_equipment || 0);
+    html = html.replace(/\{\{available_equipment\}\}/g, stats.available_equipment || 0);
+    html = html.replace(/\{\{assigned_equipment\}\}/g, stats.assigned_equipment || 0);
+    html = html.replace(/\{\{total_users\}\}/g, stats.total_users || 0);
     
-       // Таблица техники
-        
+    // Таблица техники
     let equipmentRows = '';
     equipment.forEach(item => {
       const statusClass = `status-${item.status}`;
@@ -97,13 +92,22 @@ async function renderAdmin(req, res) {
         assignedInfo = '<span style="color: #a0aec0; font-size: 12px;">не найдено</span>';
       }
       
-      // 🆕 Категория и тип
+      // Категория
       const categoryCell = item.category_name 
         ? `<span class="catalog-badge">${item.category_icon || '📁'} ${item.category_name}</span>`
         : '<span style="color: #cbd5e0;">—</span>';
       
+      // Тип
       const typeCell = item.type_name 
         ? `<span class="catalog-badge type">${item.type_icon || '📦'} ${item.type_name}</span>`
+        : '<span style="color: #cbd5e0;">—</span>';
+      
+      // 🆕 Место хранения
+      const cellInfo = item.cell_id
+        ? `<div class="location-cell" title="${item.warehouse_name} → ${item.zone_name} → ${item.rack_name} → ${item.cell_name}">
+             <div class="location-cell-code">${item.cell_code || item.cell_name}</div>
+             <div class="location-path" style="font-size: 10px;">${item.warehouse_name}</div>
+           </div>`
         : '<span style="color: #cbd5e0;">—</span>';
       
       equipmentRows += `
@@ -114,6 +118,7 @@ async function renderAdmin(req, res) {
           <td>${item.model || '—'}</td>
           <td>${categoryCell}</td>
           <td>${typeCell}</td>
+          <td>${cellInfo}</td>
           <td><span class="status-badge ${statusClass}">${item.status}</span></td>
           <td>${assignedInfo}</td>
           <td>
@@ -128,121 +133,72 @@ async function renderAdmin(req, res) {
     });
     html = html.replace('{{equipment_rows}}', equipmentRows);
     
-// Таблица пользователей
-let userRows = '';
-users.forEach(user => {
-    const equipmentCount = user.active_equipment_count || 0;
-    const hasEquipment = equipmentCount > 0;
-    const isActive = user.is_active === 1;
-    const isAdmin = user.role === 'admin';
-    
-    // Роль
-    const roleBadge = isAdmin
+    // Таблица пользователей
+    let userRows = '';
+    users.forEach(user => {
+      const equipmentCount = user.active_equipment_count || 0;
+      const hasEquipment = equipmentCount > 0;
+      const isActive = user.is_active === 1;
+      const isAdmin = user.role === 'admin';
+      
+      const roleBadge = isAdmin
         ? '<span class="role-badge role-admin">👑 Админ</span>'
         : '<span class="role-badge role-user">👤 Пользователь</span>';
-    
-    // Статус + последний вход
-    const lastLogin = user.last_login 
+      
+      const statusBadge = isActive
+        ? '<span class="status-badge status-available">Активен</span>'
+        : '<span class="status-badge status-retired">Заблокирован</span>';
+      
+      const lastLogin = user.last_login 
         ? formatDate(user.last_login) 
-        : 'никогда';
-    
-    const statusHtml = isActive
-        ? `<span class="status-dot status-dot-active"></span> Активен`
-        : `<span class="status-dot status-dot-blocked"></span> Заблокирован`;
-    
-    // Кнопки блокировки
-    const blockButton = isActive
+        : '<span style="color: #a0aec0;">никогда</span>';
+      
+      const blockButton = isActive
         ? `<button onclick="blockUser(${user.id})" class="btn-icon btn-warning" title="Заблокировать">🚫</button>`
         : `<button onclick="unblockUser(${user.id})" class="btn-icon btn-success" title="Разблокировать">✅</button>`;
-    
-    userRows += `
+      
+      userRows += `
         <tr class="${!isActive ? 'row-blocked' : ''}">
-            <td>
-                <div class="user-cell">
-                    <span class="user-avatar">${getInitials(user.full_name || user.username)}</span>
-                    <div>
-                        <div class="user-name">${user.full_name || user.username}</div>
-                        <div class="user-username">@${user.username}</div>
-                    </div>
-                </div>
-            </td>
-            <td>
-                <div class="contact-cell">
-                    <div class="contact-email">${user.email}</div>
-                    <div class="contact-dept">${user.department || 'Без отдела'}</div>
-                </div>
-            </td>
-            <td>${roleBadge}</td>
-            <td style="text-align: center;">
-                <span class="badge ${hasEquipment ? 'badge-active' : 'badge-inactive'}">${equipmentCount}</span>
-            </td>
-            <td>
-                <div class="activity-cell">
-                    <div class="activity-status">${statusHtml}</div>
-                    <div class="activity-login" title="Последний вход">${lastLogin}</div>
-                </div>
-            </td>
-            <td>
-                <div class="action-buttons">
-                    <button onclick="viewUser(${user.id})" class="btn-icon btn-info" title="Просмотр">👁️</button>
-                    <button onclick="editUser(${user.id})" class="btn-icon btn-edit" title="Редактировать">✏️</button>
-                    <button onclick="resetUserPassword(${user.id}, '${user.username}')" class="btn-icon btn-warning" title="Сбросить пароль">🔑</button>
-                    ${blockButton}
-                    <button onclick="deleteUser(${user.id}, '${(user.full_name || user.username).replace(/'/g, "\\'")}')" class="btn-icon btn-delete" title="Удалить">🗑️</button>
-                </div>
-            </td>
+          <td>${user.id}</td>
+          <td>
+            <div class="user-cell">
+              <span class="user-avatar">${getInitials(user.full_name || user.username)}</span>
+              <div>
+                <div class="user-name">${user.full_name || user.username}</div>
+                <div class="user-username">@${user.username}</div>
+              </div>
+            </div>
+          </td>
+          <td>${user.email}</td>
+          <td>${user.department || '—'}</td>
+          <td>${roleBadge}</td>
+          <td><span class="badge ${hasEquipment ? 'badge-active' : 'badge-inactive'}">${equipmentCount}</span></td>
+          <td>${statusBadge}</td>
+          <td style="font-size: 12px; color: #666;">${lastLogin}</td>
+          <td>
+            <div class="action-buttons">
+              <button onclick="viewUser(${user.id})" class="btn-icon btn-info" title="Просмотр">👁️</button>
+              <button onclick="editUser(${user.id})" class="btn-icon btn-edit" title="Редактировать">✏️</button>
+              <button onclick="resetUserPassword(${user.id}, '${user.username}')" class="btn-icon btn-warning" title="Сбросить пароль">🔑</button>
+              ${blockButton}
+              <button onclick="deleteUser(${user.id}, '${escapeAttr(user.full_name || user.username)}')" class="btn-icon btn-delete" title="Удалить">🗑️</button>
+            </div>
+          </td>
         </tr>
-    `;
-});
-html = html.replace('{{user_rows}}', userRows);
+      `;
+    });
+    html = html.replace('{{user_rows}}', userRows);
     
     res.send(html);
   } catch (error) {
-    console.error('❌ Ошибка:', error);
+    console.error('❌ Ошибка загрузки админ-панели:', error);
     res.status(500).send('Ошибка при загрузке админ-панели');
   }
 }
 
-/**
- * Получить инициалы для аватара
- */
-function getInitials(name) {
-  if (!name) return '?';
-  const parts = name.split(' ').filter(p => p);
-  if (parts.length === 0) return '?';
-  if (parts.length === 1) return parts[0][0].toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
-
-/**
- * Форматирование даты
- */
-function formatDate(dateString) {
-  if (!dateString) return '—';
-  try {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now - date;
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-    
-    if (diffMins < 1) return 'только что';
-    if (diffMins < 60) return `${diffMins} мин назад`;
-    if (diffHours < 24) return `${diffHours} ч назад`;
-    if (diffDays < 7) return `${diffDays} дн назад`;
-    
-    return date.toLocaleDateString('ru-RU', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-  } catch {
-    return dateString;
-  }
-}
-
-// ===== API ДЛЯ ТЕХНИКИ =====
+// ============================================================
+// API — ТЕХНИКА
+// ============================================================
 
 async function getEquipmentAPI(req, res) {
   try {
@@ -271,7 +227,7 @@ async function addEquipmentAPI(req, res) {
     const { 
       inventory_number, name, model, serial_number, 
       manufacturer, purchase_date, warranty_until, 
-      status, description, category_id, type_id 
+      status, description, category_id, type_id, cell_id
     } = req.body;
     
     if (!inventory_number || !name) {
@@ -291,7 +247,19 @@ async function addEquipmentAPI(req, res) {
       status: status || 'available',
       description: description || '',
       category_id: category_id ? parseInt(category_id) : null,
-      type_id: type_id ? parseInt(type_id) : null
+      type_id: type_id ? parseInt(type_id) : null,
+      cell_id: cell_id ? parseInt(cell_id) : null,
+    });
+    
+    await logAction({
+      req,
+      action: 'equipment_create',
+      entityType: 'equipment',
+      entityId: result.id,
+      details: JSON.stringify({ 
+        inventory_number: inventory_number,
+        name: name 
+      })
     });
     
     res.json({ 
@@ -317,11 +285,8 @@ async function updateEquipmentAPI(req, res) {
       inventory_number, name, model, serial_number, 
       manufacturer, purchase_date, warranty_until, 
       status, description, assign_user_id, assign_condition,
-      category_id, type_id  // 🆕
+      category_id, type_id, cell_id
     } = req.body;
-    
-    console.log(`📥 Получен запрос на обновление техники ID: ${id}`);
-    console.log('📦 Данные:', req.body);
     
     if (!inventory_number || !name) {
       return res.status(400).json({ 
@@ -336,14 +301,18 @@ async function updateEquipmentAPI(req, res) {
     }
     
     const oldStatus = existing.status;
-    
-    // 🆕 Переменная для результата назначения
     let assignmentResult = null;
     
-    // 🆕 Если назначаем технику пользователю
+    // 🆕 Финальное значение cell_id
+    // Если статус = assigned — принудительно обнуляем
+    let finalCellId = cell_id ? parseInt(cell_id) : null;
+    if (status === 'assigned') {
+      finalCellId = null;
+    }
+    
+    // Если назначаем технику пользователю
     if (status === 'assigned' && assign_user_id) {
-      
-      // Если техника уже была назначена — закрываем старое назначение
+      // Если техника была назначена — закрываем старое назначение
       if (oldStatus === 'assigned') {
         const { db } = require('../database/db');
         
@@ -359,13 +328,12 @@ async function updateEquipmentAPI(req, res) {
           );
         });
         
-        // Если назначение на ДРУГОГО пользователя — закрываем старое
         if (oldAssignment && oldAssignment.user_id !== parseInt(assign_user_id)) {
           await new Promise((resolve, reject) => {
             db.run(
               `UPDATE user_equipment 
                SET returned_date = CURRENT_TIMESTAMP, 
-                   condition_on_return = 'Автовозврат: переназначение другому пользователю',
+                   condition_on_return = 'Автовозврат: переназначение',
                    notes = COALESCE(notes, '') || ' | Возврат при переназначении'
                WHERE id = ?`,
               [oldAssignment.id],
@@ -375,8 +343,6 @@ async function updateEquipmentAPI(req, res) {
               }
             );
           });
-          
-          console.log(`✅ Закрыто старое назначение техники ${id}`);
         }
         
         // Временно меняем статус на available, чтобы assignEquipment сработала
@@ -392,7 +358,6 @@ async function updateEquipmentAPI(req, res) {
         });
       }
       
-      // Назначаем новому пользователю
       try {
         assignmentResult = await assignEquipment(
           parseInt(assign_user_id),
@@ -400,9 +365,7 @@ async function updateEquipmentAPI(req, res) {
           assign_condition || 'В хорошем состоянии',
           'Назначено через редактирование техники'
         );
-        console.log(`✅ Техника ${id} назначена пользователю ${assign_user_id}`);
         
-        // Логируем назначение
         await logAction({
           req,
           action: 'equipment_assign',
@@ -414,7 +377,6 @@ async function updateEquipmentAPI(req, res) {
           })
         });
       } catch (error) {
-        console.error('❌ Ошибка назначения:', error);
         return res.status(400).json({ error: error.message });
       }
     }
@@ -423,14 +385,12 @@ async function updateEquipmentAPI(req, res) {
     if (oldStatus === 'assigned' && status === 'available') {
       const { returnEquipmentByEquipmentId } = require('../database/db');
       try {
-        const returnResult = await returnEquipmentByEquipmentId(
+        await returnEquipmentByEquipmentId(
           id, 
           'Возвращена при изменении статуса', 
           'Автоматический возврат'
         );
-        console.log(`✅ Техника ${id} возвращена`);
         
-        // Логируем возврат
         await logAction({
           req,
           action: 'equipment_return',
@@ -441,11 +401,11 @@ async function updateEquipmentAPI(req, res) {
           })
         });
       } catch (error) {
-        console.warn('⚠️ Не удалось автоматически вернуть технику:', error.message);
+        console.warn('⚠️ Не удалось вернуть технику:', error.message);
       }
     }
     
-    // Обновляем технику
+    // Обновляем технику с финальным cell_id
     const result = await updateEquipment(id, {
       inventory_number,
       name,
@@ -456,11 +416,11 @@ async function updateEquipmentAPI(req, res) {
       warranty_until: warranty_until || null,
       status: status || 'available',
       description: description || '',
-      category_id: category_id ? parseInt(category_id) : null,  // 🆕
-      type_id: type_id ? parseInt(type_id) : null                // 🆕
+      category_id: category_id ? parseInt(category_id) : null,
+      type_id: type_id ? parseInt(type_id) : null,
+      cell_id: finalCellId,   // 🆕 используем финальное значение
     });
     
-    // Логируем обновление
     await logAction({
       req,
       action: 'equipment_update',
@@ -476,9 +436,8 @@ async function updateEquipmentAPI(req, res) {
       success: true, 
       message: 'Техника обновлена успешно',
       data: result,
-      assignment: assignmentResult    // ← теперь переменная объявлена (была необъявлена)
+      assignment: assignmentResult
     });
-
   } catch (error) {
     console.error('❌ Ошибка обновления:', error);
     if (error.message === 'Техника не найдена') {
@@ -498,16 +457,11 @@ async function deleteEquipmentAPI(req, res) {
       return res.status(404).json({ error: 'Техника не найдена' });
     }
     
-    const { logAction } = require('../utils/logger');
     await logAction({
-        req,
-        action: 'equipment_delete',
-        entityType: 'equipment',
-        entityId: result.id,
-        details: JSON.stringify({ 
-          inventory_number: inventory_number,
-          name: name 
-        })
+      req,
+      action: 'equipment_delete',
+      entityType: 'equipment',
+      entityId: id,
     });
     
     res.json({ 
@@ -523,7 +477,9 @@ async function deleteEquipmentAPI(req, res) {
   }
 }
 
-// ===== СТРАНИЦЫ ДЛЯ ТЕХНИКИ =====
+// ============================================================
+// СТРАНИЦЫ ТЕХНИКИ
+// ============================================================
 
 function renderAddEquipment(req, res) {
   const htmlPath = path.join(__dirname, '..', 'views', 'admin-add.html');
@@ -539,13 +495,13 @@ function renderAddEquipment(req, res) {
 async function renderEditEquipment(req, res) {
   try {
     const id = parseInt(req.params.id);
-    console.log(`📝 Редактирование техники ID: ${id}`);
     
     if (isNaN(id)) {
       return res.status(400).send('Неверный ID');
     }
     
     const equipment = await getEquipmentById(id);
+    
     if (!equipment) {
       return res.status(404).send('Техника не найдена');
     }
@@ -553,7 +509,6 @@ async function renderEditEquipment(req, res) {
     const htmlPath = path.join(__dirname, '..', 'views', 'admin-edit.html');
     let html = fs.readFileSync(htmlPath, 'utf8');
     
-    // Заменяем все переменные
     html = html.replace(/\{\{id\}\}/g, equipment.id);
     html = html.replace(/\{\{inventory_number\}\}/g, equipment.inventory_number || '');
     html = html.replace(/\{\{name\}\}/g, equipment.name || '');
@@ -565,9 +520,10 @@ async function renderEditEquipment(req, res) {
     html = html.replace(/\{\{status\}\}/g, equipment.status || 'available');
     html = html.replace(/\{\{description\}\}/g, equipment.description || '');
     
-    // 🆕 Категория и тип
+    // Категория, тип, ячейка
     html = html.replace(/\{\{category_id\}\}/g, equipment.category_id || '');
     html = html.replace(/\{\{type_id\}\}/g, equipment.type_id || '');
+    html = html.replace(/\{\{cell_id\}\}/g, equipment.cell_id || '');
     
     // Статусы
     const statuses = ['available', 'assigned', 'maintenance', 'retired'];
@@ -578,6 +534,15 @@ async function renderEditEquipment(req, res) {
     });
     html = html.replace(/\{\{status_options\}\}/g, statusOptions);
     
+    // Пользователи для назначения
+    const users = await getAllUsers();
+    let userOptions = '<option value="">— Выберите пользователя —</option>';
+    users.forEach(user => {
+      const fullName = user.full_name || user.username;
+      userOptions += `<option value="${user.id}">${fullName} (${user.department || 'без отдела'})</option>`;
+    });
+    html = html.replace(/\{\{user_options\}\}/g, userOptions);
+    
     res.send(html);
   } catch (error) {
     console.error('❌ Ошибка при загрузке страницы редактирования:', error);
@@ -585,8 +550,9 @@ async function renderEditEquipment(req, res) {
   }
 }
 
-
-// ===== API ДЛЯ ПОЛЬЗОВАТЕЛЕЙ =====
+// ============================================================
+// API — ПОЛЬЗОВАТЕЛИ
+// ============================================================
 
 async function getUsersAPI(req, res) {
   try {
@@ -610,14 +576,43 @@ async function getUserByIdAPI(req, res) {
   }
 }
 
-/**
- * POST /api/admin/users — создание пользователя с автогенерацией пароля
- */
+async function getUserDetailsAPI(req, res) {
+  try {
+    const id = parseInt(req.params.id);
+    
+    const user = await getUserWithDetails(id);
+    if (!user) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+    
+    const { getUserActiveEquipment, getUserEquipmentHistory } = require('../database/db');
+    const activeEquipment = await getUserActiveEquipment(id);
+    const history = await getUserEquipmentHistory(id);
+    
+    const stats = {
+      active: activeEquipment.length,
+      total: history.length,
+      returned: history.filter(h => h.returned_date).length
+    };
+    
+    delete user.password_hash;
+    
+    res.json({
+      user,
+      stats,
+      activeEquipment,
+      history: history.slice(0, 30)
+    });
+  } catch (error) {
+    console.error('❌ Ошибка получения деталей:', error);
+    res.status(500).json({ error: error.message });
+  }
+}
+
 async function addUserAPI(req, res) {
   try {
     const { username, email, full_name, department, phone, role } = req.body;
     
-    // Валидация
     if (!username || !email) {
       return res.status(400).json({ 
         error: 'Логин и email обязательны' 
@@ -634,7 +629,6 @@ async function addUserAPI(req, res) {
       return res.status(400).json({ error: emailCheck.errors.join('. ') });
     }
     
-    // Проверяем, что пользователя нет
     const existing = await checkUserExists(username.trim(), email.trim());
     if (existing) {
       if (existing.username === username.trim()) {
@@ -643,14 +637,10 @@ async function addUserAPI(req, res) {
       return res.status(400).json({ error: 'Пользователь с таким email уже существует' });
     }
     
-    // Валидация роли
     const userRole = ['admin', 'user'].includes(role) ? role : 'user';
-    
-    // Генерируем временный пароль
     const tempPassword = generateTempPassword(12);
     const passwordHash = await hashPassword(tempPassword);
     
-    // Создаём пользователя
     const result = await createUserWithPassword({
       username: username.trim(),
       email: email.trim(),
@@ -662,7 +652,6 @@ async function addUserAPI(req, res) {
       must_change_password: 1
     });
     
-    // Логируем
     await logAction({
       req,
       action: 'user_create',
@@ -674,7 +663,6 @@ async function addUserAPI(req, res) {
       })
     });
     
-    // Возвращаем сгенерированный пароль ОДИН РАЗ
     res.json({ 
       success: true, 
       message: 'Пользователь создан успешно',
@@ -685,234 +673,11 @@ async function addUserAPI(req, res) {
         full_name: full_name,
         role: userRole
       },
-      // ⚠️ Пароль показывается ТОЛЬКО ОДИН РАЗ!
       tempPassword: tempPassword,
       warning: 'Сохраните пароль! Он больше не будет показан.'
     });
   } catch (error) {
     console.error('❌ Ошибка создания пользователя:', error);
-    res.status(500).json({ error: error.message });
-  }
-}
-
-/**
- * POST /api/admin/users/:id/reset-password — сброс пароля
- */
-async function resetUserPasswordAPI(req, res) {
-  try {
-    const id = parseInt(req.params.id);
-    
-    const user = await getUserById(id);
-    if (!user) {
-      return res.status(404).json({ error: 'Пользователь не найден' });
-    }
-    
-    // Генерируем новый временный пароль
-    const tempPassword = generateTempPassword(12);
-    const passwordHash = await hashPassword(tempPassword);
-    
-    // Обновляем пароль, устанавливаем must_change_password=1
-    const { updateUserPassword } = require('../database/db');
-    await updateUserPassword(id, passwordHash, 1);
-    
-    // Логируем
-    await logAction({
-      req,
-      action: 'user_password_reset',
-      entityType: 'user',
-      entityId: id,
-      details: JSON.stringify({ username: user.username })
-    });
-    
-    res.json({ 
-      success: true, 
-      message: `Пароль пользователя "${user.full_name || user.username}" сброшен`,
-      tempPassword: tempPassword,
-      warning: 'Передайте пароль пользователю. Он должен сменить его при следующем входе.'
-    });
-  } catch (error) {
-    console.error('❌ Ошибка сброса пароля:', error);
-    res.status(500).json({ error: error.message });
-  }
-}
-
-/**
- * POST /api/admin/users/:id/block — блокировка
- */
-async function blockUserAPI(req, res) {
-  try {
-    const id = parseInt(req.params.id);
-    
-    // Нельзя заблокировать себя
-    if (id === req.session.userId) {
-      return res.status(400).json({ error: 'Нельзя заблокировать себя' });
-    }
-    
-    const user = await getUserById(id);
-    if (!user) {
-      return res.status(404).json({ error: 'Пользователь не найден' });
-    }
-    
-    // Нельзя заблокировать последнего админа
-    if (user.role === 'admin') {
-      const { db } = require('../database/db');
-      const adminCount = await new Promise((resolve, reject) => {
-        db.get(
-          `SELECT COUNT(*) as count FROM users WHERE role = 'admin' AND is_active = 1`,
-          (err, row) => {
-            if (err) reject(err);
-            else resolve(row.count);
-          }
-        );
-      });
-      
-      if (adminCount <= 1) {
-        return res.status(400).json({ 
-          error: 'Нельзя заблокировать последнего активного администратора' 
-        });
-      }
-    }
-    
-    const { setUserActive } = require('../database/db');
-    await setUserActive(id, false);
-    
-    await logAction({
-      req,
-      action: 'user_block',
-      entityType: 'user',
-      entityId: id,
-      details: JSON.stringify({ username: user.username })
-    });
-    
-    res.json({ 
-      success: true, 
-      message: `Пользователь "${user.full_name || user.username}" заблокирован`
-    });
-  } catch (error) {
-    console.error('❌ Ошибка блокировки:', error);
-    res.status(500).json({ error: error.message });
-  }
-}
-
-/**
- * POST /api/admin/users/:id/unblock — разблокировка
- */
-async function unblockUserAPI(req, res) {
-  try {
-    const id = parseInt(req.params.id);
-    
-    const user = await getUserById(id);
-    if (!user) {
-      return res.status(404).json({ error: 'Пользователь не найден' });
-    }
-    
-    const { setUserActive } = require('../database/db');
-    await setUserActive(id, true);
-    
-    await logAction({
-      req,
-      action: 'user_unblock',
-      entityType: 'user',
-      entityId: id,
-      details: JSON.stringify({ username: user.username })
-    });
-    
-    res.json({ 
-      success: true, 
-      message: `Пользователь "${user.full_name || user.username}" разблокирован`
-    });
-  } catch (error) {
-    console.error('❌ Ошибка разблокировки:', error);
-    res.status(500).json({ error: error.message });
-  }
-}
-
-/**
- * GET /api/admin/users/:id/details — детали пользователя
- */
-async function getUserDetailsAPI(req, res) {
-  try {
-    const id = parseInt(req.params.id);
-    
-    const user = await getUserWithDetails(id);
-    if (!user) {
-      return res.status(404).json({ error: 'Пользователь не найден' });
-    }
-    
-    // Получаем активную технику
-    const { getUserActiveEquipment, getUserEquipmentHistory } = require('../database/db');
-    const activeEquipment = await getUserActiveEquipment(id);
-    const history = await getUserEquipmentHistory(id);
-    
-    // Статистика
-    const stats = {
-      active: activeEquipment.length,
-      total: history.length,
-      returned: history.filter(h => h.returned_date).length
-    };
-    
-    // Убираем пароль из ответа
-    delete user.password_hash;
-    
-    res.json({
-      user,
-      stats,
-      activeEquipment,
-      history: history.slice(0, 30) // последние 30 записей
-    });
-  } catch (error) {
-    console.error('❌ Ошибка получения деталей:', error);
-    res.status(500).json({ error: error.message });
-  }
-}
-
-/**
- * GET /api/admin/equipment/:id/details — детали техники + история
- */
-async function getEquipmentDetailsAPI(req, res) {
-  try {
-    const id = parseInt(req.params.id);
-    
-    if (isNaN(id)) {
-      return res.status(400).json({ error: 'Неверный ID техники' });
-    }
-    
-    // Получаем технику
-    const equipment = await getEquipmentById(id);
-    if (!equipment) {
-      return res.status(404).json({ error: 'Техника не найдена' });
-    }
-    
-    // Получаем историю использования
-    const { getEquipmentHistory } = require('../database/db');
-    const history = await getEquipmentHistory(id);
-    
-    // Ищем активное назначение (returned_date IS NULL)
-    const activeAssignment = history.find(h => h.status === 'active');
-    
-    // Статистика
-    const stats = {
-      total: history.length,
-      active: activeAssignment ? 1 : 0,
-      returned: history.filter(h => h.status === 'returned').length,
-      current_user: activeAssignment ? {
-        id: activeAssignment.user_id,
-        full_name: activeAssignment.full_name,
-        username: activeAssignment.username,
-        department: activeAssignment.department,
-        email: activeAssignment.email,
-        assigned_date: activeAssignment.assigned_date,
-        condition_on_assign: activeAssignment.condition_on_assign
-      } : null
-    };
-    
-    res.json({
-      equipment,
-      stats,
-      history
-    });
-  } catch (error) {
-    console.error('❌ Ошибка получения деталей техники:', error);
     res.status(500).json({ error: error.message });
   }
 }
@@ -938,7 +703,6 @@ async function updateUserAPI(req, res) {
       return res.status(400).json({ error: emailCheck.errors.join('. ') });
     }
     
-    // Проверяем, что нет другого пользователя с таким логином/email
     const existing = await checkUserExists(username.trim(), email.trim(), id);
     if (existing) {
       if (existing.username === username.trim()) {
@@ -952,10 +716,8 @@ async function updateUserAPI(req, res) {
       return res.status(404).json({ error: 'Пользователь не найден' });
     }
     
-    // Проверяем смену роли
     const newRole = ['admin', 'user'].includes(role) ? role : user.role;
     
-    // Если меняем админа на пользователя — проверяем, что это не последний админ
     if (user.role === 'admin' && newRole === 'user') {
       const { db } = require('../database/db');
       const adminCount = await new Promise((resolve, reject) => {
@@ -975,7 +737,6 @@ async function updateUserAPI(req, res) {
       }
     }
     
-    // Обновляем
     const { db } = require('../database/db');
     await new Promise((resolve, reject) => {
       db.run(
@@ -990,7 +751,6 @@ async function updateUserAPI(req, res) {
       );
     });
     
-    // Логируем
     await logAction({
       req,
       action: 'user_update',
@@ -1012,14 +772,10 @@ async function updateUserAPI(req, res) {
   }
 }
 
-/**
- * DELETE /api/admin/users/:id — удаление с возвратом техники
- */
 async function deleteUserAPI(req, res) {
   try {
     const id = parseInt(req.params.id);
     
-    // Нельзя удалить себя
     if (id === req.session.userId) {
       return res.status(400).json({ error: 'Нельзя удалить себя' });
     }
@@ -1029,7 +785,6 @@ async function deleteUserAPI(req, res) {
       return res.status(404).json({ error: 'Пользователь не найден' });
     }
     
-    // Нельзя удалить последнего админа
     if (user.role === 'admin') {
       const { db } = require('../database/db');
       const adminCount = await new Promise((resolve, reject) => {
@@ -1044,15 +799,13 @@ async function deleteUserAPI(req, res) {
       
       if (adminCount <= 1) {
         return res.status(400).json({ 
-          error: 'Нельзя удалить последнего активного администратора' 
+          error: 'Нельзя удалить последнего администратора' 
         });
       }
     }
     
-    // Удаляем с возвратом техники
     const result = await deleteUserWithEquipmentReturn(id);
     
-    // Логируем
     await logAction({
       req,
       action: 'user_delete',
@@ -1075,7 +828,124 @@ async function deleteUserAPI(req, res) {
   }
 }
 
-// ===== СТРАНИЦЫ ДЛЯ ПОЛЬЗОВАТЕЛЕЙ =====
+async function resetUserPasswordAPI(req, res) {
+  try {
+    const id = parseInt(req.params.id);
+    
+    const user = await getUserById(id);
+    if (!user) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+    
+    const tempPassword = generateTempPassword(12);
+    const passwordHash = await hashPassword(tempPassword);
+    
+    await updateUserPassword(id, passwordHash, 1);
+    
+    await logAction({
+      req,
+      action: 'user_password_reset',
+      entityType: 'user',
+      entityId: id,
+      details: JSON.stringify({ username: user.username })
+    });
+    
+    res.json({ 
+      success: true, 
+      message: `Пароль пользователя "${user.full_name || user.username}" сброшен`,
+      tempPassword: tempPassword,
+      warning: 'Передайте пароль пользователю. Он должен сменить его при следующем входе.'
+    });
+  } catch (error) {
+    console.error('❌ Ошибка сброса пароля:', error);
+    res.status(500).json({ error: error.message });
+  }
+}
+
+async function blockUserAPI(req, res) {
+  try {
+    const id = parseInt(req.params.id);
+    
+    if (id === req.session.userId) {
+      return res.status(400).json({ error: 'Нельзя заблокировать себя' });
+    }
+    
+    const user = await getUserById(id);
+    if (!user) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+    
+    if (user.role === 'admin') {
+      const { db } = require('../database/db');
+      const adminCount = await new Promise((resolve, reject) => {
+        db.get(
+          `SELECT COUNT(*) as count FROM users WHERE role = 'admin' AND is_active = 1`,
+          (err, row) => {
+            if (err) reject(err);
+            else resolve(row.count);
+          }
+        );
+      });
+      
+      if (adminCount <= 1) {
+        return res.status(400).json({ 
+          error: 'Нельзя заблокировать последнего администратора' 
+        });
+      }
+    }
+    
+    await setUserActive(id, false);
+    
+    await logAction({
+      req,
+      action: 'user_block',
+      entityType: 'user',
+      entityId: id,
+      details: JSON.stringify({ username: user.username })
+    });
+    
+    res.json({ 
+      success: true, 
+      message: `Пользователь "${user.full_name || user.username}" заблокирован`
+    });
+  } catch (error) {
+    console.error('❌ Ошибка блокировки:', error);
+    res.status(500).json({ error: error.message });
+  }
+}
+
+async function unblockUserAPI(req, res) {
+  try {
+    const id = parseInt(req.params.id);
+    
+    const user = await getUserById(id);
+    if (!user) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+    
+    await setUserActive(id, true);
+    
+    await logAction({
+      req,
+      action: 'user_unblock',
+      entityType: 'user',
+      entityId: id,
+      details: JSON.stringify({ username: user.username })
+    });
+    
+    res.json({ 
+      success: true, 
+      message: `Пользователь "${user.full_name || user.username}" разблокирован`
+    });
+  } catch (error) {
+    console.error('❌ Ошибка разблокировки:', error);
+    res.status(500).json({ error: error.message });
+  }
+}
+
+// ============================================================
+// СТРАНИЦЫ ПОЛЬЗОВАТЕЛЕЙ
+// ============================================================
 
 function renderAddUser(req, res) {
   const htmlPath = path.join(__dirname, '..', 'views', 'admin-user-add.html');
@@ -1116,12 +986,12 @@ async function renderEditUser(req, res) {
   }
 }
 
-/**
- * GET /admin/logs — страница логов
- */
+// ============================================================
+// ЛОГИ
+// ============================================================
+
 async function renderLogs(req, res) {
   try {
-    // Параметры фильтрации
     const filters = {
       userId: req.query.userId ? parseInt(req.query.userId) : null,
       action: req.query.action || null,
@@ -1132,18 +1002,15 @@ async function renderLogs(req, res) {
       offset: req.query.offset ? parseInt(req.query.offset) : 0
     };
     
-    // Получаем данные
     const logs = await getActivityLogs(filters);
     const totalCount = await getActivityLogsCount(filters);
     const stats = await getActivityStats(30);
     const users = await getAllUsers();
     const actions = await getUniqueActions();
     
-    // Читаем HTML
     const htmlPath = path.join(__dirname, '..', 'views', 'admin-logs.html');
     let html = fs.readFileSync(htmlPath, 'utf8');
     
-    // Статистика
     html = html.replace(/\{\{stats\.total\}\}/g, stats.total || 0);
     html = html.replace(/\{\{stats\.unique_users\}\}/g, stats.unique_users || 0);
     html = html.replace(/\{\{stats\.logins\}\}/g, stats.logins || 0);
@@ -1160,7 +1027,7 @@ async function renderLogs(req, res) {
     });
     html = html.replace('{{user_options}}', userOptions);
     
-    // Список действий для фильтра
+    // Список действий
     const actionNames = {
       'login': '🔐 Вход',
       'logout': '🚪 Выход',
@@ -1177,7 +1044,26 @@ async function renderLogs(req, res) {
       'equipment_update': '✏️ Редактирование техники',
       'equipment_delete': '🗑️ Удаление техники',
       'equipment_assign': '📦 Назначение техники',
-      'equipment_return': '↩️ Возврат техники'
+      'equipment_return': '↩️ Возврат техники',
+      'category_create': '📁 Создание категории',
+      'category_update': '📁 Редактирование категории',
+      'category_delete': '📁 Удаление категории',
+      'type_create': '📦 Создание типа',
+      'type_update': '📦 Редактирование типа',
+      'type_delete': '📦 Удаление типа',
+      'warehouse_create': '🏢 Создание склада',
+      'warehouse_update': '🏢 Редактирование склада',
+      'warehouse_delete': '🏢 Удаление склада',
+      'warehouse_set_default': '⭐ Склад по умолчанию',
+      'zone_create': '📍 Создание зоны',
+      'zone_update': '📍 Редактирование зоны',
+      'zone_delete': '📍 Удаление зоны',
+      'rack_create': '🗄️ Создание стеллажа',
+      'rack_update': '🗄️ Редактирование стеллажа',
+      'rack_delete': '🗄️ Удаление стеллажа',
+      'cell_create': '📦 Создание ячейки',
+      'cell_update': '📦 Редактирование ячейки',
+      'cell_delete': '📦 Удаление ячейки',
     };
     
     let actionOptions = '<option value="">Все действия</option>';
@@ -1188,7 +1074,6 @@ async function renderLogs(req, res) {
     });
     html = html.replace('{{action_options}}', actionOptions);
     
-    // Значения фильтров
     html = html.replace(/\{\{filter\.search\}\}/g, filters.search || '');
     html = html.replace(/\{\{filter\.dateFrom\}\}/g, filters.dateFrom || '');
     html = html.replace(/\{\{filter\.dateTo\}\}/g, filters.dateTo || '');
@@ -1209,7 +1094,6 @@ async function renderLogs(req, res) {
       `;
     } else {
       logs.forEach(log => {
-        // Цвет для действия
         let actionClass = 'log-action-default';
         if (log.action.includes('delete')) actionClass = 'log-action-delete';
         else if (log.action.includes('create')) actionClass = 'log-action-create';
@@ -1220,7 +1104,6 @@ async function renderLogs(req, res) {
         
         const actionLabel = actionNames[log.action] || log.action;
         
-        // Формируем детали
         let detailsHtml = '—';
         if (log.details) {
           try {
@@ -1233,7 +1116,6 @@ async function renderLogs(req, res) {
           }
         }
         
-        // Пользователь
         const userName = log.user_full_name || log.username || '—';
         const userInitials = getInitials(log.user_full_name || log.username);
         
@@ -1273,7 +1155,6 @@ async function renderLogs(req, res) {
       pagination += `<span class="pagination-info">Страница ${currentPage} из ${totalPages} (всего: ${totalCount})</span>`;
       pagination += `<div class="pagination-buttons">`;
       
-      // Формируем query string
       const buildQuery = (offset) => {
         const params = new URLSearchParams();
         if (filters.userId) params.set('userId', filters.userId);
@@ -1307,42 +1188,6 @@ async function renderLogs(req, res) {
   }
 }
 
-/**
- * Форматирование даты и времени
- */
-function formatDateTime(dateString) {
-  if (!dateString) return '—';
-  try {
-    const date = new Date(dateString);
-    return date.toLocaleString('ru-RU', {
-      day: '2-digit',
-      month: '2-digit',
-      year: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
-  } catch {
-    return dateString;
-  }
-}
-
-/**
- * Экранирование HTML
- */
-function escapeHtml(text) {
-  if (!text) return '';
-  return String(text)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
-
-/**
- * GET /api/admin/logs — API логов (для автообновления)
- */
 async function getLogsAPI(req, res) {
   try {
     const filters = {
@@ -1365,9 +1210,6 @@ async function getLogsAPI(req, res) {
   }
 }
 
-/**
- * GET /api/admin/logs/stats — статистика
- */
 async function getLogsStatsAPI(req, res) {
   try {
     const days = req.query.days ? parseInt(req.query.days) : 30;
@@ -1381,9 +1223,6 @@ async function getLogsStatsAPI(req, res) {
   }
 }
 
-/**
- * POST /api/admin/logs/clean — очистка старых логов
- */
 async function cleanLogsAPI(req, res) {
   try {
     const days = req.body.days ? parseInt(req.body.days) : 90;
@@ -1396,8 +1235,6 @@ async function cleanLogsAPI(req, res) {
     
     const result = await cleanOldLogs(days);
     
-    // Логируем само действие
-    const { logAction } = require('../utils/logger');
     await logAction({
       req,
       action: 'logs_clean',
@@ -1415,26 +1252,155 @@ async function cleanLogsAPI(req, res) {
   }
 }
 
-// ===== ЭКСПОРТЫ =====
+// ============================================================
+// ДЕТАЛИ ТЕХНИКИ (карточка)
+// ============================================================
+
+/**
+ * GET /api/admin/equipment/:id/details — детали техники + история
+ */
+async function getEquipmentDetailsAPI(req, res) {
+  try {
+    const id = parseInt(req.params.id);
+    
+    if (isNaN(id)) {
+      return res.status(400).json({ error: 'Неверный ID техники' });
+    }
+    
+    // Получаем технику
+    const equipment = await getEquipmentById(id);
+    if (!equipment) {
+      return res.status(404).json({ error: 'Техника не найдена' });
+    }
+    
+    // Получаем историю использования
+    const { getEquipmentHistory } = require('../database/db');
+    const history = await getEquipmentHistory(id);
+    
+    // Ищем активное назначение
+    const activeAssignment = history.find(h => h.status === 'active');
+    
+    // Статистика
+    const stats = {
+      total: history.length,
+      active: activeAssignment ? 1 : 0,
+      returned: history.filter(h => h.status === 'returned').length,
+      current_user: activeAssignment ? {
+        id: activeAssignment.user_id,
+        full_name: activeAssignment.full_name,
+        username: activeAssignment.username,
+        department: activeAssignment.department,
+        email: activeAssignment.email,
+        assigned_date: activeAssignment.assigned_date,
+        condition_on_assign: activeAssignment.condition_on_assign
+      } : null
+    };
+    
+    res.json({
+      equipment,
+      stats,
+      history
+    });
+  } catch (error) {
+    console.error('❌ Ошибка получения деталей техники:', error);
+    res.status(500).json({ error: error.message });
+  }
+}
+
+// ============================================================
+// ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+// ============================================================
+
+function getInitials(name) {
+  if (!name) return '?';
+  const parts = String(name).trim().split(/\s+/).filter(p => p);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0][0].toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+function formatDate(dateString) {
+  if (!dateString) return '—';
+  try {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return 'только что';
+    if (diffMins < 60) return `${diffMins} мин назад`;
+    if (diffHours < 24) return `${diffHours} ч назад`;
+    if (diffDays < 7) return `${diffDays} дн назад`;
+    
+    return date.toLocaleDateString('ru-RU', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  } catch {
+    return dateString;
+  }
+}
+
+function formatDateTime(dateString) {
+  if (!dateString) return '—';
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleString('ru-RU', {
+      day: '2-digit',
+      month: '2-digit',
+      year: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+  } catch {
+    return dateString;
+  }
+}
+
+function escapeHtml(text) {
+  if (!text) return '';
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function escapeAttr(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/"/g, '&quot;');
+}
+
+// ============================================================
+// ЭКСПОРТ
+// ============================================================
 
 module.exports = {
   // Страницы
   renderAdmin,
-  renderLogs,              // ← НОВОЕ
+  renderLogs,
   
-  // API для техники
+  // API техники
   getEquipmentAPI,
   getEquipmentByIdAPI,
-  getEquipmentDetailsAPI,
+  getEquipmentDetailsAPI,   // 🆕
   addEquipmentAPI,
   updateEquipmentAPI,
   deleteEquipmentAPI,
   
-  // Страницы для техники
+  // Страницы техники
   renderAddEquipment,
   renderEditEquipment,
   
-  // API для пользователей
+  // API пользователей
   getUsersAPI,
   getUserByIdAPI,
   addUserAPI,
@@ -1445,12 +1411,12 @@ module.exports = {
   unblockUserAPI,
   getUserDetailsAPI,
   
-  // Страницы для пользователей
+  // Страницы пользователей
   renderAddUser,
   renderEditUser,
   
-  // Логи                              ← НОВОЕ
+  // Логи
   getLogsAPI,
   getLogsStatsAPI,
-  cleanLogsAPI
+  cleanLogsAPI,
 };

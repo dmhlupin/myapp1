@@ -1,11 +1,11 @@
 // public/js/admin.js — Логика админ-панели
 
-// ===== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =====
+// ============================================================
+// ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+// ============================================================
 
 /**
  * Получить инициалы из имени
- * "Мария Петрова" → "МП"
- * "admin" → "A"
  */
 function getInitials(name) {
     if (!name) return '?';
@@ -16,8 +16,7 @@ function getInitials(name) {
 }
 
 /**
- * Форматирование даты и времени в относительный вид
- * "5 мин назад", "2 ч назад", "вчера"
+ * Форматирование даты и времени
  */
 function formatDate(dateString) {
     if (!dateString) return '—';
@@ -28,12 +27,12 @@ function formatDate(dateString) {
         const diffMins = Math.floor(diffMs / 60000);
         const diffHours = Math.floor(diffMs / 3600000);
         const diffDays = Math.floor(diffMs / 86400000);
-        
+
         if (diffMins < 1) return 'только что';
         if (diffMins < 60) return `${diffMins} мин назад`;
         if (diffHours < 24) return `${diffHours} ч назад`;
         if (diffDays < 7) return `${diffDays} дн назад`;
-        
+
         return date.toLocaleDateString('ru-RU', {
             day: '2-digit',
             month: '2-digit',
@@ -44,8 +43,9 @@ function formatDate(dateString) {
     }
 }
 
-// ===== ОСНОВНАЯ ЛОГИКА =====
-
+// ============================================================
+// ПЕРЕМЕННЫЕ
+// ============================================================
 
 let deleteId = null;
 let deleteType = null;
@@ -53,7 +53,9 @@ let deleteUserName = '';
 let deleteEquipmentCount = 0;
 let currentTempPassword = '';
 
-// ===== ВКЛАДКИ =====
+// ============================================================
+// ВКЛАДКИ
+// ============================================================
 
 function switchTab(tab) {
     document.querySelectorAll('.tab-content').forEach(el => {
@@ -62,21 +64,23 @@ function switchTab(tab) {
     document.querySelectorAll('.tab-btn').forEach(el => {
         el.classList.remove('active');
     });
-    
+
     document.getElementById(`tab-${tab}`).classList.add('active');
     event.target.classList.add('active');
 }
 
-// ===== ПОИСК =====
+// ============================================================
+// ПОИСК
+// ============================================================
 
 function searchTable(type) {
     const input = document.getElementById(type === 'equipment' ? 'searchEquipment' : 'searchUsers');
     const filter = input.value.toLowerCase();
     const table = document.getElementById(type === 'equipment' ? 'equipmentTableBody' : 'usersTableBody');
     if (!table) return;
-    
+
     const rows = table.getElementsByTagName('tr');
-    
+
     for (let i = 0; i < rows.length; i++) {
         const cells = rows[i].getElementsByTagName('td');
         let found = false;
@@ -91,7 +95,9 @@ function searchTable(type) {
     }
 }
 
-// ===== ТЕХНИКА =====
+// ============================================================
+// ТЕХНИКА
+// ============================================================
 
 function editEquipment(id) {
     window.location.href = `/admin/edit/${id}`;
@@ -101,14 +107,248 @@ function deleteEquipment(id) {
     deleteId = id;
     deleteType = 'equipment';
     deleteEquipmentCount = 0;
-    
-    document.getElementById('deleteUserText').textContent = 
+
+    document.getElementById('deleteUserText').textContent =
         'Вы уверены, что хотите удалить эту технику? Это действие нельзя отменить.';
     document.getElementById('deleteUserWarning').style.display = 'none';
     document.getElementById('deleteModal').classList.add('active');
 }
 
-// ===== ПОЛЬЗОВАТЕЛИ =====
+// ============================================================
+// ПРОСМОТР ТЕХНИКИ (карточка)
+// ============================================================
+
+async function viewEquipment(id) {
+    try {
+        const response = await fetch(`/api/admin/equipment/${id}/details`);
+        const data = await response.json();
+
+        if (!data.equipment) {
+            showToast('❌ Техника не найдена', 'error');
+            return;
+        }
+
+        const { equipment, stats, history } = data;
+
+        // Форматирование дат
+        const purchaseDate = equipment.purchase_date
+            ? new Date(equipment.purchase_date).toLocaleDateString('ru-RU')
+            : '—';
+        const warrantyDate = equipment.warranty_until
+            ? new Date(equipment.warranty_until).toLocaleDateString('ru-RU')
+            : '—';
+
+        // Проверка гарантии
+        const warrantyExpired = equipment.warranty_until && new Date(equipment.warranty_until) < new Date();
+        const warrantyBadge = warrantyExpired
+            ? '<span style="color: #c53030; font-size: 12px;">⚠️ Истекла</span>'
+            : (equipment.warranty_until ? '<span style="color: #2f855a; font-size: 12px;">✅ Действует</span>' : '');
+
+        // Статус
+        const statusLabels = {
+            'available': { label: 'Доступна', class: 'status-available', icon: '✅' },
+            'assigned': { label: 'Назначена', class: 'status-assigned', icon: '👤' },
+            'maintenance': { label: 'В ремонте', class: 'status-maintenance', icon: '🔧' },
+            'retired': { label: 'Списана', class: 'status-retired', icon: '❌' }
+        };
+        const statusInfo = statusLabels[equipment.status] || statusLabels.available;
+        const statusBadge = `<span class="status-badge ${statusInfo.class}">${statusInfo.icon} ${statusInfo.label}</span>`;
+
+        // Категория / тип
+        const categoryHtml = equipment.category_name
+            ? `<span class="status-badge" style="background: #e2e8f0; color: #4a5568;">📁 ${escapeHtml(equipment.category_name)}</span>`
+            : '';
+        const typeHtml = equipment.type_name
+            ? `<span class="status-badge" style="background: #e2e8f0; color: #4a5568;">📦 ${escapeHtml(equipment.type_name)}</span>`
+            : '';
+
+        // Текущий владелец
+        let currentUserHtml = '';
+        if (stats.current_user) {
+            const u = stats.current_user;
+            const initials = getInitials(u.full_name || u.username);
+            const assignedDate = new Date(u.assigned_date).toLocaleDateString('ru-RU');
+            currentUserHtml = `
+                <div class="current-user-card">
+                    <div class="current-user-avatar">${initials}</div>
+                    <div class="current-user-info">
+                        <div class="current-user-name">${escapeHtml(u.full_name || u.username)}</div>
+                        <div class="current-user-dept">${escapeHtml(u.department || 'Без отдела')} · @${escapeHtml(u.username)}</div>
+                        <div class="current-user-date">📅 Выдано: ${assignedDate}</div>
+                    </div>
+                    <span class="current-user-status">Активно</span>
+                </div>
+            `;
+        } else {
+            currentUserHtml = `
+                <div class="empty-equipment">
+                    <span class="empty-icon">📭</span>
+                    <p>Техника не назначена пользователю</p>
+                </div>
+            `;
+        }
+
+        // История
+        let historyHtml = '';
+        if (history.length === 0) {
+            historyHtml = '<p style="color: #a0aec0; text-align: center; padding: 15px;">История пуста</p>';
+        } else {
+            historyHtml = `
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>Пользователь</th>
+                            <th>Отдел</th>
+                            <th>Выдано</th>
+                            <th>Возвращено</th>
+                            <th>Состояние</th>
+                            <th>Статус</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            history.forEach(h => {
+                const assignedDate = h.assigned_date
+                    ? new Date(h.assigned_date).toLocaleDateString('ru-RU')
+                    : '—';
+                const returnedDate = h.returned_date
+                    ? new Date(h.returned_date).toLocaleDateString('ru-RU')
+                    : '—';
+                const statusBadge = h.status === 'active'
+                    ? '<span class="status-badge status-assigned">Активна</span>'
+                    : '<span class="status-badge status-available">Возвращена</span>';
+
+                historyHtml += `
+                    <tr>
+                        <td>
+                            <div class="history-user">
+                                <span class="history-user-avatar">${getInitials(h.full_name || h.username)}</span>
+                                <span>${escapeHtml(h.full_name || h.username)}</span>
+                            </div>
+                        </td>
+                        <td>${escapeHtml(h.department || '—')}</td>
+                        <td>${assignedDate}</td>
+                        <td>${returnedDate}</td>
+                        <td>${escapeHtml(h.condition_on_assign || '—')}</td>
+                        <td>${statusBadge}</td>
+                    </tr>
+                `;
+            });
+            historyHtml += '</tbody></table>';
+        }
+
+        // 🆕 Место хранения
+        let locationHtml = '';
+        if (equipment.cell_id) {
+            locationHtml = `
+                <div class="user-detail-section">
+                    <h4>📍 Место хранения</h4>
+                    <div class="detail-item" style="background: #ebf8ff; border-left: 3px solid #4299e1; padding: 12px;">
+                        <div class="value">
+                            ${escapeHtml(equipment.warehouse_name || '—')} 
+                            → ${escapeHtml(equipment.zone_name || '—')} 
+                            → ${escapeHtml(equipment.rack_name || '—')} 
+                            → <strong>${escapeHtml(equipment.cell_name || '—')}${equipment.cell_code ? ` [${equipment.cell_code}]` : ''}</strong>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Собираем
+        const body = document.getElementById('viewEquipmentBody');
+        body.innerHTML = `
+            <div class="equipment-header-card">
+                <div class="equipment-header-icon">🔧</div>
+                <div class="equipment-header-info">
+                    <h2>${escapeHtml(equipment.name)}</h2>
+                    <div class="equipment-header-inv">${escapeHtml(equipment.inventory_number)}</div>
+                    <div class="equipment-header-badges">
+                        ${statusBadge}
+                        ${categoryHtml}
+                        ${typeHtml}
+                    </div>
+                </div>
+            </div>
+
+            <div class="user-stats">
+                <div class="user-stat">
+                    <div class="user-stat-number active">${stats.active}</div>
+                    <div class="user-stat-label">Сейчас назначена</div>
+                </div>
+                <div class="user-stat">
+                    <div class="user-stat-number total">${stats.total}</div>
+                    <div class="user-stat-label">Всего выдач</div>
+                </div>
+                <div class="user-stat">
+                    <div class="user-stat-number returned">${stats.returned}</div>
+                    <div class="user-stat-label">Возвращено</div>
+                </div>
+            </div>
+
+            <div class="user-detail-section">
+                <h4>📋 Информация о технике</h4>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <label>Название</label>
+                        <div class="value">${escapeHtml(equipment.name)}</div>
+                    </div>
+                    <div class="detail-item">
+                        <label>Модель</label>
+                        <div class="value">${escapeHtml(equipment.model || '—')}</div>
+                    </div>
+                    <div class="detail-item">
+                        <label>Производитель</label>
+                        <div class="value">${escapeHtml(equipment.manufacturer || '—')}</div>
+                    </div>
+                    <div class="detail-item">
+                        <label>Серийный номер</label>
+                        <div class="value">${escapeHtml(equipment.serial_number || '—')}</div>
+                    </div>
+                    <div class="detail-item">
+                        <label>Дата покупки</label>
+                        <div class="value">${purchaseDate}</div>
+                    </div>
+                    <div class="detail-item">
+                        <label>Гарантия до</label>
+                        <div class="value">${warrantyDate} ${warrantyBadge}</div>
+                    </div>
+                </div>
+                ${equipment.description ? `
+                    <div class="detail-item" style="margin-top: 12px;">
+                        <label>Описание</label>
+                        <div class="value">${escapeHtml(equipment.description)}</div>
+                    </div>
+                ` : ''}
+            </div>
+
+            ${locationHtml}
+
+            <div class="user-detail-section">
+                <h4>👤 Текущий владелец</h4>
+                ${currentUserHtml}
+            </div>
+
+            <div class="user-detail-section">
+                <h4>📜 История использования (${stats.total})</h4>
+                ${historyHtml}
+            </div>
+        `;
+
+        document.getElementById('viewEquipmentModal').classList.add('active');
+    } catch (error) {
+        console.error('Ошибка:', error);
+        showToast('❌ Ошибка загрузки данных', 'error');
+    }
+}
+
+function closeViewEquipmentModal() {
+    document.getElementById('viewEquipmentModal').classList.remove('active');
+}
+
+// ============================================================
+// ПОЛЬЗОВАТЕЛИ
+// ============================================================
 
 function editUser(id) {
     window.location.href = `/admin/user/edit/${id}`;
@@ -118,7 +358,8 @@ function deleteUser(id, name) {
     deleteId = id;
     deleteType = 'user';
     deleteUserName = name || 'пользователя';
-    
+    deleteEquipmentCount = 0;
+
     // Находим строку и получаем количество техники
     const rows = document.querySelectorAll('#usersTableBody tr');
     rows.forEach(row => {
@@ -128,10 +369,10 @@ function deleteUser(id, name) {
             deleteEquipmentCount = badge ? parseInt(badge.textContent) : 0;
         }
     });
-    
-    document.getElementById('deleteUserText').innerHTML = 
-        `Вы уверены, что хотите удалить пользователя <strong>"${deleteUserName}"</strong>?`;
-    
+
+    document.getElementById('deleteUserText').innerHTML =
+        `Вы уверены, что хотите удалить пользователя <strong>"${escapeHtml(deleteUserName)}"</strong>?`;
+
     const warning = document.getElementById('deleteUserWarning');
     if (deleteEquipmentCount > 0) {
         document.getElementById('deleteEquipmentCount').textContent = deleteEquipmentCount;
@@ -139,7 +380,7 @@ function deleteUser(id, name) {
     } else {
         warning.style.display = 'none';
     }
-    
+
     document.getElementById('deleteModal').classList.add('active');
 }
 
@@ -153,15 +394,15 @@ function closeModal() {
 
 async function confirmDelete() {
     if (!deleteId) return;
-    
-    const endpoint = deleteType === 'equipment' 
+
+    const endpoint = deleteType === 'equipment'
         ? `/api/admin/equipment/${deleteId}`
         : `/api/admin/users/${deleteId}`;
-    
+
     try {
         const response = await fetch(endpoint, { method: 'DELETE' });
         const result = await response.json();
-        
+
         if (result.success) {
             showToast('✅ ' + result.message, 'success');
             setTimeout(() => location.reload(), 1000);
@@ -171,21 +412,23 @@ async function confirmDelete() {
     } catch (error) {
         showToast('❌ Ошибка при удалении', 'error');
     }
-    
+
     closeModal();
 }
 
-// ===== БЛОКИРОВКА =====
+// ============================================================
+// БЛОКИРОВКА
+// ============================================================
 
 async function blockUser(id) {
     if (!confirm('Заблокировать пользователя? Он не сможет войти в систему.')) return;
-    
+
     try {
         const response = await fetch(`/api/admin/users/${id}/block`, {
             method: 'POST'
         });
         const result = await response.json();
-        
+
         if (result.success) {
             showToast('✅ ' + result.message, 'success');
             setTimeout(() => location.reload(), 800);
@@ -203,7 +446,7 @@ async function unblockUser(id) {
             method: 'POST'
         });
         const result = await response.json();
-        
+
         if (result.success) {
             showToast('✅ ' + result.message, 'success');
             setTimeout(() => location.reload(), 800);
@@ -215,17 +458,19 @@ async function unblockUser(id) {
     }
 }
 
-// ===== СБРОС ПАРОЛЯ =====
+// ============================================================
+// СБРОС ПАРОЛЯ
+// ============================================================
 
 async function resetUserPassword(id, username) {
     if (!confirm(`Сбросить пароль для пользователя "${username}"?\n\nБудет сгенерирован новый временный пароль.`)) return;
-    
+
     try {
         const response = await fetch(`/api/admin/users/${id}/reset-password`, {
             method: 'POST'
         });
         const result = await response.json();
-        
+
         if (result.success) {
             currentTempPassword = result.tempPassword;
             document.getElementById('tempPasswordValue').textContent = result.tempPassword;
@@ -247,7 +492,7 @@ function closePasswordModal() {
 
 function copyPassword() {
     if (!currentTempPassword) return;
-    
+
     navigator.clipboard.writeText(currentTempPassword).then(() => {
         showToast('📋 Пароль скопирован в буфер обмена', 'success');
     }).catch(() => {
@@ -255,431 +500,225 @@ function copyPassword() {
     });
 }
 
-// ===== ПРОСМОТР ПОЛЬЗОВАТЕЛЯ =====
+// ============================================================
+// ПРОСМОТР ПОЛЬЗОВАТЕЛЯ
+// ============================================================
 
 async function viewUser(id) {
-  try {
-    const response = await fetch(`/api/admin/users/${id}/details`);
-    const data = await response.json();
-    
-    if (!data.user) {
-      showToast('❌ Пользователь не найден', 'error');
-      return;
-    }
-    
-    const { user, stats, activeEquipment, history } = data;
-    
-    // Форматирование дат
-    const lastLogin = user.last_login 
-      ? new Date(user.last_login).toLocaleString('ru-RU', {
-          day: '2-digit', month: '2-digit', year: 'numeric',
-          hour: '2-digit', minute: '2-digit'
-        })
-      : 'никогда';
-    
-    const createdAt = user.created_at 
-      ? new Date(user.created_at).toLocaleDateString('ru-RU') 
-      : '—';
-    
-    // Статус
-    const isActive = user.is_active === 1;
-    const statusBadge = isActive
-      ? '<span class="status-badge status-available">✅ Активен</span>'
-      : '<span class="status-badge status-retired">🚫 Заблокирован</span>';
-    
-    // Роль
-    const isAdmin = user.role === 'admin';
-    const roleBadge = isAdmin
-      ? '<span class="role-badge role-admin">👑 Администратор</span>'
-      : '<span class="role-badge role-user">👤 Пользователь</span>';
-    
-    // Инициалы
-    const initials = getInitials(user.full_name || user.username);
-    
-    // Активная техника
-    let activeEquipmentHtml = '';
-    if (activeEquipment.length === 0) {
-      activeEquipmentHtml = `
-        <div class="empty-equipment">
-          <span class="empty-icon">📭</span>
-          <p>Нет активной техники</p>
-        </div>
-      `;
-    } else {
-      activeEquipmentHtml = '<div class="equipment-cards">';
-      activeEquipment.forEach(eq => {
-        const assignedDate = new Date(eq.assigned_date).toLocaleDateString('ru-RU');
-        activeEquipmentHtml += `
-          <div class="equipment-card">
-            <div class="equipment-card-header">
-              <span class="equipment-card-inv">${eq.inventory_number}</span>
-              <span class="equipment-card-date">${assignedDate}</span>
+    try {
+        const response = await fetch(`/api/admin/users/${id}/details`);
+        const data = await response.json();
+
+        if (!data.user) {
+            showToast('❌ Пользователь не найден', 'error');
+            return;
+        }
+
+        const { user, stats, activeEquipment, history } = data;
+
+        // Форматирование дат
+        const lastLogin = user.last_login
+            ? new Date(user.last_login).toLocaleString('ru-RU', {
+                day: '2-digit', month: '2-digit', year: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            })
+            : 'никогда';
+
+        const createdAt = user.created_at
+            ? new Date(user.created_at).toLocaleDateString('ru-RU')
+            : '—';
+
+        // Статус
+        const isActive = user.is_active === 1;
+        const statusBadge = isActive
+            ? '<span class="status-badge status-available">✅ Активен</span>'
+            : '<span class="status-badge status-retired">🚫 Заблокирован</span>';
+
+        // Роль
+        const isAdmin = user.role === 'admin';
+        const roleBadge = isAdmin
+            ? '<span class="role-badge role-admin">👑 Администратор</span>'
+            : '<span class="role-badge role-user">👤 Пользователь</span>';
+
+        // Инициалы
+        const initials = getInitials(user.full_name || user.username);
+
+        // Активная техника
+        let activeEquipmentHtml = '';
+        if (activeEquipment.length === 0) {
+            activeEquipmentHtml = `
+                <div class="empty-equipment">
+                    <span class="empty-icon">📭</span>
+                    <p>Нет активной техники</p>
+                </div>
+            `;
+        } else {
+            activeEquipmentHtml = '<div class="equipment-cards">';
+            activeEquipment.forEach(eq => {
+                const assignedDate = new Date(eq.assigned_date).toLocaleDateString('ru-RU');
+                activeEquipmentHtml += `
+                    <div class="equipment-card">
+                        <div class="equipment-card-header">
+                            <span class="equipment-card-inv">${eq.inventory_number}</span>
+                            <span class="equipment-card-date">${assignedDate}</span>
+                        </div>
+                        <div class="equipment-card-body">
+                            <div class="equipment-card-name">${eq.name}</div>
+                            ${eq.model ? `<div class="equipment-card-model">${eq.model}</div>` : ''}
+                            ${eq.manufacturer ? `<div class="equipment-card-manufacturer">${eq.manufacturer}</div>` : ''}
+                        </div>
+                        ${eq.condition_on_assign ? `
+                            <div class="equipment-card-footer">
+                                Состояние: ${eq.condition_on_assign}
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            });
+            activeEquipmentHtml += '</div>';
+        }
+
+        // История
+        let historyHtml = '';
+        if (history.length === 0) {
+            historyHtml = '<p style="color: #a0aec0; text-align: center; padding: 15px;">История пуста</p>';
+        } else {
+            historyHtml = `
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>Инв. номер</th>
+                            <th>Название</th>
+                            <th>Выдано</th>
+                            <th>Возвращено</th>
+                            <th>Статус</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            history.forEach(h => {
+                const assignedDate = h.assigned_date
+                    ? new Date(h.assigned_date).toLocaleDateString('ru-RU')
+                    : '—';
+                const returnedDate = h.returned_date
+                    ? new Date(h.returned_date).toLocaleDateString('ru-RU')
+                    : '—';
+                const statusBadge = h.status === 'active'
+                    ? '<span class="status-badge status-assigned">Активна</span>'
+                    : '<span class="status-badge status-available">Возвращена</span>';
+
+                historyHtml += `
+                    <tr>
+                        <td><strong>${h.inventory_number}</strong></td>
+                        <td>${h.name}</td>
+                        <td>${assignedDate}</td>
+                        <td>${returnedDate}</td>
+                        <td>${statusBadge}</td>
+                    </tr>
+                `;
+            });
+            historyHtml += '</tbody></table>';
+        }
+
+        // Собираем всё
+        const body = document.getElementById('viewUserBody');
+        body.innerHTML = `
+            <div class="user-header-card">
+                <div class="user-header-avatar">${initials}</div>
+                <div class="user-header-info">
+                    <h2>${escapeHtml(user.full_name || user.username)}</h2>
+                    <div class="user-header-username">@${escapeHtml(user.username)}</div>
+                    <div class="user-header-badges">
+                        ${roleBadge}
+                        ${statusBadge}
+                    </div>
+                </div>
             </div>
-            <div class="equipment-card-body">
-              <div class="equipment-card-name">${eq.name}</div>
-              ${eq.model ? `<div class="equipment-card-model">${eq.model}</div>` : ''}
-              ${eq.manufacturer ? `<div class="equipment-card-manufacturer">${eq.manufacturer}</div>` : ''}
+
+            <div class="user-stats">
+                <div class="user-stat">
+                    <div class="user-stat-number active">${stats.active}</div>
+                    <div class="user-stat-label">Активной техники</div>
+                </div>
+                <div class="user-stat">
+                    <div class="user-stat-number total">${stats.total}</div>
+                    <div class="user-stat-label">Всего получал</div>
+                </div>
+                <div class="user-stat">
+                    <div class="user-stat-number returned">${stats.returned}</div>
+                    <div class="user-stat-label">Возвращено</div>
+                </div>
             </div>
-            ${eq.condition_on_assign ? `
-              <div class="equipment-card-footer">
-                Состояние: ${eq.condition_on_assign}
-              </div>
-            ` : ''}
-          </div>
+
+            <div class="user-detail-section">
+                <h4>📋 Контактная информация</h4>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <label>Email</label>
+                        <div class="value">${escapeHtml(user.email || '—')}</div>
+                    </div>
+                    <div class="detail-item">
+                        <label>Телефон</label>
+                        <div class="value">${escapeHtml(user.phone || '—')}</div>
+                    </div>
+                    <div class="detail-item">
+                        <label>Отдел</label>
+                        <div class="value">${escapeHtml(user.department || '—')}</div>
+                    </div>
+                    <div class="detail-item">
+                        <label>Последний вход</label>
+                        <div class="value">${lastLogin}</div>
+                    </div>
+                    <div class="detail-item">
+                        <label>Дата создания</label>
+                        <div class="value">${createdAt}</div>
+                    </div>
+                    <div class="detail-item">
+                        <label>ID пользователя</label>
+                        <div class="value">#${user.id}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="user-detail-section">
+                <h4>📦 Активная техника (${stats.active})</h4>
+                ${activeEquipmentHtml}
+            </div>
+
+            <div class="user-detail-section">
+                <h4>📜 История получений (${stats.total})</h4>
+                ${historyHtml}
+            </div>
         `;
-      });
-      activeEquipmentHtml += '</div>';
+
+        document.getElementById('viewUserModal').classList.add('active');
+    } catch (error) {
+        console.error('Ошибка:', error);
+        showToast('❌ Ошибка загрузки данных', 'error');
     }
-    
-    // История (компактная таблица)
-    let historyHtml = '';
-    if (history.length === 0) {
-      historyHtml = '<p style="color: #a0aec0; text-align: center; padding: 15px;">История пуста</p>';
-    } else {
-      historyHtml = `
-        <table class="history-table">
-          <thead>
-            <tr>
-              <th>Инв. номер</th>
-              <th>Название</th>
-              <th>Выдано</th>
-              <th>Возвращено</th>
-              <th>Статус</th>
-            </tr>
-          </thead>
-          <tbody>
-      `;
-      history.forEach(h => {
-        const assignedDate = h.assigned_date 
-          ? new Date(h.assigned_date).toLocaleDateString('ru-RU') 
-          : '—';
-        const returnedDate = h.returned_date 
-          ? new Date(h.returned_date).toLocaleDateString('ru-RU') 
-          : '—';
-        const statusBadge = h.status === 'active'
-          ? '<span class="status-badge status-assigned">Активна</span>'
-          : '<span class="status-badge status-available">Возвращена</span>';
-        
-        historyHtml += `
-          <tr>
-            <td><strong>${h.inventory_number}</strong></td>
-            <td>${h.name}</td>
-            <td>${assignedDate}</td>
-            <td>${returnedDate}</td>
-            <td>${statusBadge}</td>
-          </tr>
-        `;
-      });
-      historyHtml += '</tbody></table>';
-    }
-    
-    // Собираем всё
-    const body = document.getElementById('viewUserBody');
-    body.innerHTML = `
-      <!-- Заголовок с аватаром -->
-      <div class="user-header-card">
-        <div class="user-header-avatar">${initials}</div>
-        <div class="user-header-info">
-          <h2>${user.full_name || user.username}</h2>
-          <div class="user-header-username">@${user.username}</div>
-          <div class="user-header-badges">
-            ${roleBadge}
-            ${statusBadge}
-          </div>
-        </div>
-      </div>
-      
-      <!-- Статистика -->
-      <div class="user-stats">
-        <div class="user-stat">
-          <div class="user-stat-number active">${stats.active}</div>
-          <div class="user-stat-label">Активной техники</div>
-        </div>
-        <div class="user-stat">
-          <div class="user-stat-number total">${stats.total}</div>
-          <div class="user-stat-label">Всего получал</div>
-        </div>
-        <div class="user-stat">
-          <div class="user-stat-number returned">${stats.returned}</div>
-          <div class="user-stat-label">Возвращено</div>
-        </div>
-      </div>
-      
-      <!-- Контакты -->
-      <div class="user-detail-section">
-        <h4>📋 Контактная информация</h4>
-        <div class="detail-grid">
-          <div class="detail-item">
-            <label>Email</label>
-            <div class="value">${user.email || '—'}</div>
-          </div>
-          <div class="detail-item">
-            <label>Телефон</label>
-            <div class="value">${user.phone || '—'}</div>
-          </div>
-          <div class="detail-item">
-            <label>Отдел</label>
-            <div class="value">${user.department || '—'}</div>
-          </div>
-          <div class="detail-item">
-            <label>Последний вход</label>
-            <div class="value">${lastLogin}</div>
-          </div>
-          <div class="detail-item">
-            <label>Дата создания</label>
-            <div class="value">${createdAt}</div>
-          </div>
-          <div class="detail-item">
-            <label>ID пользователя</label>
-            <div class="value">#${user.id}</div>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Активная техника -->
-      <div class="user-detail-section">
-        <h4>📦 Активная техника (${stats.active})</h4>
-        ${activeEquipmentHtml}
-      </div>
-      
-      <!-- История -->
-      <div class="user-detail-section">
-        <h4>📜 История получений (${stats.total})</h4>
-        ${historyHtml}
-      </div>
-    `;
-    
-    document.getElementById('viewUserModal').classList.add('active');
-  } catch (error) {
-    console.error('Ошибка:', error);
-    showToast('❌ Ошибка загрузки данных', 'error');
-  }
 }
 
 function closeViewUserModal() {
     document.getElementById('viewUserModal').classList.remove('active');
 }
 
-// ===== ПРОСМОТР ТЕХНИКИ =====
+// ============================================================
+// ВСПОМОГАТЕЛЬНЫЕ
+// ============================================================
 
-async function viewEquipment(id) {
-  try {
-    const response = await fetch(`/api/admin/equipment/${id}/details`);
-    const data = await response.json();
-    
-    if (!data.equipment) {
-      showToast('❌ Техника не найдена', 'error');
-      return;
-    }
-    
-    const { equipment, stats, history } = data;
-    
-    // Форматирование дат
-    const purchaseDate = equipment.purchase_date 
-      ? new Date(equipment.purchase_date).toLocaleDateString('ru-RU')
-      : '—';
-    const warrantyDate = equipment.warranty_until 
-      ? new Date(equipment.warranty_until).toLocaleDateString('ru-RU')
-      : '—';
-    
-    // Проверка гарантии
-    const warrantyExpired = equipment.warranty_until && new Date(equipment.warranty_until) < new Date();
-    const warrantyBadge = warrantyExpired 
-      ? '<span style="color: #c53030; font-size: 12px;">⚠️ Истекла</span>'
-      : (equipment.warranty_until ? '<span style="color: #2f855a; font-size: 12px;">✅ Действует</span>' : '');
-    
-    // Статус
-    const statusLabels = {
-      'available': { label: 'Доступна', class: 'status-available', icon: '✅' },
-      'assigned': { label: 'Назначена', class: 'status-assigned', icon: '👤' },
-      'maintenance': { label: 'В ремонте', class: 'status-maintenance', icon: '🔧' },
-      'retired': { label: 'Списана', class: 'status-retired', icon: '❌' }
-    };
-    const statusInfo = statusLabels[equipment.status] || statusLabels.available;
-    const statusBadge = `<span class="status-badge ${statusInfo.class}">${statusInfo.icon} ${statusInfo.label}</span>`;
-    
-    // Текущий пользователь
-    let currentUserHtml = '';
-    if (stats.current_user) {
-      const u = stats.current_user;
-      const initials = getInitials(u.full_name || u.username);
-      const assignedDate = new Date(u.assigned_date).toLocaleDateString('ru-RU');
-      currentUserHtml = `
-        <div class="current-user-card">
-          <div class="current-user-avatar">${initials}</div>
-          <div class="current-user-info">
-            <div class="current-user-name">${u.full_name || u.username}</div>
-            <div class="current-user-dept">${u.department || 'Без отдела'} · @${u.username}</div>
-            <div class="current-user-date">📅 Выдано: ${assignedDate}</div>
-          </div>
-          <span class="current-user-status">Активно</span>
-        </div>
-      `;
-    } else {
-      currentUserHtml = `
-        <div class="empty-equipment">
-          <span class="empty-icon">📭</span>
-          <p>Техника не назначена пользователю</p>
-        </div>
-      `;
-    }
-    
-    // История (таблица)
-    let historyHtml = '';
-    if (history.length === 0) {
-      historyHtml = '<p style="color: #a0aec0; text-align: center; padding: 15px;">История пуста</p>';
-    } else {
-      historyHtml = `
-        <table class="history-table">
-          <thead>
-            <tr>
-              <th>Пользователь</th>
-              <th>Отдел</th>
-              <th>Выдано</th>
-              <th>Возвращено</th>
-              <th>Состояние при выдаче</th>
-              <th>Статус</th>
-            </tr>
-          </thead>
-          <tbody>
-      `;
-      history.forEach(h => {
-        const assignedDate = h.assigned_date 
-          ? new Date(h.assigned_date).toLocaleDateString('ru-RU') 
-          : '—';
-        const returnedDate = h.returned_date 
-          ? new Date(h.returned_date).toLocaleDateString('ru-RU') 
-          : '—';
-        
-        // 🆕 Проверка аномалии: возврат раньше выдачи
-        let anomalyWarning = '';
-        if (h.assigned_date && h.returned_date) {
-          const assigned = new Date(h.assigned_date);
-          const returned = new Date(h.returned_date);
-          if (returned < assigned) {
-            anomalyWarning = ' <span title="Дата возврата раньше выдачи — возможно, сбой системного времени" style="color: #ed8936; cursor: help;">⚠️</span>';
-          }
-        }
-        
-        const statusBadge = h.status === 'active'
-          ? '<span class="status-badge status-assigned">Активна</span>'
-          : '<span class="status-badge status-available">Возвращена</span>';
-        
-        const userName = h.full_name || h.username || `Пользователь #${h.user_id}`;
-        const userDept = h.department || '—';
-        
-        historyHtml += `
-          <tr>
-            <td>
-              <div class="history-user">
-                <span class="history-user-avatar">${getInitials(userName)}</span>
-                <span>${userName}</span>
-              </div>
-            </td>
-            <td>${userDept}</td>
-            <td>${assignedDate}</td>
-            <td>${returnedDate}${anomalyWarning}</td>
-            <td>${h.condition_on_assign || '—'}</td>
-            <td>${statusBadge}</td>
-          </tr>
-        `;
-      });
-      historyHtml += '</tbody></table>';
-    }
-    
-    // Собираем всё
-    const body = document.getElementById('viewEquipmentBody');
-    body.innerHTML = `
-      <!-- Заголовок с иконкой -->
-      <div class="equipment-header-card">
-        <div class="equipment-header-icon">🔧</div>
-        <div class="equipment-header-info">
-          <h2>${equipment.name}</h2>
-          <div class="equipment-header-inv">${equipment.inventory_number}</div>
-          <div class="equipment-header-badges">
-            ${statusBadge}
-          </div>
-        </div>
-      </div>
-      
-      <!-- Статистика -->
-      <div class="user-stats">
-        <div class="user-stat">
-          <div class="user-stat-number active">${stats.active}</div>
-          <div class="user-stat-label">Сейчас назначена</div>
-        </div>
-        <div class="user-stat">
-          <div class="user-stat-number total">${stats.total}</div>
-          <div class="user-stat-label">Всего выдач</div>
-        </div>
-        <div class="user-stat">
-          <div class="user-stat-number returned">${stats.returned}</div>
-          <div class="user-stat-label">Возвращено</div>
-        </div>
-      </div>
-      
-      <!-- Основная информация -->
-      <div class="user-detail-section">
-        <h4>📋 Информация о технике</h4>
-        <div class="detail-grid">
-          <div class="detail-item">
-            <label>Название</label>
-            <div class="value">${equipment.name}</div>
-          </div>
-          <div class="detail-item">
-            <label>Модель</label>
-            <div class="value">${equipment.model || '—'}</div>
-          </div>
-          <div class="detail-item">
-            <label>Производитель</label>
-            <div class="value">${equipment.manufacturer || '—'}</div>
-          </div>
-          <div class="detail-item">
-            <label>Серийный номер</label>
-            <div class="value">${equipment.serial_number || '—'}</div>
-          </div>
-          <div class="detail-item">
-            <label>Дата покупки</label>
-            <div class="value">${purchaseDate}</div>
-          </div>
-          <div class="detail-item">
-            <label>Гарантия до</label>
-            <div class="value">${warrantyDate} ${warrantyBadge}</div>
-          </div>
-        </div>
-        ${equipment.description ? `
-          <div class="detail-item" style="margin-top: 12px;">
-            <label>Описание</label>
-            <div class="value">${equipment.description}</div>
-          </div>
-        ` : ''}
-      </div>
-      
-      <!-- Текущий пользователь -->
-      <div class="user-detail-section">
-        <h4>👤 Текущий владелец</h4>
-        ${currentUserHtml}
-      </div>
-      
-      <!-- История -->
-      <div class="user-detail-section">
-        <h4>📜 История использования (${stats.total})</h4>
-        ${historyHtml}
-      </div>
-    `;
-    
-    document.getElementById('viewEquipmentModal').classList.add('active');
-  } catch (error) {
-    console.error('Ошибка:', error);
-    showToast('❌ Ошибка загрузки данных', 'error');
-  }
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
 }
 
-function closeViewEquipmentModal() {
-  document.getElementById('viewEquipmentModal').classList.remove('active');
-}
-
-// ===== ИНИЦИАЛИЗАЦИЯ =====
+// ============================================================
+// ИНИЦИАЛИЗАЦИЯ
+// ============================================================
 
 document.addEventListener('DOMContentLoaded', function() {
     // Закрытие модалок по клику на оверлей
@@ -689,22 +728,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (this.id === 'deleteModal') closeModal();
                 if (this.id === 'passwordModal') closePasswordModal();
                 if (this.id === 'viewUserModal') closeViewUserModal();
-                if (this.id === 'viewEquipmentModal') closeViewEquipmentModal();  // ← НОВОЕ
+                if (this.id === 'viewEquipmentModal') closeViewEquipmentModal();
             }
         });
     });
-    
+
     // Фокус на поиск
     const searchEq = document.getElementById('searchEquipment');
     if (searchEq) searchEq.focus();
-    
+
     // Escape
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
             closeModal();
             closePasswordModal();
             closeViewUserModal();
-            closeViewEquipmentModal();  // ← НОВОЕ
+            closeViewEquipmentModal();
         }
     });
 });

@@ -230,3 +230,34 @@ tr:hover {
         font-size: 13px;
     }
 }
+/* ============================================================
+   МЕСТО ХРАНЕНИЯ
+   ============================================================ */
+
+.location-cell {
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.location-path {
+    color: #718096;
+    font-size: 11px;
+    margin-bottom: 3px;
+}
+
+.location-cell-code {
+    display: inline-block;
+    font-family: 'Courier New', monospace;
+    background: #ebf8ff;
+    color: #2a4365;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+@media (max-width: 768px) {
+    .location-path {
+        display: none;
+    }
+}

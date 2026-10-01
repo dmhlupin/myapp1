@@ -4,7 +4,7 @@
 const fs = require('fs');
 const path = require('path');
 const {
-  getEquipmentWithUsers,
+  getEquipmentWithLocation,   // ← используем новую функцию с адресом
   getStats,
   getAllCategories,
   getAllTypes,
@@ -15,7 +15,8 @@ const {
  */
 async function renderEquipmentDashboard(req, res) {
   try {
-    const equipment = await getEquipmentWithUsers();
+    // Загружаем технику с полным адресом хранения
+    const equipment = await getEquipmentWithLocation();
     const stats = await getStats();
     const categories = await getAllCategories();
     const types = await getAllTypes();
@@ -40,7 +41,9 @@ async function renderEquipmentDashboard(req, res) {
     let tableRows = '';
     equipment.forEach(item => {
       const statusClass = `status-${item.status}`;
-      const userInfo = item.user_name ? `${item.user_name} (${item.user_department || 'без отдела'})` : '—';
+      const userInfo = item.user_name 
+        ? `${item.user_name} (${item.user_department || 'без отдела'})` 
+        : '—';
       
       const categoryCell = item.category_name 
         ? `<span class="category-badge">${item.category_icon || '📁'} ${item.category_name}</span>`
@@ -50,13 +53,22 @@ async function renderEquipmentDashboard(req, res) {
         ? `<span class="type-badge">${item.type_icon || '📦'} ${item.type_name}</span>`
         : '<span style="color: #a0aec0;">—</span>';
       
+      // 🆕 Место хранения
+      const locationCell = item.cell_id
+        ? `<div class="location-cell">
+             <div class="location-path">${item.warehouse_name} → ${item.zone_name} → ${item.rack_name}</div>
+             <div class="location-cell-code">${item.cell_name}${item.cell_code ? ` [${item.cell_code}]` : ''}</div>
+           </div>`
+        : '<span style="color: #cbd5e0;">—</span>';
+      
       tableRows += `
-        <tr data-category-id="${item.category_id || ''}" data-type-id="${item.type_id || ''}">
+        <tr data-category-id="${item.category_id || ''}" data-type-id="${item.type_id || ''}" data-warehouse-id="${item.warehouse_id || ''}">
           <td><strong>${item.inventory_number}</strong></td>
           <td>${item.name}</td>
           <td>${item.model || '—'}</td>
           <td>${categoryCell}</td>
           <td>${typeCell}</td>
+          <td>${locationCell}</td>
           <td><span class="status-badge ${statusClass}">${item.status}</span></td>
           <td>${userInfo}</td>
         </tr>

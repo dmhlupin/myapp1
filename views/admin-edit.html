@@ -68,6 +68,40 @@
             font-size: 13px;
             font-weight: 600;
         }
+
+                .location-section {
+            background: #f7fafc;
+            border-radius: 12px;
+            padding: 20px 25px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+
+        .location-title {
+            color: #2d3748;
+            font-size: 16px;
+            margin: 0 0 8px 0;
+            font-weight: 600;
+        }
+
+        .location-preview {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 15px;
+            background: linear-gradient(135deg, #ebf8ff 0%, #e6fffa 100%);
+            border-radius: 8px;
+            border: 1px solid #90cdf4;
+            color: #2a4365;
+            font-size: 13px;
+            font-weight: 500;
+            margin-top: 10px;
+        }
+
+        .location-preview-icon {
+            font-size: 16px;
+            flex-shrink: 0;
+        }
     </style>
 </head>
 <body>
@@ -86,6 +120,7 @@
         <input type="hidden" id="currentStatus" value="{{status}}">
         <input type="hidden" id="currentCategoryId" value="{{category_id}}">
         <input type="hidden" id="currentTypeId" value="{{type_id}}">
+        <input type="hidden" id="currentCellId" value="{{cell_id}}">
 
         <!-- Предупреждение при возврате -->
         <div class="status-warning" id="statusWarning">
@@ -184,6 +219,53 @@
                 </select>
                 <div class="help-text">
                     <span id="statusHelpText">При смене статуса с "Назначена" на "Доступна" техника будет автоматически возвращена</span>
+                </div>
+            </div>
+            
+            <!-- ============================================================ -->
+            <!-- МЕСТО ХРАНЕНИЯ                                                -->
+            <!-- ============================================================ -->
+            <div id="locationSection" class="location-section">
+                <h3 class="location-title">📍 Место хранения</h3>
+                <div class="help-text" style="margin-bottom: 15px;">
+                    Укажите, где хранится техника. Необязательно.
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Склад</label>
+                        <select id="warehouseId" onchange="onWarehouseChange()">
+                            <option value="">— Не указано —</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Зона</label>
+                        <select id="zoneId" onchange="onZoneChange()" disabled>
+                            <option value="">— Сначала выберите склад —</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Стеллаж</label>
+                        <select id="rackId" onchange="onRackChange()" disabled>
+                            <option value="">— Сначала выберите зону —</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Ячейка</label>
+                        <select id="cellId" onchange="updateLocationPreview()" disabled>
+                            <option value="">— Сначала выберите стеллаж —</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="location-preview" id="locationPreview" style="display: none;">
+                    <span class="location-preview-icon">📍</span>
+                    <span id="locationPreviewText"></span>
                 </div>
             </div>
 

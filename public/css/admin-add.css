@@ -31,3 +31,38 @@ body {
     background: #667eea;
     color: white;
 }
+
+/* Место хранения */
+        .location-section {
+            background: #f7fafc;
+            border-radius: 12px;
+            padding: 20px 25px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+
+        .location-title {
+            color: #2d3748;
+            font-size: 16px;
+            margin: 0 0 8px 0;
+            font-weight: 600;
+        }
+
+        .location-preview {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 15px;
+            background: linear-gradient(135deg, #ebf8ff 0%, #e6fffa 100%);
+            border-radius: 8px;
+            border: 1px solid #90cdf4;
+            color: #2a4365;
+            font-size: 13px;
+            font-weight: 500;
+            margin-top: 10px;
+        }
+
+        .location-preview-icon {
+            font-size: 16px;
+            flex-shrink: 0;
+        }

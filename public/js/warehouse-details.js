@@ -198,7 +198,11 @@ function renderCell(cell) {
             </div>
             <div class="tree-cell-actions" onclick="event.stopPropagation()">
                 <button onclick="openCellModal(${cell.id})" class="tree-btn edit" title="Редактировать">✏️</button>
-                <button onclick="deleteCellItem(${cell.id}, '${escapeAttr(cell.name)}', ${equipmentCount})" class="tree-btn delete" title="Удалить">🗑️</button>
+                ${equipmentCount > 0
+                        ? `<button class="tree-btn delete" disabled title="Нельзя удалить: в ячейке есть техника" style="opacity: 0.3; cursor: not-allowed;">🗑️</button>`
+                        : `<button onclick="deleteCellItem(${cell.id}, '${escapeAttr(cell.name)}', 0)" 
+                    class="tree-btn delete" title="Удалить">🗑️</button>`
+                }
             </div>
         </div>
     `;
@@ -714,7 +718,7 @@ function closeDeleteModal() {
 
 async function confirmDelete() {
     if (!deleteTarget) return;
-    
+
     const { type, id } = deleteTarget;
     const url = type === 'zone' 
         ? `/api/admin/zones/${id}` 
@@ -732,7 +736,8 @@ async function confirmDelete() {
             closeDeleteModal();
             await loadWarehouseTree();
         } else {
-            showToast('❌ ' + result.error, 'error');
+            // 🆕 Показываем понятную ошибку
+            showToast('❌ ' + (result.error || 'Ошибка удаления'), 'error');
         }
     } catch (error) {
         console.error('Ошибка:', error);
