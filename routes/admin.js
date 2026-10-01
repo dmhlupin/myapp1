@@ -33,6 +33,9 @@ const {
   cleanOldLogs,
   // Stats
   getStats,
+  // Move
+  moveEquipmentToCellDetailed,
+  getEquipmentMoves,
 } = require('../database/db');
 
 // Утилиты
@@ -125,6 +128,7 @@ async function renderAdmin(req, res) {
             <div class="action-buttons">
               <button onclick="viewEquipment(${item.id})" class="btn-icon btn-info" title="Просмотр">👁️</button>
               <button onclick="editEquipment(${item.id})" class="btn-icon btn-edit" title="Редактировать">✏️</button>
+              ${item.status !== 'assigned' ? `<button onclick="openMoveEquipmentModal(${item.id})" class="btn-icon btn-move" title="Переместить">🔄</button>` : ''}
               ${deleteButton}
             </div>
           </td>
@@ -1045,6 +1049,7 @@ async function renderLogs(req, res) {
       'equipment_delete': '🗑️ Удаление техники',
       'equipment_assign': '📦 Назначение техники',
       'equipment_return': '↩️ Возврат техники',
+      'equipment_move': '🔄 Перемещение техники',
       'category_create': '📁 Создание категории',
       'category_update': '📁 Редактирование категории',
       'category_delete': '📁 Удаление категории',
@@ -1101,6 +1106,7 @@ async function renderLogs(req, res) {
         else if (log.action === 'login') actionClass = 'log-action-login';
         else if (log.action === 'login_failed') actionClass = 'log-action-failed';
         else if (log.action.includes('block')) actionClass = 'log-action-block';
+        else if (log.action === 'equipment_move') actionClass = 'log-action-move';
         
         const actionLabel = actionNames[log.action] || log.action;
         
@@ -1380,6 +1386,115 @@ function escapeAttr(str) {
 }
 
 // ============================================================
+// API — ПЕРЕМЕЩЕНИЕ ТЕХНИКИ
+// ============================================================
+
+/**
+ * POST /api/admin/equipment/:id/move — переместить технику в ячейку
+ */
+async function moveEquipmentAPI(req, res) {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ error: 'Неверный ID техники' });
+    }
+    
+    const { cell_id, notes } = req.body;
+    
+    // Проверяем технику
+    const equipment = await getEquipmentById(id);
+    if (!equipment) {
+      return res.status(404).json({ error: 'Техника не найдена' });
+    }
+    
+    // Нельзя перемещать назначенную технику
+    if (equipment.status === 'assigned') {
+      return res.status(400).json({ 
+        error: 'Нельзя переместить назначенную технику. Сначала верните её.' 
+      });
+    }
+    
+    // Перемещаем
+    const result = await moveEquipmentToCellDetailed(
+      id,
+      cell_id ? parseInt(cell_id) : null,
+      req.session.userId,
+      req.session.username
+    );
+    
+    // Если уже в этой ячейке — ничего не делаем
+    if (result.already_there) {
+      return res.json({ 
+        success: true, 
+        message: 'Техника уже в этой ячейке',
+        data: result 
+      });
+    }
+    
+    // Логируем
+    await logAction({
+      req,
+      action: 'equipment_move',
+      entityType: 'equipment',
+      entityId: id,
+      details: JSON.stringify({
+        inventory_number: result.inventory_number,
+        equipment_name: result.equipment_name,
+        from_cell: result.from_cell_code || result.from_cell_name || null,
+        to_cell: result.to_cell_code || result.to_cell_name || null,
+        to_warehouse: result.to_warehouse_name || null,
+        to_zone: result.to_zone_name || null,
+        to_rack: result.to_rack_name || null,
+        notes: notes || null
+      })
+    });
+    
+    // Формируем сообщение
+    let message = '✅ Техника перемещена';
+    if (result.from_cell_code && result.to_cell_code) {
+      message = `✅ Перемещено из ${result.from_cell_code} в ${result.to_cell_code}`;
+    } else if (!result.from_cell_code && result.to_cell_code) {
+      message = `✅ Техника размещена в ${result.to_cell_code}`;
+    } else if (result.from_cell_code && !result.to_cell_code) {
+      message = `✅ Техника убрана из ячейки ${result.from_cell_code}`;
+    }
+    
+    res.json({ 
+      success: true, 
+      message,
+      data: result 
+    });
+  } catch (error) {
+    console.error('❌ Ошибка перемещения:', error);
+    if (error.message.includes('переполнена') || 
+        error.message.includes('Нельзя переместить') ||
+        error.message.includes('не найдена')) {
+      res.status(400).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: error.message });
+    }
+  }
+}
+
+/**
+ * GET /api/admin/equipment/:id/moves — история перемещений
+ */
+async function getEquipmentMovesAPI(req, res) {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ error: 'Неверный ID техники' });
+    }
+    
+    const moves = await getEquipmentMoves(id);
+    res.json(moves);
+  } catch (error) {
+    console.error('❌ Ошибка получения истории:', error);
+    res.status(500).json({ error: error.message });
+  }
+}
+
+// ============================================================
 // ЭКСПОРТ
 // ============================================================
 
@@ -1419,4 +1534,8 @@ module.exports = {
   getLogsAPI,
   getLogsStatsAPI,
   cleanLogsAPI,
+
+    // 🆕 Перемещение
+  moveEquipmentAPI,
+  getEquipmentMovesAPI,
 };

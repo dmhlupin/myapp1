@@ -17,7 +17,7 @@ const {
   renderLogs,              
   getEquipmentAPI,
   getEquipmentByIdAPI,
-  getEquipmentDetailsAPI, // ← НОВОЕ
+  getEquipmentDetailsAPI, 
   addEquipmentAPI,
   updateEquipmentAPI,
   deleteEquipmentAPI,
@@ -34,10 +34,13 @@ const {
   getUserDetailsAPI,
   renderAddUser,
   renderEditUser,
-  // Логи                ← НОВОЕ
+  // Логи                
   getLogsAPI,
   getLogsStatsAPI,
-  cleanLogsAPI
+  cleanLogsAPI,
+  // Перемещение      // ← НОВОЕ
+  moveEquipmentAPI,
+  getEquipmentMovesAPI,
 } = require('./routes/admin');
 
 // Роуты каталога
@@ -238,11 +241,15 @@ app.get('/api/admin/equipment', requireAdmin, getEquipmentAPI);
 app.get('/api/admin/equipment/filtered', requireAdmin, getFilteredEquipmentAPI);
 app.get('/api/admin/equipment/counts', requireAdmin, getEquipmentCountsAPI);
 
-app.get('/api/admin/equipment/:id/details', requireAdmin, getEquipmentDetailsAPI);  // ← НОВОЕ (до :id!)
+app.get('/api/admin/equipment/:id/details', requireAdmin, getEquipmentDetailsAPI);  
+app.get('/api/admin/equipment/:id/moves', requireAdmin, getEquipmentMovesAPI);  // 🆕
 app.get('/api/admin/equipment/:id', requireAdmin, getEquipmentByIdAPI);
+app.post('/api/admin/equipment/:id/move', requireAdmin, moveEquipmentAPI);      // 🆕
 app.post('/api/admin/equipment', requireAdmin, addEquipmentAPI);
 app.put('/api/admin/equipment/:id', requireAdmin, updateEquipmentAPI);
 app.delete('/api/admin/equipment/:id', requireAdmin, deleteEquipmentAPI);
+
+
 
 // ============================================
 // ЛОГИ (только администраторы!)

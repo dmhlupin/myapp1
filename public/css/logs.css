@@ -389,3 +389,7 @@
         text-align: center;
     }
 }
+.log-action-move {
+    background: #e9d8fd;
+    color: #553c9a;
+}

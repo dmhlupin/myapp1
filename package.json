@@ -1,7 +1,7 @@
 {
   "name": "MoveIT service",
-  "version": "1.13.0",
-  "description": "Система учёта техники с адресным хранением и инвентаризацией",
+  "version": "1.14.0",
+  "description": "Система учёта техники с адресным хранением, инвентаризацией и перемещением",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
