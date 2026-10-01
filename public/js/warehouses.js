@@ -131,8 +131,11 @@ function renderWarehouses() {
                 </div>
 
                 <div class="warehouse-actions">
-                    <button onclick="openWarehouseModal(${wh.id})" class="btn btn-primary btn-sm">
-                        ✏️ <span>Редактировать</span>
+                    <a href="/admin/warehouses/${wh.id}" class="btn btn-success btn-sm">
+                        📦 <span>Открыть</span>
+                    </a>
+                    <button onclick="openWarehouseModal(${wh.id})" class="btn btn-primary btn-sm btn-icon-only" title="Редактировать">
+                        ✏️
                     </button>
                     ${setDefaultBtn}
                     <button onclick="deleteWarehouseItem(${wh.id}, '${escapeAttr(wh.name)}', ${wh.zones_count || 0}, ${wh.equipment_count || 0})" 

@@ -15,6 +15,27 @@ const {
   // Статистика
   getWarehouseStats,
   getWarehouseTree,
+  // 🆕 Зоны
+  getZonesByWarehouse,
+  getAllZones,
+  getZoneById,
+  createZone,
+  updateZone,
+  deleteZone,
+  // 🆕 Стеллажи
+  getRacksByZone,
+  getRackById,
+  createRack,
+  updateRack,
+  deleteRack,
+  // 🆕 Ячейки
+  getCellsByRack,
+  getCellById,
+  createCell,
+  updateCell,
+  deleteCell,
+  getCellFullPath,
+  getEquipmentInCell,
 } = require('../database/db');
 const { logAction } = require('../utils/logger');
 
@@ -292,12 +313,473 @@ async function getWarehouseStatsAPI(req, res) {
 }
 
 // ============================================================
+// API — ЗОНЫ
+// ============================================================
+
+/**
+ * GET /api/admin/warehouses/:id/zones — зоны склада
+ */
+async function getZonesAPI(req, res) {
+  try {
+    const warehouseId = parseInt(req.params.id);
+    if (isNaN(warehouseId)) {
+      return res.status(400).json({ error: 'Неверный ID склада' });
+    }
+    
+    const zones = await getZonesByWarehouse(warehouseId);
+    res.json(zones);
+  } catch (error) {
+    console.error('❌ Ошибка:', error);
+    res.status(500).json({ error: error.message });
+  }
+}
+
+/**
+ * POST /api/admin/zones — создать зону
+ */
+async function createZoneAPI(req, res) {
+  try {
+    const { warehouse_id, name, description, sort_order } = req.body;
+    
+    if (!warehouse_id) {
+      return res.status(400).json({ error: 'Склад обязателен' });
+    }
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'Название зоны обязательно' });
+    }
+    
+    const result = await createZone({
+      warehouse_id: parseInt(warehouse_id),
+      name: name.trim(),
+      description: (description || '').trim(),
+      sort_order: parseInt(sort_order) || 0,
+    });
+    
+    await logAction({
+      req,
+      action: 'zone_create',
+      entityType: 'zone',
+      entityId: result.id,
+      details: JSON.stringify({ name: name.trim(), warehouse_id }),
+    });
+    
+    res.json({ success: true, message: 'Зона создана', data: result });
+  } catch (error) {
+    if (error.message.includes('UNIQUE constraint failed')) {
+      res.status(400).json({ error: 'Зона с таким названием уже существует' });
+    } else {
+      res.status(400).json({ error: error.message });
+    }
+  }
+}
+
+/**
+ * PUT /api/admin/zones/:id — обновить зону
+ */
+async function updateZoneAPI(req, res) {
+  try {
+    const id = parseInt(req.params.id);
+    const { name, description, sort_order, is_active } = req.body;
+    
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'Название зоны обязательно' });
+    }
+    
+    const result = await updateZone(id, {
+      name: name.trim(),
+      description: (description || '').trim(),
+      sort_order: parseInt(sort_order) || 0,
+      is_active: is_active !== false && is_active !== 'false',
+    });
+    
+    await logAction({
+      req,
+      action: 'zone_update',
+      entityType: 'zone',
+      entityId: id,
+      details: JSON.stringify({ name: name.trim() }),
+    });
+    
+    res.json({ success: true, message: 'Зона обновлена', data: result });
+  } catch (error) {
+    if (error.message === 'Зона не найдена') {
+      res.status(404).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: error.message });
+    }
+  }
+}
+
+/**
+ * DELETE /api/admin/zones/:id — удалить зону
+ */
+async function deleteZoneAPI(req, res) {
+  try {
+    const id = parseInt(req.params.id);
+    
+    const zone = await getZoneById(id);
+    if (!zone) {
+      return res.status(404).json({ error: 'Зона не найдена' });
+    }
+    
+    const result = await deleteZone(id);
+    
+    await logAction({
+      req,
+      action: 'zone_delete',
+      entityType: 'zone',
+      entityId: id,
+      details: JSON.stringify({ name: zone.name }),
+    });
+    
+    res.json({ success: true, message: 'Зона удалена', data: result });
+  } catch (error) {
+    if (error.message.includes('Нельзя удалить')) {
+      res.status(400).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: error.message });
+    }
+  }
+}
+
+// ============================================================
+// API — СТЕЛЛАЖИ
+// ============================================================
+
+/**
+ * GET /api/admin/zones/:id/racks — стеллажи зоны
+ */
+async function getRacksAPI(req, res) {
+  try {
+    const zoneId = parseInt(req.params.id);
+    if (isNaN(zoneId)) {
+      return res.status(400).json({ error: 'Неверный ID зоны' });
+    }
+    
+    const racks = await getRacksByZone(zoneId);
+    res.json(racks);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
+
+/**
+ * POST /api/admin/racks — создать стеллаж
+ */
+async function createRackAPI(req, res) {
+  try {
+    const { zone_id, name, description, sort_order } = req.body;
+    
+    if (!zone_id) {
+      return res.status(400).json({ error: 'Зона обязательна' });
+    }
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'Название стеллажа обязательно' });
+    }
+    
+    const result = await createRack({
+      zone_id: parseInt(zone_id),
+      name: name.trim(),
+      description: (description || '').trim(),
+      sort_order: parseInt(sort_order) || 0,
+    });
+    
+    await logAction({
+      req,
+      action: 'rack_create',
+      entityType: 'rack',
+      entityId: result.id,
+      details: JSON.stringify({ name: name.trim(), zone_id }),
+    });
+    
+    res.json({ success: true, message: 'Стеллаж создан', data: result });
+  } catch (error) {
+    if (error.message.includes('UNIQUE constraint failed')) {
+      res.status(400).json({ error: 'Стеллаж с таким названием уже существует' });
+    } else {
+      res.status(400).json({ error: error.message });
+    }
+  }
+}
+
+/**
+ * PUT /api/admin/racks/:id — обновить стеллаж
+ */
+async function updateRackAPI(req, res) {
+  try {
+    const id = parseInt(req.params.id);
+    const { name, description, sort_order, is_active } = req.body;
+    
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'Название стеллажа обязательно' });
+    }
+    
+    const result = await updateRack(id, {
+      name: name.trim(),
+      description: (description || '').trim(),
+      sort_order: parseInt(sort_order) || 0,
+      is_active: is_active !== false && is_active !== 'false',
+    });
+    
+    await logAction({
+      req,
+      action: 'rack_update',
+      entityType: 'rack',
+      entityId: id,
+      details: JSON.stringify({ name: name.trim() }),
+    });
+    
+    res.json({ success: true, message: 'Стеллаж обновлён', data: result });
+  } catch (error) {
+    if (error.message === 'Стеллаж не найден') {
+      res.status(404).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: error.message });
+    }
+  }
+}
+
+/**
+ * DELETE /api/admin/racks/:id — удалить стеллаж
+ */
+async function deleteRackAPI(req, res) {
+  try {
+    const id = parseInt(req.params.id);
+    
+    const rack = await getRackById(id);
+    if (!rack) {
+      return res.status(404).json({ error: 'Стеллаж не найден' });
+    }
+    
+    const result = await deleteRack(id);
+    
+    await logAction({
+      req,
+      action: 'rack_delete',
+      entityType: 'rack',
+      entityId: id,
+      details: JSON.stringify({ name: rack.name }),
+    });
+    
+    res.json({ success: true, message: 'Стеллаж удалён', data: result });
+  } catch (error) {
+    if (error.message.includes('Нельзя удалить')) {
+      res.status(400).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: error.message });
+    }
+  }
+}
+
+// ============================================================
+// API — ЯЧЕЙКИ
+// ============================================================
+
+/**
+ * GET /api/admin/racks/:id/cells — ячейки стеллажа
+ */
+async function getCellsAPI(req, res) {
+  try {
+    const rackId = parseInt(req.params.id);
+    if (isNaN(rackId)) {
+      return res.status(400).json({ error: 'Неверный ID стеллажа' });
+    }
+    
+    const cells = await getCellsByRack(rackId);
+    res.json(cells);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
+
+/**
+ * GET /api/admin/cells/:id — одна ячейка
+ */
+async function getCellAPI(req, res) {
+  try {
+    const id = parseInt(req.params.id);
+    const cell = await getCellById(id);
+    
+    if (!cell) {
+      return res.status(404).json({ error: 'Ячейка не найдена' });
+    }
+    
+    res.json(cell);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
+
+/**
+ * GET /api/admin/cells/:id/equipment — техника в ячейке
+ */
+async function getCellEquipmentAPI(req, res) {
+  try {
+    const id = parseInt(req.params.id);
+    const equipment = await getEquipmentInCell(id);
+    res.json(equipment);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
+
+/**
+ * POST /api/admin/cells — создать ячейку
+ */
+async function createCellAPI(req, res) {
+  try {
+    const { rack_id, name, code, capacity, description, sort_order } = req.body;
+    
+    if (!rack_id) {
+      return res.status(400).json({ error: 'Стеллаж обязателен' });
+    }
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'Название ячейки обязательно' });
+    }
+    
+    const result = await createCell({
+      rack_id: parseInt(rack_id),
+      name: name.trim(),
+      code: (code || '').trim(),
+      capacity: capacity ? parseInt(capacity) : null,
+      description: (description || '').trim(),
+      sort_order: parseInt(sort_order) || 0,
+    });
+    
+    await logAction({
+      req,
+      action: 'cell_create',
+      entityType: 'cell',
+      entityId: result.id,
+      details: JSON.stringify({ name: name.trim(), code, rack_id }),
+    });
+    
+    res.json({ success: true, message: 'Ячейка создана', data: result });
+  } catch (error) {
+    if (error.message.includes('UNIQUE constraint failed')) {
+      res.status(400).json({ error: 'Ячейка с таким названием уже существует' });
+    } else {
+      res.status(400).json({ error: error.message });
+    }
+  }
+}
+
+/**
+ * PUT /api/admin/cells/:id — обновить ячейку
+ */
+async function updateCellAPI(req, res) {
+  try {
+    const id = parseInt(req.params.id);
+    const { name, code, capacity, description, sort_order, is_active } = req.body;
+    
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'Название ячейки обязательно' });
+    }
+    
+    const result = await updateCell(id, {
+      name: name.trim(),
+      code: (code || '').trim(),
+      capacity: capacity ? parseInt(capacity) : null,
+      description: (description || '').trim(),
+      sort_order: parseInt(sort_order) || 0,
+      is_active: is_active !== false && is_active !== 'false',
+    });
+    
+    await logAction({
+      req,
+      action: 'cell_update',
+      entityType: 'cell',
+      entityId: id,
+      details: JSON.stringify({ name: name.trim() }),
+    });
+    
+    res.json({ success: true, message: 'Ячейка обновлена', data: result });
+  } catch (error) {
+    if (error.message === 'Ячейка не найдена') {
+      res.status(404).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: error.message });
+    }
+  }
+}
+
+/**
+ * DELETE /api/admin/cells/:id — удалить ячейку
+ */
+async function deleteCellAPI(req, res) {
+  try {
+    const id = parseInt(req.params.id);
+    
+    const cell = await getCellById(id);
+    if (!cell) {
+      return res.status(404).json({ error: 'Ячейка не найдена' });
+    }
+    
+    const result = await deleteCell(id);
+    
+    await logAction({
+      req,
+      action: 'cell_delete',
+      entityType: 'cell',
+      entityId: id,
+      details: JSON.stringify({ name: cell.name, code: cell.code }),
+    });
+    
+    res.json({ success: true, message: 'Ячейка удалена', data: result });
+  } catch (error) {
+    if (error.message.includes('Нельзя удалить')) {
+      res.status(400).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: error.message });
+    }
+  }
+}
+
+// ============================================================
+// СТРАНИЦА ДЕТАЛЕЙ СКЛАДА
+// ============================================================
+
+/**
+ * GET /admin/warehouses/:id — страница деталей склада
+ */
+async function renderWarehouseDetails(req, res) {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).send('Неверный ID склада');
+    }
+    
+    const warehouse = await getWarehouseById(id);
+    if (!warehouse) {
+      return res.status(404).send('Склад не найден');
+    }
+    
+    const htmlPath = path.join(__dirname, '..', 'views', 'admin-warehouse-details.html');
+    let html = fs.readFileSync(htmlPath, 'utf8');
+    
+    // Данные склада
+    html = html.replace(/\{\{warehouse\.id\}\}/g, warehouse.id);
+    html = html.replace(/\{\{warehouse\.name\}\}/g, warehouse.name || '');
+    html = html.replace(/\{\{warehouse\.address\}\}/g, warehouse.address || '');
+    html = html.replace(/\{\{warehouse\.description\}\}/g, warehouse.description || '');
+    html = html.replace(/\{\{warehouse\.is_default\}\}/g, warehouse.is_default ? 'true' : 'false');
+    html = html.replace(/\{\{warehouse\.zones_count\}\}/g, warehouse.zones_count || 0);
+    
+    res.send(html);
+  } catch (error) {
+    console.error('❌ Ошибка загрузки склада:', error);
+    res.status(500).send('Ошибка загрузки страницы');
+  }
+}
+
+// ============================================================
 // ЭКСПОРТ
 // ============================================================
 
 module.exports = {
-  // Страница
+  // Страницы
   renderWarehouses,
+  renderWarehouseDetails,    // 🆕
   
   // API складов
   getWarehousesAPI,
@@ -311,4 +793,24 @@ module.exports = {
   getWarehouseTreeAPI,
   getFullTreeAPI,
   getWarehouseStatsAPI,
+  
+  // 🆕 API зон
+  getZonesAPI,
+  createZoneAPI,
+  updateZoneAPI,
+  deleteZoneAPI,
+  
+  // 🆕 API стеллажей
+  getRacksAPI,
+  createRackAPI,
+  updateRackAPI,
+  deleteRackAPI,
+  
+  // 🆕 API ячеек
+  getCellsAPI,
+  getCellAPI,
+  getCellEquipmentAPI,
+  createCellAPI,
+  updateCellAPI,
+  deleteCellAPI,
 };

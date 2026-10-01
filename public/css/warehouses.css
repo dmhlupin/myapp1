@@ -382,3 +382,8 @@
         flex: 1;
     }
 }
+
+/* Ссылки в actions — как кнопки */
+.warehouse-actions a.btn {
+    text-decoration: none;
+}

@@ -1,0 +1,609 @@
+/* public/css/warehouse-details.css — Стили для страницы деталей склада */
+
+/* ============================================================
+   ПАНЕЛЬ ИНФОРМАЦИИ О СКЛАДЕ
+   ============================================================ */
+
+.warehouse-info-panel {
+    background: white;
+    border-radius: 12px;
+    padding: 25px 30px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    margin-bottom: 25px;
+    border-left: 4px solid #667eea;
+}
+
+.warehouse-info-header {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+}
+
+.warehouse-info-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    flex-shrink: 0;
+}
+
+.warehouse-info-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.warehouse-info-text h2 {
+    color: #2d3748;
+    font-size: 22px;
+    margin: 0 0 8px 0;
+}
+
+.warehouse-info-badges {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+}
+
+.warehouse-info-badges .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.warehouse-info-badges .badge-default {
+    background: #feebc8;
+    color: #7b341e;
+}
+
+.warehouse-info-badges .badge-active {
+    background: #c6f6d5;
+    color: #22543d;
+}
+
+.warehouse-info-badges .badge-inactive {
+    background: #fed7d7;
+    color: #742a2a;
+}
+
+.warehouse-info-description {
+    color: #718096;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.warehouse-info-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* ============================================================
+   СЕКЦИЯ ДЕРЕВА
+   ============================================================ */
+
+.tree-section {
+    background: white;
+    border-radius: 12px;
+    padding: 25px 30px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    margin-bottom: 25px;
+}
+
+.tree-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #e2e8f0;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.tree-header h2 {
+    color: #2d3748;
+    font-size: 18px;
+    margin: 0;
+}
+
+.tree-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* ============================================================
+   ДЕРЕВО
+   ============================================================ */
+
+.warehouse-tree {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Зона (уровень 1) */
+.tree-zone {
+    background: #f7fafc;
+    border: 1px solid #e2e8f0;
+    border-left: 4px solid #667eea;
+    border-radius: 10px;
+    overflow: hidden;
+    transition: all 0.2s;
+}
+
+.tree-zone:hover {
+    border-color: #667eea;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
+}
+
+.tree-zone-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s;
+}
+
+.tree-zone-header:hover {
+    background: #edf2f7;
+}
+
+.tree-zone-header .toggle {
+    font-size: 14px;
+    color: #718096;
+    width: 20px;
+    text-align: center;
+    transition: transform 0.2s;
+}
+
+.tree-zone-header .icon {
+    font-size: 22px;
+    flex-shrink: 0;
+}
+
+.tree-zone-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.tree-zone-name {
+    font-weight: 600;
+    color: #2d3748;
+    font-size: 15px;
+    margin-bottom: 2px;
+}
+
+.tree-zone-description {
+    font-size: 12px;
+    color: #718096;
+}
+
+.tree-zone-meta {
+    display: flex;
+    gap: 15px;
+    font-size: 12px;
+    color: #a0aec0;
+    flex-shrink: 0;
+}
+
+.tree-zone-actions {
+    display: flex;
+    gap: 5px;
+    flex-shrink: 0;
+}
+
+/* Стеллаж (уровень 2) */
+.tree-zone-body {
+    padding: 0 15px 15px 45px;
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.tree-zone.expanded .tree-zone-body {
+    display: flex;
+}
+
+.tree-rack {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-left: 4px solid #48bb78;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: all 0.2s;
+}
+
+.tree-rack:hover {
+    border-color: #48bb78;
+    box-shadow: 0 3px 8px rgba(72, 187, 120, 0.1);
+}
+
+.tree-rack-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s;
+}
+
+.tree-rack-header:hover {
+    background: #f7fafc;
+}
+
+.tree-rack-header .toggle {
+    font-size: 13px;
+    color: #718096;
+    width: 18px;
+    text-align: center;
+}
+
+.tree-rack-header .icon {
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.tree-rack-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.tree-rack-name {
+    font-weight: 600;
+    color: #2d3748;
+    font-size: 14px;
+    margin-bottom: 2px;
+}
+
+.tree-rack-description {
+    font-size: 11px;
+    color: #a0aec0;
+}
+
+.tree-rack-meta {
+    display: flex;
+    gap: 12px;
+    font-size: 12px;
+    color: #a0aec0;
+    flex-shrink: 0;
+}
+
+.tree-rack-actions {
+    display: flex;
+    gap: 5px;
+    flex-shrink: 0;
+}
+
+/* Ячейки (уровень 3) */
+.tree-rack-body {
+    padding: 0 12px 12px 40px;
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.tree-rack.expanded .tree-rack-body {
+    display: flex;
+}
+
+.tree-cell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: #f7fafc;
+    border: 1px solid #e2e8f0;
+    border-left: 3px solid #ed64a6;
+    border-radius: 6px;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.tree-cell:hover {
+    background: #fff5f7;
+    border-color: #ed64a6;
+    transform: translateX(3px);
+}
+
+.tree-cell-icon {
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.tree-cell-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.tree-cell-name {
+    font-weight: 500;
+    color: #2d3748;
+    font-size: 13px;
+}
+
+.tree-cell-code {
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    color: #667eea;
+    background: #ebf8ff;
+    padding: 1px 6px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-top: 2px;
+}
+
+.tree-cell-meta {
+    display: flex;
+    gap: 12px;
+    font-size: 11px;
+    color: #a0aec0;
+    flex-shrink: 0;
+    align-items: center;
+}
+
+.tree-cell-count {
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.tree-cell-count.empty {
+    background: #edf2f7;
+    color: #a0aec0;
+}
+
+.tree-cell-count.has-items {
+    background: #c6f6d5;
+    color: #22543d;
+}
+
+.tree-cell-count.full {
+    background: #fed7d7;
+    color: #742a2a;
+}
+
+.tree-cell-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+/* Кнопки-иконки в дереве */
+.tree-btn {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    background: white;
+    cursor: pointer;
+    font-size: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.tree-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.tree-btn.edit {
+    color: #2b6cb0;
+}
+
+.tree-btn.edit:hover {
+    background: #ebf8ff;
+    border-color: #90cdf4;
+}
+
+.tree-btn.delete {
+    color: #c53030;
+}
+
+.tree-btn.delete:hover {
+    background: #fff5f5;
+    border-color: #fc8181;
+}
+
+.tree-btn.add {
+    color: #2f855a;
+}
+
+.tree-btn.add:hover {
+    background: #f0fff4;
+    border-color: #9ae6b4;
+}
+
+/* ============================================================
+   ПУСТЫЕ СОСТОЯНИЯ
+   ============================================================ */
+
+.tree-empty {
+    padding: 40px 20px;
+    text-align: center;
+    color: #a0aec0;
+    background: #f7fafc;
+    border-radius: 10px;
+    border: 2px dashed #e2e8f0;
+}
+
+.tree-empty .empty-icon {
+    font-size: 48px;
+    display: block;
+    margin-bottom: 12px;
+    opacity: 0.5;
+}
+
+.tree-empty .empty-text {
+    font-size: 15px;
+    color: #4a5568;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.tree-empty .empty-hint {
+    font-size: 13px;
+}
+
+/* ============================================================
+   АДАПТИВНОСТЬ
+   ============================================================ */
+
+@media (max-width: 768px) {
+    .warehouse-info-header {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .warehouse-info-icon {
+        width: 48px;
+        height: 48px;
+        font-size: 24px;
+    }
+
+    .warehouse-info-actions {
+        width: 100%;
+    }
+
+    .warehouse-info-actions .btn {
+        flex: 1;
+        justify-content: center;
+    }
+
+    .tree-section {
+        padding: 20px 15px;
+    }
+
+    .tree-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .tree-actions {
+        justify-content: center;
+    }
+
+    /* Уменьшаем отступы дерева */
+    .tree-zone-body {
+        padding-left: 20px;
+    }
+
+    .tree-rack-body {
+        padding-left: 20px;
+    }
+
+    /* Скрываем метаданные на мобильных */
+    .tree-zone-meta,
+    .tree-rack-meta,
+    .tree-cell-meta {
+        display: none;
+    }
+
+    .tree-zone-name,
+    .tree-rack-name {
+        font-size: 13px;
+    }
+
+    .tree-btn {
+        width: 26px;
+        height: 26px;
+        font-size: 11px;
+    }
+}
+
+/* ============================================================
+   МОДАЛКА ПРОСМОТРА ЯЧЕЙКИ
+   ============================================================ */
+
+#cellViewModal .view-user-modal {
+    max-width: 700px;
+}
+
+.cell-view-header {
+    background: linear-gradient(135deg, #ed64a6 0%, #d53f8c 100%);
+    border-radius: 12px;
+    padding: 20px;
+    color: white;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.cell-view-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    flex-shrink: 0;
+}
+
+.cell-view-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.cell-view-info h2 {
+    color: white;
+    font-size: 20px;
+    margin: 0 0 4px 0;
+}
+
+.cell-view-code {
+    font-family: 'Courier New', monospace;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 2px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    display: inline-block;
+}
+
+.cell-view-section {
+    margin-bottom: 20px;
+}
+
+.cell-view-section h4 {
+    color: #2d3748;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.cell-view-empty {
+    text-align: center;
+    padding: 30px;
+    background: #f7fafc;
+    border-radius: 10px;
+    color: #a0aec0;
+}
+
+.cell-view-empty .emoji {
+    font-size: 40px;
+    display: block;
+    margin-bottom: 10px;
+    opacity: 0.5;
+}

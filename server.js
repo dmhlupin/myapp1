@@ -62,16 +62,37 @@ const {
 // Роуты складов
 
 const {
+  // Страницы
   renderWarehouses,
+  renderWarehouseDetails,
+  // API складов
   getWarehousesAPI,
   getWarehouseAPI,
   createWarehouseAPI,
   updateWarehouseAPI,
   deleteWarehouseAPI,
   setDefaultWarehouseAPI,
+  // Дерево и статистика
   getWarehouseTreeAPI,
   getFullTreeAPI,
   getWarehouseStatsAPI,
+  // API зон
+  getZonesAPI,
+  createZoneAPI,
+  updateZoneAPI,
+  deleteZoneAPI,
+  // API стеллажей
+  getRacksAPI,
+  createRackAPI,
+  updateRackAPI,
+  deleteRackAPI,
+  // API ячеек
+  getCellsAPI,
+  getCellAPI,
+  getCellEquipmentAPI,
+  createCellAPI,
+  updateCellAPI,
+  deleteCellAPI,
 } = require('./routes/warehouses');
 
 // Роуты авторизации
@@ -251,19 +272,40 @@ app.delete('/api/admin/types/:id', requireAdmin, deleteTypeAPI);
 // СКЛАДЫ (только администраторы!)
 // ============================================
 
-// Страница
+// Страницы
 app.get('/admin/warehouses', requireAdmin, renderWarehouses);
+app.get('/admin/warehouses/:id', requireAdmin, renderWarehouseDetails);
 
 // API складов
 app.get('/api/admin/warehouses', requireAdmin, getWarehousesAPI);
-app.get('/api/admin/warehouses/tree', requireAdmin, getFullTreeAPI);          // ← 1
-app.get('/api/admin/warehouses/stats', requireAdmin, getWarehouseStatsAPI);   // ← 2
-app.get('/api/admin/warehouses/:id/tree', requireAdmin, getWarehouseTreeAPI); // ← 3
-app.get('/api/admin/warehouses/:id', requireAdmin, getWarehouseAPI);          // ← 4
+app.get('/api/admin/warehouses/tree', requireAdmin, getFullTreeAPI);
+app.get('/api/admin/warehouses/stats', requireAdmin, getWarehouseStatsAPI);
+app.get('/api/admin/warehouses/:id/tree', requireAdmin, getWarehouseTreeAPI);
+app.get('/api/admin/warehouses/:id/zones', requireAdmin, getZonesAPI);
+app.get('/api/admin/warehouses/:id', requireAdmin, getWarehouseAPI);
 app.post('/api/admin/warehouses', requireAdmin, createWarehouseAPI);
 app.put('/api/admin/warehouses/:id', requireAdmin, updateWarehouseAPI);
 app.delete('/api/admin/warehouses/:id', requireAdmin, deleteWarehouseAPI);
 app.post('/api/admin/warehouses/:id/set-default', requireAdmin, setDefaultWarehouseAPI);
+
+// API зон
+app.post('/api/admin/zones', requireAdmin, createZoneAPI);
+app.put('/api/admin/zones/:id', requireAdmin, updateZoneAPI);
+app.delete('/api/admin/zones/:id', requireAdmin, deleteZoneAPI);
+
+// API стеллажей
+app.get('/api/admin/zones/:id/racks', requireAdmin, getRacksAPI);
+app.post('/api/admin/racks', requireAdmin, createRackAPI);
+app.put('/api/admin/racks/:id', requireAdmin, updateRackAPI);
+app.delete('/api/admin/racks/:id', requireAdmin, deleteRackAPI);
+
+// API ячеек
+app.get('/api/admin/racks/:id/cells', requireAdmin, getCellsAPI);
+app.get('/api/admin/cells/:id/equipment', requireAdmin, getCellEquipmentAPI);
+app.get('/api/admin/cells/:id', requireAdmin, getCellAPI);
+app.post('/api/admin/cells', requireAdmin, createCellAPI);
+app.put('/api/admin/cells/:id', requireAdmin, updateCellAPI);
+app.delete('/api/admin/cells/:id', requireAdmin, deleteCellAPI);
 
 // ============================================
 // API ДЛЯ ПОЛЬЗОВАТЕЛЕЙ (только администраторы!)
