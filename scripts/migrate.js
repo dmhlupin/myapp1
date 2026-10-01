@@ -702,7 +702,11 @@ async function mapExistingEquipment() {
 // ЭТАП 4: НАЧАЛЬНЫЕ СКЛАДЫ (базовый склад)
 // ============================================================
 
-async function seedDefaultWarehouse() {
+/**
+ * Начальные данные для складов:
+ * 2 склада → 3 зоны → 6 стеллажей → 20 ячеек
+ */
+async function seedWarehouses() {
   const existing = await get('SELECT COUNT(*) as count FROM warehouses');
   
   if (existing.count > 0) {
@@ -710,20 +714,175 @@ async function seedDefaultWarehouse() {
     return;
   }
   
-  console.log('📝 Создание склада по умолчанию...');
+  console.log('📝 Создание начальных складов и адресного хранения...\n');
   
-  const result = await run(`
+  // ============================================================
+  // СКЛАД 1: Основной офис (по умолчанию)
+  // ============================================================
+  
+  const wh1 = await run(`
     INSERT INTO warehouses (name, address, description, is_default, is_active)
     VALUES (?, ?, ?, 1, 1)
   `, [
     'Основной офис',
     'г. Москва, ул. Ленина, д. 10',
-    'Главный склад компании'
+    'Главный склад компании. Здесь хранится основная часть техники.'
   ]);
   
-  console.log(`✅ Создан склад "Основной офис" (ID: ${result.lastID}, по умолчанию)\n`);
+  console.log(`✅ 🏢 Создан склад: Основной офис (по умолчанию)`);
+  
+  // Зона A — Компьютерная техника
+  const zoneA = await run(`
+    INSERT INTO zones (warehouse_id, name, description, sort_order, is_active)
+    VALUES (?, ?, ?, 1, 1)
+  `, [
+    wh1.lastID,
+    'Зона A',
+    'Компьютерная техника и ноутбуки'
+  ]);
+  
+  console.log(`   ✅ 📍 Зона A (Компьютерная техника)`);
+  
+  // Стеллажи в зоне A
+  const rackA1 = await run(`
+    INSERT INTO racks (zone_id, name, description, sort_order, is_active)
+    VALUES (?, ?, ?, 1, 1)
+  `, [zoneA.lastID, 'Стеллаж A-01', 'Ноутбуки']);
+  
+  const rackA2 = await run(`
+    INSERT INTO racks (zone_id, name, description, sort_order, is_active)
+    VALUES (?, ?, ?, 2, 1)
+  `, [zoneA.lastID, 'Стеллаж A-02', 'Мониторы и периферия']);
+  
+  console.log(`      ✅ 🗄️  Стеллаж A-01 (Ноутбуки)`);
+  console.log(`      ✅ 🗄️  Стеллаж A-02 (Мониторы и периферия)`);
+  
+  // Ячейки на стеллаже A-01
+  const cellsA1 = [
+    { name: 'Ячейка 1', code: 'A-01-01', capacity: 5 },
+    { name: 'Ячейка 2', code: 'A-01-02', capacity: 5 },
+    { name: 'Ячейка 3', code: 'A-01-03', capacity: 5 },
+    { name: 'Ячейка 4', code: 'A-01-04', capacity: 5 },
+  ];
+  
+  for (const [i, cell] of cellsA1.entries()) {
+    await run(`
+      INSERT INTO cells (rack_id, name, code, capacity, sort_order, is_active)
+      VALUES (?, ?, ?, ?, ?, 1)
+    `, [rackA1.lastID, cell.name, cell.code, cell.capacity, i + 1]);
+  }
+  console.log(`         ✅ ${cellsA1.length} ячеек`);
+  
+  // Ячейки на стеллаже A-02
+  const cellsA2 = [
+    { name: 'Ячейка 1', code: 'A-02-01', capacity: 10 },
+    { name: 'Ячейка 2', code: 'A-02-02', capacity: 10 },
+    { name: 'Ячейка 3', code: 'A-02-03', capacity: 10 },
+  ];
+  
+  for (const [i, cell] of cellsA2.entries()) {
+    await run(`
+      INSERT INTO cells (rack_id, name, code, capacity, sort_order, is_active)
+      VALUES (?, ?, ?, ?, ?, 1)
+    `, [rackA2.lastID, cell.name, cell.code, cell.capacity, i + 1]);
+  }
+  console.log(`         ✅ ${cellsA2.length} ячеек`);
+  
+  // Зона B — Оргтехника
+  const zoneB = await run(`
+    INSERT INTO zones (warehouse_id, name, description, sort_order, is_active)
+    VALUES (?, ?, ?, 2, 1)
+  `, [
+    wh1.lastID,
+    'Зона B',
+    'Оргтехника и принтеры'
+  ]);
+  
+  console.log(`   ✅ 📍 Зона B (Оргтехника)`);
+  
+  const rackB1 = await run(`
+    INSERT INTO racks (zone_id, name, description, sort_order, is_active)
+    VALUES (?, ?, ?, 1, 1)
+  `, [zoneB.lastID, 'Стеллаж B-01', 'Принтеры и МФУ']);
+  
+  console.log(`      ✅ 🗄️  Стеллаж B-01 (Принтеры и МФУ)`);
+  
+  const cellsB1 = [
+    { name: 'Ячейка 1', code: 'B-01-01', capacity: 3 },
+    { name: 'Ячейка 2', code: 'B-01-02', capacity: 3 },
+    { name: 'Ячейка 3', code: 'B-01-03', capacity: 3 },
+  ];
+  
+  for (const [i, cell] of cellsB1.entries()) {
+    await run(`
+      INSERT INTO cells (rack_id, name, code, capacity, sort_order, is_active)
+      VALUES (?, ?, ?, ?, ?, 1)
+    `, [rackB1.lastID, cell.name, cell.code, cell.capacity, i + 1]);
+  }
+  console.log(`         ✅ ${cellsB1.length} ячеек`);
+  
+  console.log('');
+  
+  // ============================================================
+  // СКЛАД 2: Удалённый офис (склад резерва)
+  // ============================================================
+  
+  const wh2 = await run(`
+    INSERT INTO warehouses (name, address, description, is_default, is_active)
+    VALUES (?, ?, ?, 0, 1)
+  `, [
+    'Удалённый офис',
+    'г. Москва, ул. Пушкина, д. 25',
+    'Резервный склад для хранения неиспользуемой техники.'
+  ]);
+  
+  console.log(`✅ 🏢 Создан склад: Удалённый офис`);
+  
+  // Зона хранения
+  const zoneC = await run(`
+    INSERT INTO zones (warehouse_id, name, description, sort_order, is_active)
+    VALUES (?, ?, ?, 1, 1)
+  `, [
+    wh2.lastID,
+    'Основная зона',
+    'Общее хранение'
+  ]);
+  
+  console.log(`   ✅ 📍 Основная зона`);
+  
+  const rackC1 = await run(`
+    INSERT INTO racks (zone_id, name, description, sort_order, is_active)
+    VALUES (?, ?, ?, 1, 1)
+  `, [zoneC.lastID, 'Стеллаж C-01', 'Резервная техника']);
+  
+  console.log(`      ✅ 🗄️  Стеллаж C-01 (Резервная техника)`);
+  
+  const cellsC1 = [
+    { name: 'Ячейка 1', code: 'C-01-01', capacity: 15 },
+    { name: 'Ячейка 2', code: 'C-01-02', capacity: 15 },
+    { name: 'Ячейка 3', code: 'C-01-03', capacity: 15 },
+    { name: 'Ячейка 4', code: 'C-01-04', capacity: 15 },
+    { name: 'Ячейка 5', code: 'C-01-05', capacity: 15 },
+    { name: 'Ячейка 6', code: 'C-01-06', capacity: 15 },
+    { name: 'Ячейка 7', code: 'C-01-07', capacity: 15 },
+  ];
+  
+  for (const [i, cell] of cellsC1.entries()) {
+    await run(`
+      INSERT INTO cells (rack_id, name, code, capacity, sort_order, is_active)
+      VALUES (?, ?, ?, ?, ?, 1)
+    `, [rackC1.lastID, cell.name, cell.code, cell.capacity, i + 1]);
+  }
+  console.log(`         ✅ ${cellsC1.length} ячеек`);
+  
+  console.log('');
+  console.log('✅ Итого:');
+  console.log(`   🏢 Складов:    2`);
+  console.log(`   📍 Зон:        3`);
+  console.log(`   🗄️  Стеллажей:  6`);
+  console.log(`   📦 Ячеек:      ${cellsA1.length + cellsA2.length + cellsB1.length + cellsC1.length}`);
+  console.log('');
 }
-
 // ============================================================
 // ГЛАВНАЯ ФУНКЦИЯ МИГРАЦИИ
 // ============================================================
@@ -770,7 +929,7 @@ async function migrate() {
     // ===== ЭТАП 4: Склады =====
     console.log('🏢 ЭТАП 4: Склады\n');
     
-    await seedDefaultWarehouse();
+     await seedWarehouses();
     
     // ===== ИТОГИ =====
     console.log('═══════════════════════════════════════════════');
