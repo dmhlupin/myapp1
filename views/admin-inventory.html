@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Инвентаризация</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/admin.css">
+    <link rel="stylesheet" href="/css/inventory.css">
+    <link rel="stylesheet" href="/css/help.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div>
+                <h1>📊 Инвентаризация</h1>
+                <div class="subtitle">Обзор всех складов и хранения техники</div>
+            </div>
+            <div class="header-actions">
+                <a href="/admin/warehouses" class="btn btn-back btn-sm">🏢 Склады</a>
+                <a href="/admin" class="btn btn-back btn-sm">⚙️ Админ-панель</a>
+                <a href="/" class="btn btn-back btn-sm">📊 Дашборд</a>
+                <a href="/logout" class="btn btn-danger btn-sm">🚪 Выйти</a>
+            </div>
+        </div>
+
+        <!-- Общие итоги -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <span class="icon">🏢</span>
+                <div class="number" data-stat="warehouses">{{totals.total_warehouses}}</div>
+                <div class="label">Складов</div>
+            </div>
+            <div class="stat-card">
+                <span class="icon">📍</span>
+                <div class="number green" data-stat="zones">{{totals.total_zones}}</div>
+                <div class="label">Зон</div>
+            </div>
+            <div class="stat-card">
+                <span class="icon">🗄️</span>
+                <div class="number orange" data-stat="racks">{{totals.total_racks}}</div>
+                <div class="label">Стеллажей</div>
+            </div>
+            <div class="stat-card">
+                <span class="icon">📦</span>
+                <div class="number pink" data-stat="cells">{{totals.total_cells}}</div>
+                <div class="label">Ячеек</div>
+            </div>
+            <div class="stat-card highlight">
+                <span class="icon">🔧</span>
+                <div class="number blue" data-stat="on_stock">{{totals.equipment_on_stock}}</div>
+                <div class="label">Техники на складах</div>
+            </div>
+            <div class="stat-card">
+                <span class="icon">👤</span>
+                <div class="number" data-stat="assigned">{{totals.equipment_assigned}}</div>
+                <div class="label">Назначено пользователям</div>
+            </div>
+        </div>
+
+        <!-- Предупреждение, если есть техника без ячейки -->
+        <div class="inventory-warning" id="warningBlock" style="display: none;">
+            <span class="warning-icon">⚠️</span>
+            <div>
+                <strong>Внимание!</strong>
+                <p>Есть доступная техника без указания места хранения: <strong id="warningCount">0</strong> единиц. Рекомендуется назначить им ячейки.</p>
+            </div>
+        </div>
+
+        <!-- Сводка по складам -->
+        <div class="inventory-section">
+            <div class="section-header">
+                <h2>🏢 Сводка по складам</h2>
+                <div class="section-actions">
+                    <button onclick="loadSummary()" class="btn btn-back btn-sm">🔄 Обновить</button>
+                </div>
+            </div>
+
+            <div id="warehouseSummary" class="warehouse-summary">
+                <div class="catalog-loading">⏳ Загрузка...</div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div id="footer-container"></div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- МОДАЛЬНОЕ ОКНО: ДЕТАЛИ СКЛАДА                                -->
+    <!-- ============================================================ -->
+    <div class="modal-overlay" id="warehouseDetailModal">
+        <div class="modal view-user-modal">
+            <div class="modal-header">
+                <h3 id="warehouseDetailTitle">🏢 Склад</h3>
+                <button onclick="closeWarehouseDetailModal()" class="modal-close">✕</button>
+            </div>
+            <div class="modal-body" id="warehouseDetailBody">
+                <!-- Заполняется JS -->
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="/js/main.js"></script>
+    <script src="/js/help.js"></script>
+    <script src="/js/footer.js"></script>
+    <script src="/js/inventory.js"></script>
+</body>
+</html>

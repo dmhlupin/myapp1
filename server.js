@@ -93,6 +93,13 @@ const {
   createCellAPI,
   updateCellAPI,
   deleteCellAPI,
+  // 🆕 Инвентаризация
+  renderInventory,
+  getInventorySummaryAPI,
+  getInventoryTotalsAPI,
+  getWarehouseInventoryAPI,
+  getCellOccupancyAPI,
+  exportInventoryCSV,
 } = require('./routes/warehouses');
 
 // Роуты авторизации
@@ -306,6 +313,22 @@ app.get('/api/admin/cells/:id', requireAdmin, getCellAPI);
 app.post('/api/admin/cells', requireAdmin, createCellAPI);
 app.put('/api/admin/cells/:id', requireAdmin, updateCellAPI);
 app.delete('/api/admin/cells/:id', requireAdmin, deleteCellAPI);
+
+// ============================================
+// ИНВЕНТАРИЗАЦИЯ (только администраторы!)
+// ============================================
+
+// Страница
+app.get('/admin/inventory', requireAdmin, renderInventory);
+
+// API
+app.get('/api/admin/inventory/summary', requireAdmin, getInventorySummaryAPI);
+app.get('/api/admin/inventory/totals', requireAdmin, getInventoryTotalsAPI);
+
+// Сначала более конкретные
+app.get('/api/admin/warehouses/:id/inventory/export', requireAdmin, exportInventoryCSV);
+app.get('/api/admin/warehouses/:id/inventory', requireAdmin, getWarehouseInventoryAPI);
+app.get('/api/admin/warehouses/:id/occupancy', requireAdmin, getCellOccupancyAPI);
 
 // ============================================
 // API ДЛЯ ПОЛЬЗОВАТЕЛЕЙ (только администраторы!)

@@ -969,4 +969,174 @@ module.exports = ({ db, run, get, all }) => ({
     });
   }
 
+    ,
+  
+  // ============================================================
+  // ИНВЕНТАРИЗАЦИЯ
+  // ============================================================
+  
+  /**
+   * Сводка по всем складам для страницы инвентаризации
+   * Возвращает: список складов с полной статистикой
+   */
+  getInventorySummary() {
+    return new Promise((resolve, reject) => {
+      db.all(`
+        SELECT 
+          w.id,
+          w.name,
+          w.address,
+          w.is_default,
+          w.is_active,
+          (SELECT COUNT(*) FROM zones z WHERE z.warehouse_id = w.id AND z.is_active = 1) as zones_count,
+          (SELECT COUNT(*) FROM racks r 
+            JOIN zones z ON r.zone_id = z.id 
+            WHERE z.warehouse_id = w.id AND r.is_active = 1
+          ) as racks_count,
+          (SELECT COUNT(*) FROM cells c 
+            JOIN racks r ON c.rack_id = r.id
+            JOIN zones z ON r.zone_id = z.id
+            WHERE z.warehouse_id = w.id AND c.is_active = 1
+          ) as cells_count,
+          (SELECT COUNT(*) FROM equipment e 
+            JOIN cells c ON e.cell_id = c.id
+            JOIN racks r ON c.rack_id = r.id
+            JOIN zones z ON r.zone_id = z.id
+            WHERE z.warehouse_id = w.id
+          ) as equipment_count,
+          (SELECT COALESCE(SUM(c.capacity), 0) FROM cells c 
+            JOIN racks r ON c.rack_id = r.id
+            JOIN zones z ON r.zone_id = z.id
+            WHERE z.warehouse_id = w.id AND c.is_active = 1
+          ) as total_capacity
+        FROM warehouses w
+        WHERE w.is_active = 1
+        ORDER BY w.is_default DESC, w.name ASC
+      `, (err, rows) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        
+        // Считаем процент заполнения
+        const result = (rows || []).map(w => ({
+          ...w,
+          fill_percent: w.total_capacity > 0 
+            ? Math.round((w.equipment_count / w.total_capacity) * 100)
+            : (w.cells_count > 0 ? Math.round((w.equipment_count / w.cells_count) * 100) : 0)
+        }));
+        
+        resolve(result);
+      });
+    });
+  },
+  
+  /**
+   * Полный список техники на складе (для инвентаризации)
+   * Возвращает: технику с адресом + статус
+   */
+  getWarehouseInventory(warehouseId) {
+    return new Promise((resolve, reject) => {
+      db.all(`
+        SELECT 
+          e.id,
+          e.inventory_number,
+          e.name,
+          e.model,
+          e.serial_number,
+          e.manufacturer,
+          e.status,
+          e.purchase_date,
+          e.warranty_until,
+          c.name as category_name,
+          c.icon as category_icon,
+          t.name as type_name,
+          t.icon as type_icon,
+          cell.id as cell_id,
+          cell.name as cell_name,
+          cell.code as cell_code,
+          rack.name as rack_name,
+          zone.name as zone_name
+        FROM equipment e
+        LEFT JOIN equipment_categories c ON e.category_id = c.id
+        LEFT JOIN equipment_types t ON e.type_id = t.id
+        JOIN cells cell ON e.cell_id = cell.id
+        JOIN racks rack ON cell.rack_id = rack.id
+        JOIN zones zone ON rack.zone_id = zone.id
+        WHERE zone.warehouse_id = ?
+        ORDER BY zone.sort_order, zone.name, rack.sort_order, rack.name, cell.sort_order, cell.name
+      `, [warehouseId], (err, rows) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        resolve(rows || []);
+      });
+    });
+  },
+  
+  /**
+   * Заполненность ячеек склада
+   * Возвращает: список ячеек с процентом заполнения
+   */
+  getCellOccupancy(warehouseId) {
+    return new Promise((resolve, reject) => {
+      db.all(`
+        SELECT 
+          c.id,
+          c.name,
+          c.code,
+          c.capacity,
+          (SELECT COUNT(*) FROM equipment e WHERE e.cell_id = c.id) as current_count,
+          rack.name as rack_name,
+          zone.name as zone_name
+        FROM cells c
+        JOIN racks rack ON c.rack_id = rack.id
+        JOIN zones zone ON rack.zone_id = zone.id
+        WHERE zone.warehouse_id = ? AND c.is_active = 1
+        ORDER BY zone.sort_order, zone.name, rack.sort_order, rack.name, c.sort_order, c.name
+      `, [warehouseId], (err, rows) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        
+        // Процент заполнения
+        const result = (rows || []).map(c => ({
+          ...c,
+          percent: c.capacity > 0 
+            ? Math.round((c.current_count / c.capacity) * 100)
+            : (c.current_count > 0 ? 100 : 0)
+        }));
+        
+        resolve(result);
+      });
+    });
+  },
+  
+  /**
+   * Общая статистика инвентаризации (по всем складам)
+   */
+  getInventoryTotals() {
+    return new Promise((resolve, reject) => {
+      db.get(`
+        SELECT 
+          (SELECT COUNT(*) FROM warehouses WHERE is_active = 1) as total_warehouses,
+          (SELECT COUNT(*) FROM zones WHERE is_active = 1) as total_zones,
+          (SELECT COUNT(*) FROM racks WHERE is_active = 1) as total_racks,
+          (SELECT COUNT(*) FROM cells WHERE is_active = 1) as total_cells,
+          (SELECT COUNT(*) FROM equipment WHERE cell_id IS NOT NULL) as equipment_on_stock,
+          (SELECT COUNT(*) FROM equipment WHERE status = 'available' AND cell_id IS NULL) as available_without_cell,
+          (SELECT COUNT(*) FROM equipment WHERE status = 'assigned') as equipment_assigned,
+          (SELECT COALESCE(SUM(capacity), 0) FROM cells WHERE is_active = 1) as total_capacity
+      `, (err, row) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        resolve(row || {});
+      });
+    });
+  }
+
 });

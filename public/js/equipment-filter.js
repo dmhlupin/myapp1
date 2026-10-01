@@ -67,6 +67,7 @@ function onTypeFilterChange() {
 function applyFilters() {
     const categoryId = document.getElementById('filterCategory').value;
     const typeId = document.getElementById('filterType').value;
+    const warehouseId = document.getElementById('filterWarehouse').value;
     const status = document.getElementById('filterStatus').value;
     
     const tbody = document.getElementById('equipmentTableBody');
@@ -78,6 +79,7 @@ function applyFilters() {
     rows.forEach(row => {
         const rowCategoryId = row.dataset.categoryId || '';
         const rowTypeId = row.dataset.typeId || '';
+        const rowWarehouseId = row.dataset.warehouseId || '';
         
         let visible = true;
         
@@ -91,7 +93,22 @@ function applyFilters() {
             visible = false;
         }
         
-        // 🆕 Фильтр по статусу — через класс
+        // 🆕 Фильтр по складу
+        if (warehouseId) {
+            if (warehouseId === '__none__') {
+                // "Не на складе" — техника без warehouse_id
+                if (rowWarehouseId) {
+                    visible = false;
+                }
+            } else {
+                // Конкретный склад
+                if (rowWarehouseId !== warehouseId) {
+                    visible = false;
+                }
+            }
+        }
+        
+        // Фильтр по статусу
         if (status) {
             const statusCell = row.querySelector('.status-badge');
             const hasStatusClass = statusCell && statusCell.classList.contains(`status-${status}`);
@@ -141,6 +158,7 @@ function showEmptyStateIfNeeded(count) {
 function resetFilters() {
     document.getElementById('filterCategory').value = '';
     document.getElementById('filterType').innerHTML = '<option value="">Все типы</option>';
+    document.getElementById('filterWarehouse').value = '';   // 🆕
     document.getElementById('filterStatus').value = '';
     
     // Показываем все строки

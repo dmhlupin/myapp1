@@ -4,10 +4,11 @@
 const fs = require('fs');
 const path = require('path');
 const {
-  getEquipmentWithLocation,   // ← используем новую функцию с адресом
+  getEquipmentWithLocation,
   getStats,
   getAllCategories,
   getAllTypes,
+  getAllWarehouses,   // 🆕
 } = require('../database/db');
 
 /**
@@ -20,6 +21,7 @@ async function renderEquipmentDashboard(req, res) {
     const stats = await getStats();
     const categories = await getAllCategories();
     const types = await getAllTypes();
+    const warehouses = await getAllWarehouses();   // 🆕
     
     const htmlPath = path.join(__dirname, '..', 'views', 'equipment.html');
     let html = fs.readFileSync(htmlPath, 'utf8');
@@ -36,6 +38,14 @@ async function renderEquipmentDashboard(req, res) {
       categoryOptions += `<option value="${cat.id}">${cat.icon || '📁'} ${cat.name} (${cat.equipment_count || 0})</option>`;
     });
     html = html.replace('{{category_options}}', categoryOptions);
+
+        // 🆕 Селект складов
+    let warehouseOptions = '<option value="">Все склады</option>';
+    warehouseOptions += '<option value="__none__">— Не на складе —</option>';
+    warehouses.forEach(w => {
+      warehouseOptions += `<option value="${w.id}">${w.is_default ? '⭐ ' : '🏢 '}${w.name} (${w.equipment_count || 0})</option>`;
+    });
+    html = html.replace('{{warehouse_options}}', warehouseOptions);
     
     // Таблица
     let tableRows = '';

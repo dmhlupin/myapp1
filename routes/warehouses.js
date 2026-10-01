@@ -36,6 +36,11 @@ const {
   deleteCell,
   getCellFullPath,
   getEquipmentInCell,
+    // 🆕 Инвентаризация
+  getInventorySummary,
+  getWarehouseInventory,
+  getCellOccupancy,
+  getInventoryTotals,
 } = require('../database/db');
 const { logAction } = require('../utils/logger');
 
@@ -773,6 +778,171 @@ async function renderWarehouseDetails(req, res) {
 }
 
 // ============================================================
+// API — ИНВЕНТАРИЗАЦИЯ
+// ============================================================
+
+/**
+ * GET /admin/inventory — страница инвентаризации
+ */
+async function renderInventory(req, res) {
+  try {
+    const summary = await getInventorySummary();
+    const totals = await getInventoryTotals();
+    
+    const htmlPath = path.join(__dirname, '..', 'views', 'admin-inventory.html');
+    let html = fs.readFileSync(htmlPath, 'utf8');
+    
+    // Общие итоги
+    html = html.replace(/\{\{totals\.total_warehouses\}\}/g, totals.total_warehouses || 0);
+    html = html.replace(/\{\{totals\.total_zones\}\}/g, totals.total_zones || 0);
+    html = html.replace(/\{\{totals\.total_racks\}\}/g, totals.total_racks || 0);
+    html = html.replace(/\{\{totals\.total_cells\}\}/g, totals.total_cells || 0);
+    html = html.replace(/\{\{totals\.equipment_on_stock\}\}/g, totals.equipment_on_stock || 0);
+    html = html.replace(/\{\{totals\.available_without_cell\}\}/g, totals.available_without_cell || 0);
+    html = html.replace(/\{\{totals\.equipment_assigned\}\}/g, totals.equipment_assigned || 0);
+    html = html.replace(/\{\{totals\.total_capacity\}\}/g, totals.total_capacity || 0);
+    
+    res.send(html);
+  } catch (error) {
+    console.error('❌ Ошибка загрузки инвентаризации:', error);
+    res.status(500).send('Ошибка загрузки страницы');
+  }
+}
+
+/**
+ * GET /api/admin/inventory/summary — сводка по складам
+ */
+async function getInventorySummaryAPI(req, res) {
+  try {
+    const summary = await getInventorySummary();
+    res.json(summary);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
+
+/**
+ * GET /api/admin/inventory/totals — общие итоги
+ */
+async function getInventoryTotalsAPI(req, res) {
+  try {
+    const totals = await getInventoryTotals();
+    res.json(totals);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
+
+/**
+ * GET /api/admin/warehouses/:id/inventory — техника на складе
+ */
+async function getWarehouseInventoryAPI(req, res) {
+  try {
+    const warehouseId = parseInt(req.params.id);
+    if (isNaN(warehouseId)) {
+      return res.status(400).json({ error: 'Неверный ID склада' });
+    }
+    
+    const inventory = await getWarehouseInventory(warehouseId);
+    res.json(inventory);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
+
+/**
+ * GET /api/admin/warehouses/:id/occupancy — заполненность ячеек
+ */
+async function getCellOccupancyAPI(req, res) {
+  try {
+    const warehouseId = parseInt(req.params.id);
+    if (isNaN(warehouseId)) {
+      return res.status(400).json({ error: 'Неверный ID склада' });
+    }
+    
+    const occupancy = await getCellOccupancy(warehouseId);
+    res.json(occupancy);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
+
+/**
+ * GET /api/admin/warehouses/:id/inventory/export — экспорт в CSV
+ */
+async function exportInventoryCSV(req, res) {
+  try {
+    const warehouseId = parseInt(req.params.id);
+    if (isNaN(warehouseId)) {
+      return res.status(400).send('Неверный ID склада');
+    }
+    
+    const warehouse = await getWarehouseById(warehouseId);
+    if (!warehouse) {
+      return res.status(404).send('Склад не найден');
+    }
+    
+    const inventory = await getWarehouseInventory(warehouseId);
+    
+    // Формируем CSV
+    const lines = [];
+    
+    // BOM для Excel (UTF-8)
+    lines.push('\uFEFF');
+    
+    // Заголовок
+    lines.push('Инвентаризация: ' + warehouse.name);
+    lines.push('Адрес: ' + (warehouse.address || '—'));
+    lines.push('Дата: ' + new Date().toLocaleString('ru-RU'));
+    lines.push('');
+    
+    // Шапка таблицы
+    lines.push([
+      'Инв. номер',
+      'Название',
+      'Модель',
+      'Производитель',
+      'Категория',
+      'Тип',
+      'Место хранения',
+      'Статус'
+    ].join(';'));
+    
+    // Данные
+    inventory.forEach(eq => {
+      const location = eq.cell_code 
+        ? `${eq.zone_name} / ${eq.rack_name} / ${eq.cell_name} [${eq.cell_code}]`
+        : `${eq.zone_name} / ${eq.rack_name} / ${eq.cell_name}`;
+      
+      lines.push([
+        eq.inventory_number,
+        eq.name,
+        eq.model || '',
+        eq.manufacturer || '',
+        eq.category_name || '',
+        eq.type_name || '',
+        location,
+        eq.status
+      ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(';'));
+    });
+    
+    lines.push('');
+    lines.push(`Всего единиц: ${inventory.length}`);
+    
+    const csv = lines.join('\n');
+    
+    // Отправляем
+    const filename = `inventory-${warehouseId}-${Date.now()}.csv`;
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(csv);
+  } catch (error) {
+    console.error('❌ Ошибка экспорта:', error);
+    res.status(500).send('Ошибка экспорта');
+  }
+}
+
+// ============================================================
 // ЭКСПОРТ
 // ============================================================
 
@@ -813,4 +983,13 @@ module.exports = {
   createCellAPI,
   updateCellAPI,
   deleteCellAPI,
+    
+  // 🆕 Инвентаризация
+  renderInventory,
+  getInventorySummaryAPI,
+  getInventoryTotalsAPI,
+  getWarehouseInventoryAPI,
+  getCellOccupancyAPI,
+  exportInventoryCSV,
+
 };
