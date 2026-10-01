@@ -1,0 +1,74 @@
+<!-- views/partials/header.html -->
+<!-- Шапка приложения: логотип, поиск, профиль -->
+
+<header class="app-header">
+
+    <!-- Глобальный поиск -->
+    <div class="global-search">
+        <span class="global-search-icon">🔍</span>
+        <input 
+            type="text" 
+            class="global-search-input" 
+            id="globalSearch"
+            placeholder="Поиск техники, пользователей, складов..."
+            autocomplete="off"
+        >
+        <span class="global-search-shortcut">Ctrl+K</span>
+    </div>
+
+    <!-- Действия справа -->
+    <div class="header-actions">
+        <!-- Уведомления (пока заглушка) -->
+        <button class="header-btn" title="Уведомления" onclick="showToast('🔔 Уведомления в разработке', 'info')">
+            🔔
+            <!-- <span class="badge-dot"></span> -->
+        </button>
+
+        <!-- Помощь -->
+        <button class="header-btn" title="Помощь" onclick="if(typeof showHelpModal === 'function') showHelpModal()">
+            ❓
+        </button>
+
+        <!-- Меню пользователя -->
+        <div class="user-menu" id="userMenu">
+            <button class="user-menu-trigger" onclick="toggleUserMenu(event)">
+                <span class="user-avatar" id="userAvatar">?</span>
+                <span class="user-info">
+                    <span class="user-name" id="userName">Загрузка...</span>
+                    <span class="user-role" id="userRole">—</span>
+                </span>
+                <span class="user-menu-arrow">▼</span>
+            </button>
+
+            <div class="user-dropdown">
+                <div class="user-dropdown-header">
+                    <div class="user-dropdown-name" id="dropdownUserName">Загрузка...</div>
+                    <div class="user-dropdown-email" id="dropdownUserEmail">—</div>
+                    <span class="user-dropdown-role" id="dropdownUserRole">—</span>
+                </div>
+
+                <a href="/profile" class="user-dropdown-item">
+                    <span>👤</span>
+                    <span>Мой профиль</span>
+                </a>
+
+                <a href="/change-password" class="user-dropdown-item">
+                    <span>🔑</span>
+                    <span>Сменить пароль</span>
+                </a>
+
+                <a href="/" class="user-dropdown-item">
+                    <span>🏠</span>
+                    <span>На главную</span>
+                </a>
+
+                <div class="user-dropdown-divider"></div>
+
+                <a href="/logout" class="user-dropdown-item danger">
+                    <span>🚪</span>
+                    <span>Выйти</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</header>

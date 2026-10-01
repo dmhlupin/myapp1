@@ -72,7 +72,12 @@ async function renderEquipmentDashboard(req, res) {
         : '<span style="color: #cbd5e0;">—</span>';
       
       tableRows += `
-        <tr data-category-id="${item.category_id || ''}" data-type-id="${item.type_id || ''}" data-warehouse-id="${item.warehouse_id || ''}">
+        <tr data-category-id="${item.category_id || ''}" 
+            data-type-id="${item.type_id || ''}" 
+            data-warehouse-id="${item.warehouse_id || ''}"
+            onclick="viewEquipmentFromList(${item.id})"
+            style="cursor: pointer;"
+            title="Нажмите для просмотра">
           <td><strong>${item.inventory_number}</strong></td>
           <td>${item.name}</td>
           <td>${item.model || '—'}</td>
@@ -89,7 +94,17 @@ async function renderEquipmentDashboard(req, res) {
     // JSON типов (экранированный)
     html = html.replace('{{{types_json}}}', escapeHtml(JSON.stringify(types)));
     
-    res.send(html);
+    // Собираем страницу через layout-контроллер
+    const { renderPage } = require('../utils/layout');
+    
+    const fullHtml = renderPage({
+        title: 'Учет техники — MoveIT service',
+        content: html,
+        pageCss: '/css/equipment.css',
+        pageJs: '/js/equipment-filter.js',
+    });
+    
+    res.send(fullHtml);
   } catch (error) {
     console.error('❌ Ошибка:', error);
     res.status(500).send('Ошибка при загрузке данных');

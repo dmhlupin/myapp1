@@ -1,117 +1,111 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Учет техники</title>
-    <link rel="stylesheet" href="/css/style.css">
-    <link rel="stylesheet" href="/css/equipment.css">
-    <link rel="stylesheet" href="/css/help.css">
-</head>
-<body>
-    <!-- Данные для JS (безопасно через data-атрибут) -->
-    <div id="pageData" 
-         data-types='{{{types_json}}}'
-         style="display: none;">
+<!-- views/equipment.html -->
+<!-- Контент страницы "Техника" (без layout) -->
+
+<!-- Данные для JS (безопасно через data-атрибут) -->
+<div id="pageData" 
+     data-types='{{{types_json}}}'
+     style="display: none;">
+</div>
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">🔧 Учет техники</h1>
+        <div class="page-subtitle">Просмотр всей техники и ее статуса</div>
     </div>
-
-    <div class="container">
-        <div class="header">
-            <div>
-                <h1>🔧 Учет техники</h1>
-                <div class="subtitle">Просмотр всей техники и ее статуса</div>
-            </div>
-            <div class="header-actions">
-                <a href="/profile" class="btn btn-back btn-sm">👤 Профиль</a>
-                <a href="/logout" class="btn btn-danger btn-sm">🚪 Выйти</a>
-            </div>
-        </div>
-        
-        <div class="stats">
-            <div class="stat-card">
-                <span class="icon">📦</span>
-                <div class="number">{{total_equipment}}</div>
-                <div class="label">Всего техники</div>
-            </div>
-            <div class="stat-card">
-                <span class="icon">✅</span>
-                <div class="number green">{{available_equipment}}</div>
-                <div class="label">Доступно</div>
-            </div>
-            <div class="stat-card">
-                <span class="icon">👤</span>
-                <div class="number orange">{{assigned_equipment}}</div>
-                <div class="label">Назначено</div>
-            </div>
-            <div class="stat-card">
-                <span class="icon">👥</span>
-                <div class="number pink">{{total_users}}</div>
-                <div class="label">Пользователей</div>
-            </div>
-        </div>
-        
-        <!-- Фильтры -->
-        <div class="filters-panel">
-            <div class="filter-group">
-                <label>Категория</label>
-                <select id="filterCategory" onchange="onCategoryFilterChange()">
-                    {{category_options}}
-                </select>
-            </div>
-            <div class="filter-group">
-                <label>Тип</label>
-                <select id="filterType" onchange="onTypeFilterChange()">
-                    <option value="">Все типы</option>
-                </select>
-            </div>
-            <div class="filter-group">
-                <label>Склад</label>
-                <select id="filterWarehouse" onchange="applyFilters()">
-                    {{warehouse_options}}
-                </select>
-            </div>
-            <div class="filter-group">
-                <label>Статус</label>
-                <select id="filterStatus" onchange="applyFilters()">
-                    <option value="">Все статусы</option>
-                    <option value="available">✅ Доступна</option>
-                    <option value="assigned">👤 Назначена</option>
-                    <option value="maintenance">🔧 В ремонте</option>
-                    <option value="retired">❌ Списана</option>
-                </select>
-            </div>
-            <div class="filter-actions">
-                <button type="button" onclick="resetFilters()" class="btn btn-back">✕ Сбросить</button>
-            </div>
-        </div>
-        
-        <div class="table-container">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Инв. номер</th>
-                        <th>Название</th>
-                        <th>Модель</th>
-                        <th>Категория</th>
-                        <th>Тип</th>
-                        <th>Место хранения</th>
-                        <th>Статус</th>
-                        <th>Пользователь</th>
-                    </tr>
-                </thead>
-                <tbody id="equipmentTableBody">
-                    {{equipment_rows}}
-                </tbody>
-            </table>
-        </div>
-        
-        <div id="footer-container"></div>
+    <div class="page-actions">
+        <a href="/admin/add" class="btn btn-success">➕ Добавить технику</a>
     </div>
+</div>
 
-    <div class="toast-container" id="toastContainer"></div>
+<!-- Статистика -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <span class="icon">📦</span>
+        <div class="number accent">{{total_equipment}}</div>
+        <div class="label">Всего техники</div>
+    </div>
+    <div class="stat-card">
+        <span class="icon">✅</span>
+        <div class="number success">{{available_equipment}}</div>
+        <div class="label">Доступно</div>
+    </div>
+    <div class="stat-card">
+        <span class="icon">👤</span>
+        <div class="number warning">{{assigned_equipment}}</div>
+        <div class="label">Назначено</div>
+    </div>
+    <div class="stat-card">
+        <span class="icon">👥</span>
+        <div class="number">{{total_users}}</div>
+        <div class="label">Пользователей</div>
+    </div>
+</div>
 
-    <script src="/js/main.js"></script>
-    <script src="/js/help.js"></script>
-    <script src="/js/footer.js"></script>
-    <script src="/js/equipment-filter.js"></script>
-</body>
-</html>
+<!-- Фильтры -->
+<div class="filters-panel">
+    <div class="filter-group">
+        <label>Категория</label>
+        <select id="filterCategory" onchange="onCategoryFilterChange()">
+            {{category_options}}
+        </select>
+    </div>
+    <div class="filter-group">
+        <label>Тип</label>
+        <select id="filterType" onchange="onTypeFilterChange()">
+            <option value="">Все типы</option>
+        </select>
+    </div>
+    <div class="filter-group">
+        <label>Склад</label>
+        <select id="filterWarehouse" onchange="applyFilters()">
+            {{warehouse_options}}
+        </select>
+    </div>
+    <div class="filter-group">
+        <label>Статус</label>
+        <select id="filterStatus" onchange="applyFilters()">
+            <option value="">Все статусы</option>
+            <option value="available">✅ Доступна</option>
+            <option value="assigned">👤 Назначена</option>
+            <option value="maintenance">🔧 В ремонте</option>
+            <option value="retired">❌ Списана</option>
+        </select>
+    </div>
+    <div class="filter-actions">
+        <button type="button" onclick="resetFilters()" class="btn btn-ghost">✕ Сбросить</button>
+    </div>
+</div>
+
+<!-- Таблица -->
+<div class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th>Инв. номер</th>
+                <th>Название</th>
+                <th>Модель</th>
+                <th>Категория</th>
+                <th>Тип</th>
+                <th>Место хранения</th>
+                <th>Статус</th>
+                <th>Пользователь</th>
+            </tr>
+        </thead>
+        <tbody id="equipmentTableBody">
+            {{equipment_rows}}
+        </tbody>
+    </table>
+</div>
+
+<!-- Модальное окно просмотра техники -->
+<div class="modal-overlay" id="viewEquipmentModal">
+    <div class="modal view-user-modal">
+        <div class="modal-header">
+            <h3>🔧 Информация о технике</h3>
+            <button onclick="closeViewEquipmentModal()" class="modal-close">✕</button>
+        </div>
+        <div class="modal-body" id="viewEquipmentBody">
+            <!-- Заполняется через JS -->
+        </div>
+    </div>
+</div>
