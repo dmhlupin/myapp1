@@ -812,23 +812,26 @@ async function renderWarehouseDetails(req, res) {
  */
 async function renderInventory(req, res) {
   try {
-    const summary = await getInventorySummary();
     const totals = await getInventoryTotals();
 
     const htmlPath = path.join(__dirname, '..', 'views', 'admin-inventory.html');
-    let html = fs.readFileSync(htmlPath, 'utf8');
+    let content = fs.readFileSync(htmlPath, 'utf8');
 
     // Общие итоги
-    html = html.replace(/\{\{totals\.total_warehouses\}\}/g, totals.total_warehouses || 0);
-    html = html.replace(/\{\{totals\.total_zones\}\}/g, totals.total_zones || 0);
-    html = html.replace(/\{\{totals\.total_racks\}\}/g, totals.total_racks || 0);
-    html = html.replace(/\{\{totals\.total_cells\}\}/g, totals.total_cells || 0);
-    html = html.replace(/\{\{totals\.equipment_on_stock\}\}/g, totals.equipment_on_stock || 0);
-    html = html.replace(/\{\{totals\.available_without_cell\}\}/g, totals.available_without_cell || 0);
-    html = html.replace(/\{\{totals\.equipment_assigned\}\}/g, totals.equipment_assigned || 0);
-    html = html.replace(/\{\{totals\.total_capacity\}\}/g, totals.total_capacity || 0);
+    content = content.replace(/\{\{totals\.total_warehouses\}\}/g, totals.total_warehouses || 0);
+    content = content.replace(/\{\{totals\.total_zones\}\}/g, totals.total_zones || 0);
+    content = content.replace(/\{\{totals\.total_racks\}\}/g, totals.total_racks || 0);
+    content = content.replace(/\{\{totals\.total_cells\}\}/g, totals.total_cells || 0);
+    content = content.replace(/\{\{totals\.equipment_on_stock\}\}/g, totals.equipment_on_stock || 0);
+    content = content.replace(/\{\{totals\.equipment_assigned\}\}/g, totals.equipment_assigned || 0);
 
-    res.send(html);
+    const fullHtml = renderPage({
+      title: 'Инвентаризация – MoveIT service',
+      content,
+      pageCss: '/css/inventory.css',
+      pageJs: '/js/inventory.js',
+    });
+    res.send(fullHtml);
   } catch (error) {
     console.error('❌ Ошибка загрузки инвентаризации:', error);
     res.status(500).send('Ошибка загрузки страницы');
