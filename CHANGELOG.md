@@ -1,5 +1,141 @@
 # История изменений
 
+## [1.23.0] - 2026-10-02
+
+**🎉🎉 Этап 1 завершён: все страницы на новом layout**
+
+Все страницы приложения переведены на новый дизайн
+(тёмная тема, sidebar + header + footer через партиалы).
+Этап 1 закрыт полностью. Впереди — Этап 2: расширение БД
+(«рабочие места»: офис → кабинет → место).
+
+### Итоги Этапа 1
+
+**Каркас (1.1–1.4):**
+- `utils/layout.js` — `renderPage({ title, content, pageCss, pageJs, bodyClass })`
+- `views/partials/` — `header.html`, `sidebar.html`, `footer.html`
+- `public/css/theme.css` — 66 переменных тёмной темы (Nginx UI)
+- `public/css/layout.css` — каркас (`.app-layout`, `.app-sidebar`, `.app-header`, `.app-main`, `.app-footer`, `.page-header`, `.page-title`, `.page-subtitle`, `.page-actions`)
+- `public/css/components.css` — 86 общих классов
+- Миграция `/` и `/equipment`
+
+**Страницы (1.5–1.12):**
+
+| Шаг | Страница | Версия | Статус |
+|-----|----------|--------|--------|
+| 1.5 | `/admin` | v1.17.0 | ✅ |
+| 1.6 | `/admin/add` + `/admin/edit/:id` | v1.17.5 | ✅ |
+| 1.7 | `/admin/user/add` + `/admin/user/edit/:id` | v1.18.0 | ✅ |
+| 1.8 | `/admin/catalog` | v1.19.0 | ✅ |
+| 1.9 | `/admin/logs` | v1.20.0 | ✅ |
+| 1.10 | `/admin/warehouses` + `/admin/warehouse-details` | v1.21.0 | ✅ |
+| 1.11 | `/admin/inventory` | v1.22.0 | ✅ |
+| 1.12 | `/pdf` (+ пункт в sidebar) | v1.22.3 | ✅ |
+
+**Финальная проверка (1.13) + фиксы (1.13-fix):**
+- Все страницы открываются через `renderPage`
+- Sidebar / header / footer подгружаются на каждой
+- Тёмная тема применяется
+- Активный пункт в sidebar подсвечивается (включая `/pdf`)
+- Навигация: все ссылки ведут на существующие роуты
+- Адаптивность: sidebar сворачивается, статистика перестраивается, таблицы скроллятся, модалки full-screen
+- Клавиатурные сокращения: Ctrl+K (поиск), Ctrl+B (sidebar), Escape (модалки)
+- Toast-уведомления работают
+- `node scripts/check-css.js` — все проверки зелёные
+- В консоли браузера ошибок нет ни на одной странице
+
+**Финальные фиксы (v1.22.4):**
+- `public/js/catalog.js` + `views/admin-catalog.html` — `.catalog-loading` → `.loading-block` (3 места, пропущены в 1.8)
+- `views/page.html` — удалён (мёртвый файл-рудимент, 0 использований)
+
+### Архитектура layout (итог)
+
+**`utils/layout.js` → `renderPage({ title, content, pageCss, pageJs, bodyClass })`:**
+- Загружает 3 партиала (`header.html`, `sidebar.html`, `footer.html`)
+- Подключает общие CSS: `theme.css`, `layout.css`, `components.css`, `help.css`
+- Подключает общие JS: `main.js`, `help.js`, `layout.js`
+- Вставляет `pageCss` / `pageJs`
+- Оборачивает `content` в `<main class="app-main">` внутри `<div class="app-layout">`
+
+**Эталонный паттерн роута** (файл `utils/layout.js` + любой роут):
+
+1. Импорт: `const { renderPage } = require('../utils/layout');`
+2. Чтение шаблона: `fs.readFileSync(htmlPath, 'utf8')` в переменную `content`
+3. Подстановки: скалярные — через `content.replace(/\{\{name\}\}/g, escapeHtml(value))`, многострочные — **без** `/g`
+4. Вызов: `const fullHtml = renderPage({ title, content, pageCss, pageJs });`
+5. Отправка: `res.send(fullHtml);`
+6. Ошибки: `try/catch` + `console.error('❌ ...', error)` + `res.status(500).send('Ошибка загрузки страницы')`
+
+**Критические правила (закреплены):**
+- Плейсхолдеры — через `String.replace()`
+- Скалярные — с флагом `/g`
+- Многострочные — **без** `/g` (иначе `$` в данных сломает замену)
+- Экранирование — через локальный `escapeHtml()`
+- Переменная `content` (не `html`) — для единообразия
+- `require('fs')` / `require('path')` — только там, где реально нужны
+
+### Вне Этапа 1
+
+Auth-страницы (`views/login.html`, `views/change-password.html`)
+**остаются на отдельной теме** (`style.css` + `auth.css`):
+
+- Без sidebar / header / footer (изолированный слой авторизации)
+- Своя вёрстка (`.auth-page`), свои CSS/JS
+- `renderPage` не используется
+
+Это **намеренно** — приложение не должно показывать навигацию
+до аутентификации / при смене пароля.
+
+### Файлы, затронутые в Этапе 1
+
+**Новые:**
+- `utils/layout.js`
+- `views/partials/header.html`, `views/partials/sidebar.html`, `views/partials/footer.html`
+- `public/css/theme.css`, `public/css/layout.css`, `public/css/components.css`
+- `public/css/pdf.css`
+- `public/js/layout.js`
+- `scripts/check-css.js`
+
+**Изменены:**
+- 14 HTML-шаблонов в `views/` (без auth-страниц)
+- 8 page-CSS в `public/css/`
+- 8 page-JS в `public/js/`
+- 6 файлов роутов в `routes/`
+- `package.json`, `CHANGELOG.md`
+
+**Удалены:**
+- `views/page.html` (мёртвый файл-рудимент)
+
+**Не тронуты:**
+- `database/modules/*` — вся работа с БД без изменений
+- `public/css/help.css` — общий слой
+- `public/js/main.js`, `public/js/help.js` — общие
+- API-эндпоинты — только адаптированы вызовы
+- Auth-страницы (`login.html`, `change-password.html`) — вне layout
+
+### Что дальше — Этап 2: Рабочие места
+
+Расширение БД: «рабочие места» (офис → кабинет → место),
+к которым может быть привязана техника.
+
+**План (предварительный):**
+- Миграция БД: таблицы `offices`, `rooms`, `workplaces`
+- Привязка `equipment.workplace_id`
+- UI: страница `/admin/workplaces` (дерево офис → кабинет → место)
+- Интеграция с `/equipment` (фильтр по рабочему месту)
+- Интеграция с `/admin/inventory` (техника на рабочих местах)
+- Перевод страницы на новый layout (по аналогии с Этапом 1)
+
+Точный план — в следующей передаточной записке.
+
+### Теги
+
+- v1.22.1 — sidebar + пункт PDF инструкции + подсветка
+- v1.22.2 — pdf.html → контент-шаблон
+- v1.22.3 — renderPdfList → renderPage
+- v1.22.4 — финальные фиксы (catalog-loading + удаление page.html)
+- **v1.23.0 — Этап 1 завершён (этот)**
+
 ## [1.22.0] - 2026-10-02
 
 **🎉 Шаг 1.11 завершён: /admin/inventory на новом layout**
