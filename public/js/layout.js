@@ -25,6 +25,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     // 4. Загружаем счётчики для бейджей
     await loadCounters();
+
+    // 4.1. Загружаем версию приложения
+    await loadAppVersion();
     
     // 5. Обработчики событий
     setupEventListeners();
@@ -250,6 +253,23 @@ function updateEquipmentCounter(count) {
         badge.textContent = count > 999 ? '999+' : count;
     } else {
         badge.style.display = 'none';
+    }
+}
+
+/**
+ * Загрузить версию приложения
+ */
+async function loadAppVersion() {
+    try {
+        const response = await fetch('/api/version');
+        if (!response.ok) return;
+        
+        const data = await response.json();
+        const el = document.getElementById('appVersion');
+        if (el) el.textContent = 'v' + data.version;
+    } catch (error) {
+        // Тихо игнорируем — версия не критична
+        console.warn('⚠️ Не удалось загрузить версию');
     }
 }
 
