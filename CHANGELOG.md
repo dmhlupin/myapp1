@@ -1,5 +1,66 @@
 # История изменений
 
+## [1.19.1] - 2026-10-02
+
+**Fix: /api/admin/equipment/filtered возвращал undefined в items/total**
+
+Фикс регрессии, из-за которой на /admin/catalog падала загрузка
+техники в секции «🔧 Техника в выбранной категории».
+
+### Причина
+
+- `getEquipmentWithUsers` (`database/modules/equipment.js`) —
+  старая версия без поддержки фильтров и пагинации, всегда
+  возвращает массив
+- `routes/catalog.js` → `getFilteredEquipmentAPI` вызывал её
+  с опциями `{ category_id, type_id, search, limit, offset,
+  include_total: true }` и ждал объект `{ items, total }`
+- Так как функция возвращала массив, `result.items` и `result.total`
+  были `undefined` → в JSON они отбрасывались → фронт падал
+  на `data.items.length`
+- Ошибка в консоли:
+  `TypeError: Cannot read properties of undefined (reading 'length')`
+  в `catalog.js:604` (`renderEquipmentTable`)
+
+### Решение
+
+- `routes/catalog.js`: `getEquipmentWithUsers` заменён на
+  `getEquipmentWithLocation` (функция уже есть в
+  `database/modules/equipment.js`, поддерживает фильтры
+  `category_id` / `type_id` / `search` / `status` / `warehouse_id`,
+  пагинацию `limit` / `offset` и `include_total: true` →
+  возвращает `{ items, total, limit, offset }`)
+- Добавлена защита в ответе:
+  `items: result.items || []`,
+  `total: result.total || 0`
+- `getEquipmentWithUsers` не трогали — используется в других местах
+
+### Файлы
+
+**Изменены:**
+- `routes/catalog.js`
+
+**Не тронуты:**
+- `database/modules/equipment.js`
+- `public/js/catalog.js`
+- `views/admin-catalog.html`
+
+### Проверено
+
+- `/api/admin/equipment/filtered?page=1&limit=20` возвращает
+  корректный JSON с `items` и `total`
+- `/admin/catalog`: секция техники загружается, фильтр по
+  категории / типу работает, поиск работает, пагинация работает
+- Остальные страницы (`/equipment`, `/admin`) не сломаны —
+  `getEquipmentWithUsers` и `getEquipmentWithLocation` в них
+  используются как раньше
+- В консоли браузера ошибок нет
+
+### Связанные теги
+
+- v1.19.0 — Шаг 1.8: /admin/catalog на новом layout
+- v1.19.1 — фикс регрессии с filtered API
+
 ## [1.19.0] - 2026-10-02
 
 **Шаг 1.8: /admin/catalog на новом layout**
