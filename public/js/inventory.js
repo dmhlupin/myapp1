@@ -15,7 +15,6 @@ let currentWarehouse = null;
 // ============================================================
 
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('📊 Страница инвентаризации: загрузка...');
     await loadSummary();
     await loadTotals();
 });
@@ -27,20 +26,20 @@ async function loadSummary() {
     const container = document.getElementById('warehouseSummary');
     if (!container) return;
     
-    container.innerHTML = '<div class="catalog-loading">⏳ Загрузка...</div>';
+    container.innerHTML = '<div class="loading-block">⏳ Загрузка...</div>';
     
     try {
         const response = await fetch('/api/admin/inventory/summary');
         summary = await response.json();
         
-        console.log(`✅ Загружено складов: ${summary.length}`);
         renderSummary();
     } catch (error) {
-        console.error('❌ Ошибка:', error);
+        console.error('❌ Ошибка загрузки сводки:', error);
         container.innerHTML = `
-            <div class="inventory-empty">
+            <div class="empty-state">
                 <span class="emoji">❌</span>
-                <div>Ошибка загрузки</div>
+                <h3>Ошибка загрузки</h3>
+                <p>Не удалось получить сводку по складам</p>
             </div>
         `;
     }
@@ -107,9 +106,10 @@ function renderSummary() {
     
     if (summary.length === 0) {
         container.innerHTML = `
-            <div class="inventory-empty">
+            <div class="empty-state">
                 <span class="emoji">📭</span>
-                <div>Нет активных складов</div>
+                <h3>Нет активных складов</h3>
+                <p>Добавьте склад в админ-панели</p>
             </div>
         `;
         return;
@@ -174,7 +174,7 @@ function renderWarehouseCard(w) {
                 <button onclick="openWarehouseDetail(${w.id})" class="btn btn-primary btn-sm">
                     📋 Открыть инвентаризацию
                 </button>
-                <a href="/admin/warehouses/${w.id}" class="btn btn-back btn-sm btn-icon-only" title="Дерево склада">
+                <a href="/admin/warehouses/${w.id}" class="btn btn-ghost btn-sm btn-icon-only" title="Дерево склада">
                     🏢
                 </a>
             </div>
@@ -197,7 +197,7 @@ async function openWarehouseDetail(warehouseId) {
     currentWarehouse = summary.find(w => w.id === warehouseId);
     
     title.textContent = `🏢 ${currentWarehouse?.name || 'Склад'}`;
-    body.innerHTML = '<div class="catalog-loading">⏳ Загрузка...</div>';
+    body.innerHTML = '<div class="loading-block">⏳ Загрузка...</div>';
     modal.classList.add('active');
     
     try {
@@ -209,11 +209,12 @@ async function openWarehouseDetail(warehouseId) {
         
         renderWarehouseDetail(inventory, occupancy);
     } catch (error) {
-        console.error('❌ Ошибка:', error);
+        console.error('❌ Ошибка загрузки деталей склада:', error);
         body.innerHTML = `
-            <div class="inventory-empty">
+            <div class="empty-state">
                 <span class="emoji">❌</span>
-                <div>Ошибка загрузки</div>
+                <h3>Ошибка загрузки</h3>
+                <p>Не удалось получить данные склада</p>
             </div>
         `;
     }
@@ -248,12 +249,10 @@ function renderWarehouseDetail(inventory, occupancy) {
     
     if (inventory.length === 0) {
         html += `
-            <div class="inventory-empty">
+            <div class="empty-state">
                 <span class="emoji">📭</span>
-                <div>На складе нет техники</div>
-                <div style="font-size: 13px; margin-top: 8px; color: #cbd5e0;">
-                    Техника появится, если ей назначить ячейку
-                </div>
+                <h3>На складе нет техники</h3>
+                <p>Техника появится, если ей назначить ячейку</p>
             </div>
         `;
     } else {
@@ -306,19 +305,20 @@ function renderWarehouseDetail(inventory, occupancy) {
     
     if (occupancy.length === 0) {
         html += `
-            <div class="inventory-empty">
+            <div class="empty-state">
                 <span class="emoji">📭</span>
-                <div>Нет ячеек</div>
+                <h3>Нет ячеек</h3>
+                <p>В этом складе пока нет ячеек хранения</p>
             </div>
         `;
     } else {
         occupancy.forEach(c => {
             const percent = c.percent || 0;
-            let fillColor = '#cbd5e0';
-            if (percent >= 90) fillColor = '#fc8181';
-            else if (percent >= 60) fillColor = '#ed8936';
-            else if (percent >= 30) fillColor = '#48bb78';
-            else if (percent > 0) fillColor = '#68d391';
+            let fillColor = 'var(--border-light)';
+            if (percent >= 90) fillColor = 'var(--danger)';
+            else if (percent >= 60) fillColor = 'var(--warning)';
+            else if (percent >= 30) fillColor = 'var(--success)';
+            else if (percent > 0) fillColor = 'var(--success)';
             
             const capacityText = c.capacity > 0 
                 ? `${c.current_count} / ${c.capacity}`
