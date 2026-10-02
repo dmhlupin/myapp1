@@ -1,294 +1,194 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Редактировать технику</title>
-    <link rel="stylesheet" href="/css/style.css">
-    <link rel="stylesheet" href="/css/admin-edit.css">
-    <link rel="stylesheet" href="/css/help.css">
-    <style>
-        .status-warning {
-            background: #fff3cd;
-            border: 1px solid #ffc107;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            color: #856404;
-            display: none;
-        }
-        
-        .status-warning.show {
-            display: block;
-        }
-        
-        .status-info {
-            background: #cce5ff;
-            border: 1px solid #b8daff;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            color: #004085;
-            display: none;
-        }
-        
-        .status-info.show {
-            display: block;
-        }
-        
-        .help-text {
-            font-size: 13px;
-            color: #a0aec0;
-            margin-top: 4px;
-        }
-        
-        .assign-section {
-            display: none;
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border-left: 4px solid #667eea;
-        }
-        
-        .assign-section.show {
-            display: block;
-        }
-        
-        .assign-section label {
-            font-weight: 600;
-            color: #333;
-        }
-        
-        .id-badge {
-            display: inline-block;
-            background: #edf2f7;
-            color: #4a5568;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: 600;
-        }
+<!-- views/admin-edit.html -->
+<!-- Контент-шаблон страницы редактирования техники -->
 
-                .location-section {
-            background: #f7fafc;
-            border-radius: 12px;
-            padding: 20px 25px;
-            margin-bottom: 20px;
-            border-left: 4px solid #667eea;
-        }
+<div class="page-header">
+  <div>
+    <h1 class="page-title">✏️ Редактировать технику</h1>
+    <div class="page-subtitle">ID: {{id}}</div>
+  </div>
+  <div class="page-actions">
+    <a href="/admin" class="btn btn-ghost btn-sm">← Назад</a>
+  </div>
+</div>
 
-        .location-title {
-            color: #2d3748;
-            font-size: 16px;
-            margin: 0 0 8px 0;
-            font-weight: 600;
-        }
+<!-- Скрытые поля -->
+<input type="hidden" id="equipmentId" value="{{id}}">
+<input type="hidden" id="currentStatus" value="{{status}}">
+<input type="hidden" id="currentCategoryId" value="{{category_id}}">
+<input type="hidden" id="currentTypeId" value="{{type_id}}">
+<input type="hidden" id="currentCellId" value="{{cell_id}}">
 
-        .location-preview {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 12px 15px;
-            background: linear-gradient(135deg, #ebf8ff 0%, #e6fffa 100%);
-            border-radius: 8px;
-            border: 1px solid #90cdf4;
-            color: #2a4365;
-            font-size: 13px;
-            font-weight: 500;
-            margin-top: 10px;
-        }
+<form id="editForm" onsubmit="submitForm(event)">
 
-        .location-preview-icon {
-            font-size: 16px;
-            flex-shrink: 0;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>✏️ Редактировать технику</h1>
-            <a href="/admin" class="back-link">← Назад</a>
-        </div>
-
-        <div style="margin-bottom: 20px;">
-            <span class="id-badge">ID: {{id}}</span>
-        </div>
-
-        <!-- Скрытые поля -->
-        <input type="hidden" id="equipmentId" value="{{id}}">
-        <input type="hidden" id="currentStatus" value="{{status}}">
-        <input type="hidden" id="currentCategoryId" value="{{category_id}}">
-        <input type="hidden" id="currentTypeId" value="{{type_id}}">
-        <input type="hidden" id="currentCellId" value="{{cell_id}}">
-
-        <!-- Предупреждение при возврате -->
-        <div class="status-warning" id="statusWarning">
-            <strong>⚠️ Внимание!</strong>
-            <span>При изменении статуса с "Назначена" на "Доступна", техника будет автоматически возвращена от пользователя.</span>
-        </div>
-
-        <!-- Информация при назначении -->
-        <div class="status-info" id="statusInfo">
-            <strong>ℹ️ Назначение техники</strong>
-            <span>При изменении статуса с "Доступна" на "Назначена", выберите пользователя, которому будет выдана техника.</span>
-        </div>
-
-        <!-- Секция назначения -->
-        <div class="assign-section" id="assignSection">
-            <div class="form-group">
-                <label>Выберите пользователя <span class="required">*</span></label>
-                <select id="assignUserId">
-                    <option value="">— Выберите пользователя —</option>
-                    {{user_options}}
-                </select>
-                <div class="help-text">Выберите пользователя, которому будет назначена техника</div>
-            </div>
-            <div class="form-group">
-                <label>Состояние при выдаче</label>
-                <select id="assignCondition">
-                    <option value="В хорошем состоянии">В хорошем состоянии</option>
-                    <option value="Новая">Новая</option>
-                    <option value="Требуется внимание">Требуется внимание</option>
-                    <option value="С дефектами">С дефектами</option>
-                </select>
-                <div class="help-text">Укажите состояние техники при выдаче</div>
-            </div>
-        </div>
-
-        <form id="editForm" onsubmit="submitForm(event)">
-            <div class="form-group">
-                <label>Инвентарный номер <span class="required">*</span></label>
-                <input type="text" id="inventory_number" required value="{{inventory_number}}">
-            </div>
-
-            <!-- 🆕 КАТЕГОРИЯ -->
-            <div class="form-group">
-                <label>Категория <span class="required">*</span></label>
-                <select id="category_id" required onchange="onCategoryChange()">
-                    <option value="">— Загрузка категорий... —</option>
-                </select>
-                <div class="help-text">Например: Компьютерная техника, Периферия</div>
-            </div>
-
-            <!-- 🆕 ТИП -->
-            <div class="form-group">
-                <label>Тип <span class="required">*</span></label>
-                <select id="type_id" required disabled>
-                    <option value="">— Сначала выберите категорию —</option>
-                </select>
-                <div class="help-text">Например: Ноутбук, Монитор, Клавиатура</div>
-            </div>
-
-            <div class="form-group">
-                <label>Название <span class="required">*</span></label>
-                <input type="text" id="name" required value="{{name}}">
-            </div>
-
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Модель</label>
-                    <input type="text" id="model" value="{{model}}">
-                </div>
-                <div class="form-group">
-                    <label>Серийный номер</label>
-                    <input type="text" id="serial_number" value="{{serial_number}}">
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label>Производитель</label>
-                <input type="text" id="manufacturer" value="{{manufacturer}}">
-            </div>
-
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Дата покупки</label>
-                    <input type="date" id="purchase_date" value="{{purchase_date}}">
-                </div>
-                <div class="form-group">
-                    <label>Гарантия до</label>
-                    <input type="date" id="warranty_until" value="{{warranty_until}}">
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label>Статус</label>
-                <select id="status" onchange="onStatusChange()">
-                    {{status_options}}
-                </select>
-                <div class="help-text">
-                    <span id="statusHelpText">При смене статуса с "Назначена" на "Доступна" техника будет автоматически возвращена</span>
-                </div>
-            </div>
-            
-            <!-- ============================================================ -->
-            <!-- МЕСТО ХРАНЕНИЯ                                                -->
-            <!-- ============================================================ -->
-            <div id="locationSection" class="location-section">
-                <h3 class="location-title">📍 Место хранения</h3>
-                <div class="help-text" style="margin-bottom: 15px;">
-                    Укажите, где хранится техника. Необязательно.
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Склад</label>
-                        <select id="warehouseId" onchange="onWarehouseChange()">
-                            <option value="">— Не указано —</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Зона</label>
-                        <select id="zoneId" onchange="onZoneChange()" disabled>
-                            <option value="">— Сначала выберите склад —</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Стеллаж</label>
-                        <select id="rackId" onchange="onRackChange()" disabled>
-                            <option value="">— Сначала выберите зону —</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Ячейка</label>
-                        <select id="cellId" onchange="updateLocationPreview()" disabled>
-                            <option value="">— Сначала выберите стеллаж —</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="location-preview" id="locationPreview" style="display: none;">
-                    <span class="location-preview-icon">📍</span>
-                    <span id="locationPreviewText"></span>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label>Описание</label>
-                <textarea id="description">{{description}}</textarea>
-            </div>
-
-            <div class="form-actions">
-                <button type="submit" class="btn btn-primary" id="submitBtn">💾 Обновить</button>
-                <a href="/admin" class="btn btn-back">Отмена</a>
-            </div>
-        </form>
-
-        <!-- Footer -->
-        <div id="footer-container"></div>
+  <!-- ============================================================ -->
+  <!-- ОСНОВНАЯ ИНФОРМАЦИЯ                                           -->
+  <!-- ============================================================ -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">📋 Основная информация</h2>
     </div>
+    <div class="card-body">
 
-    <div class="toast-container" id="toastContainer"></div>
+      <!-- Предупреждение при возврате -->
+      <div class="status-warning" id="statusWarning">
+        <strong>⚠️ Внимание!</strong>
+        <span>При изменении статуса с «Назначена» на «Доступна» техника будет автоматически возвращена от пользователя.</span>
+      </div>
 
-    <script src="/js/main.js"></script>
-    <script src="/js/help.js"></script>
-    <script src="/js/footer.js"></script>
-    <script src="/js/admin-edit.js"></script>
-</body>
-</html>
+      <!-- Информация при назначении -->
+      <div class="status-info" id="statusInfo">
+        <strong>ℹ️ Назначение техники</strong>
+        <span>При изменении статуса с «Доступна» на «Назначена» выберите пользователя, которому будет выдана техника.</span>
+      </div>
+
+      <!-- Секция назначения -->
+      <div class="assign-section" id="assignSection">
+        <div class="form-group">
+          <label>Выберите пользователя <span class="required">*</span></label>
+          <select id="assignUserId">
+            <option value="">— Выберите пользователя —</option>
+            {{user_options}}
+          </select>
+          <div class="help-text">Выберите пользователя, которому будет назначена техника</div>
+        </div>
+        <div class="form-group">
+          <label>Состояние при выдаче</label>
+          <select id="assignCondition">
+            <option value="В хорошем состоянии">В хорошем состоянии</option>
+            <option value="Новая">Новая</option>
+            <option value="Требуется внимание">Требуется внимание</option>
+            <option value="С дефектами">С дефектами</option>
+          </select>
+          <div class="help-text">Укажите состояние техники при выдаче</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Инвентарный номер <span class="required">*</span></label>
+        <input type="text" id="inventory_number" required value="{{inventory_number}}">
+      </div>
+
+      <div class="form-group">
+        <label>Категория <span class="required">*</span></label>
+        <select id="category_id" required onchange="onCategoryChange()">
+          <option value="">— Загрузка категорий... —</option>
+        </select>
+        <div class="help-text">Например: Компьютерная техника, Периферия</div>
+      </div>
+
+      <div class="form-group">
+        <label>Тип <span class="required">*</span></label>
+        <select id="type_id" required disabled>
+          <option value="">— Сначала выберите категорию —</option>
+        </select>
+        <div class="help-text">Например: Ноутбук, Монитор, Клавиатура</div>
+      </div>
+
+      <div class="form-group">
+        <label>Название <span class="required">*</span></label>
+        <input type="text" id="name" required value="{{name}}">
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Модель</label>
+          <input type="text" id="model" value="{{model}}">
+        </div>
+        <div class="form-group">
+          <label>Серийный номер</label>
+          <input type="text" id="serial_number" value="{{serial_number}}">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Производитель</label>
+        <input type="text" id="manufacturer" value="{{manufacturer}}">
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Дата покупки</label>
+          <input type="date" id="purchase_date" value="{{purchase_date}}">
+        </div>
+        <div class="form-group">
+          <label>Гарантия до</label>
+          <input type="date" id="warranty_until" value="{{warranty_until}}">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Статус</label>
+        <select id="status" onchange="onStatusChange()">
+          {{status_options}}
+        </select>
+        <div class="help-text">
+          <span id="statusHelpText">При смене статуса с «Назначена» на «Доступна» техника будет автоматически возвращена</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Описание</label>
+        <textarea id="description">{{description}}</textarea>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- МЕСТО ХРАНЕНИЯ                                                -->
+  <!-- ============================================================ -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">📍 Место хранения</h2>
+    </div>
+    <div class="card-body">
+      <div class="help-text" style="margin-bottom: 15px;">
+        Укажите, где хранится техника. Необязательно.
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Склад</label>
+          <select id="warehouseId" onchange="onWarehouseChange()">
+            <option value="">— Не указано —</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Зона</label>
+          <select id="zoneId" onchange="onZoneChange()" disabled>
+            <option value="">— Сначала выберите склад —</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Стеллаж</label>
+          <select id="rackId" onchange="onRackChange()" disabled>
+            <option value="">— Сначала выберите зону —</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Ячейка</label>
+          <select id="cellId" onchange="updateLocationPreview()" disabled>
+            <option value="">— Сначала выберите стеллаж —</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="location-preview" id="locationPreview" style="display: none;">
+        <span class="location-preview-icon">📍</span>
+        <span id="locationPreviewText"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- ДЕЙСТВИЯ                                                      -->
+  <!-- ============================================================ -->
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary" id="submitBtn">💾 Обновить</button>
+    <a href="/admin" class="btn btn-ghost">Отмена</a>
+  </div>
+
+</form>
