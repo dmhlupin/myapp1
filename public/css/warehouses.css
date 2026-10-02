@@ -1,35 +1,7 @@
-/* public/css/warehouses.css — Стили для страницы складов */
-
 /* ============================================================
-   СТАТИСТИКА (расширение)
+   public/css/warehouses.css — Специфика страницы «Склады»
+   Общие стили — в theme.css, layout.css, components.css
    ============================================================ */
-
-.stat-card .number.blue {
-    color: #4299e1;
-}
-
-/* ============================================================
-   ПАНЕЛЬ ДЕЙСТВИЙ
-   ============================================================ */
-
-.actions-panel {
-    background: white;
-    padding: 20px 25px;
-    border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-    margin-bottom: 25px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 15px;
-    flex-wrap: wrap;
-}
-
-.actions-panel h2 {
-    color: #2d3748;
-    font-size: 20px;
-    margin: 0;
-}
 
 /* ============================================================
    СЕТКА СКЛАДОВ
@@ -38,8 +10,8 @@
 .warehouses-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-    gap: 20px;
-    margin-bottom: 30px;
+    gap: var(--space-lg);
+    margin-bottom: var(--space-xl);
 }
 
 /* ============================================================
@@ -47,26 +19,27 @@
    ============================================================ */
 
 .warehouse-card {
-    background: white;
-    border-radius: 12px;
-    padding: 25px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-    transition: all 0.2s;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    transition: all var(--transition-fast);
     position: relative;
-    border: 2px solid transparent;
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: var(--space-md);
+    box-shadow: var(--shadow-sm);
 }
 
 .warehouse-card:hover {
     transform: translateY(-3px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--accent-border);
 }
 
 .warehouse-card.is-default {
-    border-color: #ed8936;
-    background: linear-gradient(135deg, #ffffff 0%, #fffaf0 100%);
+    border-color: var(--warning);
+    background: linear-gradient(135deg, var(--bg-tertiary) 0%, var(--warning-bg) 100%);
 }
 
 .warehouse-card.is-inactive {
@@ -76,15 +49,15 @@
 /* Заголовок карточки */
 .warehouse-card-header {
     display: flex;
-    gap: 15px;
+    gap: var(--space-md);
     align-items: flex-start;
 }
 
 .warehouse-icon {
     width: 56px;
     height: 56px;
-    border-radius: 12px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: var(--radius-lg);
+    background: linear-gradient(135deg, var(--accent) 0%, var(--purple) 100%);
     color: white;
     display: flex;
     align-items: center;
@@ -94,7 +67,7 @@
 }
 
 .warehouse-card.is-default .warehouse-icon {
-    background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);
+    background: linear-gradient(135deg, var(--warning) 0%, #d97706 100%);
 }
 
 .warehouse-info {
@@ -103,85 +76,62 @@
 }
 
 .warehouse-name {
-    font-size: 18px;
+    font-size: var(--text-lg);
     font-weight: 700;
-    color: #2d3748;
-    margin-bottom: 4px;
+    color: var(--text-primary);
+    margin-bottom: var(--space-xs);
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-sm);
     flex-wrap: wrap;
 }
 
 .default-star {
-    color: #ed8936;
-    font-size: 16px;
+    color: var(--warning);
+    font-size: var(--text-base);
 }
 
 .warehouse-badges {
     display: flex;
-    gap: 6px;
+    gap: var(--space-xs);
     flex-wrap: wrap;
-    margin-top: 6px;
-}
-
-.badge {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 10px;
-    font-size: 11px;
-    font-weight: 600;
-}
-
-.badge-default {
-    background: #feebc8;
-    color: #7b341e;
-}
-
-.badge-inactive {
-    background: #fed7d7;
-    color: #742a2a;
-}
-
-.badge-active {
-    background: #c6f6d5;
-    color: #22543d;
+    margin-top: var(--space-xs);
 }
 
 /* Адрес */
 .warehouse-address {
-    font-size: 13px;
-    color: #718096;
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
     display: flex;
     align-items: center;
-    gap: 6px;
-    margin-bottom: 4px;
+    gap: var(--space-xs);
+    margin-bottom: var(--space-xs);
 }
 
 .warehouse-address .icon {
-    font-size: 14px;
+    font-size: var(--text-base);
     flex-shrink: 0;
 }
 
 /* Описание */
 .warehouse-description {
-    font-size: 13px;
-    color: #4a5568;
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
     line-height: 1.5;
-    padding: 10px 12px;
-    background: #f7fafc;
-    border-radius: 8px;
-    border-left: 3px solid #cbd5e0;
+    padding: var(--space-sm) var(--space-md);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    border-left: 3px solid var(--border);
 }
 
 /* Счётчики */
 .warehouse-stats {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
-    padding: 12px 0;
-    border-top: 1px solid #e2e8f0;
-    border-bottom: 1px solid #e2e8f0;
+    gap: var(--space-sm);
+    padding: var(--space-md) 0;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
 }
 
 .warehouse-stat {
@@ -189,19 +139,19 @@
 }
 
 .warehouse-stat-value {
-    font-size: 18px;
+    font-size: var(--text-lg);
     font-weight: 700;
-    color: #667eea;
+    color: var(--accent);
     line-height: 1;
 }
 
-.warehouse-stat-value.zones { color: #48bb78; }
-.warehouse-stat-value.racks { color: #ed8936; }
-.warehouse-stat-value.cells { color: #ed64a6; }
+.warehouse-stat-value.zones { color: var(--success); }
+.warehouse-stat-value.racks { color: var(--warning); }
+.warehouse-stat-value.cells { color: var(--purple); }
 
 .warehouse-stat-label {
     font-size: 10px;
-    color: #a0aec0;
+    color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.5px;
     margin-top: 4px;
@@ -210,7 +160,7 @@
 /* Кнопки действий */
 .warehouse-actions {
     display: flex;
-    gap: 8px;
+    gap: var(--space-sm);
     margin-top: auto;
 }
 
@@ -218,115 +168,13 @@
     flex: 1;
     justify-content: center;
     padding: 8px 12px;
-    font-size: 13px;
+    font-size: var(--text-sm);
 }
 
 .warehouse-actions .btn-icon-only {
     flex: 0 0 auto;
     width: 38px;
     padding: 8px 0;
-}
-
-/* ============================================================
-   ПУСТОЕ СОСТОЯНИЕ
-   ============================================================ */
-
-.catalog-loading,
-.catalog-empty {
-    grid-column: 1 / -1;
-    text-align: center;
-    padding: 60px 20px;
-    background: white;
-    border-radius: 12px;
-    color: #a0aec0;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-}
-
-.catalog-loading {
-    animation: pulse 1.5s infinite;
-}
-
-@keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
-}
-
-.catalog-empty .empty-icon {
-    font-size: 64px;
-    display: block;
-    margin-bottom: 15px;
-    opacity: 0.5;
-}
-
-.catalog-empty .empty-text {
-    font-size: 16px;
-    color: #4a5568;
-    font-weight: 600;
-    margin-bottom: 8px;
-}
-
-.catalog-empty .empty-hint {
-    font-size: 13px;
-    color: #a0aec0;
-}
-
-/* ============================================================
-   МОДАЛЬНОЕ ОКНО: предупреждение об удалении
-   ============================================================ */
-
-.delete-warning {
-    background: #fffaf0;
-    border: 1px solid #f6ad55;
-    padding: 12px 15px;
-    border-radius: 8px;
-    display: flex;
-    gap: 10px;
-    align-items: flex-start;
-    margin: 15px 0;
-}
-
-.delete-warning .warning-icon {
-    font-size: 20px;
-    flex-shrink: 0;
-}
-
-.delete-warning strong {
-    color: #c05621;
-    display: block;
-    margin-bottom: 4px;
-}
-
-.delete-warning p {
-    margin: 0;
-    color: #744210;
-    font-size: 13px;
-    line-height: 1.5;
-}
-
-/* ============================================================
-   ЧЕКБОКС
-   ============================================================ */
-
-.checkbox-label {
-    display: flex !important;
-    align-items: center;
-    gap: 10px;
-    cursor: pointer;
-    font-weight: 500;
-    color: #4a5568;
-    user-select: none;
-}
-
-.checkbox-label input[type="checkbox"] {
-    width: 18px;
-    height: 18px;
-    cursor: pointer;
-    accent-color: #667eea;
-    margin: 0;
-}
-
-.checkbox-label span {
-    font-size: 14px;
 }
 
 /* ============================================================
@@ -338,18 +186,8 @@
         grid-template-columns: 1fr;
     }
 
-    .actions-panel {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .actions-panel .btn {
-        width: 100%;
-        justify-content: center;
-    }
-
     .warehouse-card {
-        padding: 20px;
+        padding: var(--space-md);
     }
 
     .warehouse-icon {
@@ -359,15 +197,11 @@
     }
 
     .warehouse-name {
-        font-size: 16px;
-    }
-
-    .warehouse-stats {
-        grid-template-columns: repeat(4, 1fr);
+        font-size: var(--text-base);
     }
 
     .warehouse-stat-value {
-        font-size: 16px;
+        font-size: var(--text-base);
     }
 
     .warehouse-actions {
@@ -381,9 +215,4 @@
     .warehouse-actions .btn-icon-only {
         flex: 1;
     }
-}
-
-/* Ссылки в actions — как кнопки */
-.warehouse-actions a.btn {
-    text-decoration: none;
 }

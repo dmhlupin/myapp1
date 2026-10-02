@@ -155,6 +155,7 @@ const cssFilesToCheck = [
   'logs.css',
   'components.css',
   'layout.css',
+  'warehouses.css',
 ];
 
 const missingVars = checkVars(themeVars, cssFilesToCheck);
