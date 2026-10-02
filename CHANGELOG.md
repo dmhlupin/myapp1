@@ -1,5 +1,167 @@
 # История изменений
 
+## [1.22.0] - 2026-10-02
+
+**🎉 Шаг 1.11 завершён: /admin/inventory на новом layout**
+
+Страница инвентаризации переведена на новый layout через `renderPage()`:
+sidebar + header + footer через партиалы, тёмная тема, общие
+компоненты из `components.css`. Шаг разбит на 4 подшага — от
+подготовки шаблона до финальной проверки.
+
+Страница крупная: 6 карточек общих итогов, warning-блок о технике
+без ячейки, сводка по складам с прогресс-барами, модалка деталей
+склада с 2 вкладками (🔧 Техника / 📍 Заполненность), экспорт в CSV.
+5 API-эндпоинтов инвентаризации не тронуты.
+
+### Итоги Шага 1.11
+
+**1.11.1 — views/admin-inventory.html → контент-шаблон**
+
+- Убраны `<!DOCTYPE>`, `<html>`, `<head>`, `<body>`,
+  `<link>` ×4 (style.css, admin.css, inventory.css, help.css),
+  `<script>` ×4 (main.js, help.js, footer.js, inventory.js),
+  `.container`, `#footer-container`, `.toast-container`
+- `.header` + `.header-actions` (4 кнопки) → `.page-header` +
+  `.page-actions` (1 кнопка «← Админ-панель»)
+- Кнопка «Обновить»: `.btn-back` → `.btn-ghost`
+- Карточки итогов: `.number.green/orange/pink/blue` →
+  `.number.success/warning/accent/info`
+- Loading: `.catalog-loading` → `.loading-block`
+- Сохранены: `id`, `onclick`, `{{totals.*}}` (6 плейсхолдеров),
+  `.inventory-warning` (локальная специфика), `.inventory-section`,
+  `.section-header`, `.detail-tab*` (локальные — структура
+  отличается от общих `.tabs`), `.inventory-table`,
+  `.occupancy-*`, `#warehouseDetailModal` (`.modal.view-user-modal`)
+
+**1.11.2 — public/css/inventory.css → тёмная тема + чистка**
+
+Убраны дубли с `components.css`:
+- `.stats-grid`, `.stat-card` (+ `:hover`, `.icon`, `.number`,
+  `.label`) — теперь только в `components.css`
+- `.stat-card .number.green/orange/pink/blue` →
+  `.number.accent/success/warning/danger` (в `components.css`)
+- `.inventory-empty` + `.emoji` → `.empty-state` (в `components.css`)
+- `@media (max-width: 768px) .stats-grid` и
+  `@media (max-width: 480px) .stats-grid` — уже есть в `components.css`
+
+Все цвета переведены на `var(--*)` из `theme.css`:
+`--bg-primary/secondary/tertiary/hover`, `--border`,
+`--border-light`, `--accent-border`, `--text-primary/secondary/muted`,
+`--accent`, `--success`, `--warning`, `--danger`, `--info`,
+`--purple`, `--*-bg`, `--radius-*`, `--space-*`, `--text-*`,
+`--shadow-*`, `--transition-*`, `--font-mono`.
+
+Специфика сохранена:
+- `.stat-card.highlight` — локальный (в `components.css` нет),
+  теперь `var(--info-bg)` + `var(--accent-border)`
+- `.inventory-warning` + `.warning-icon` + `strong` + `p`
+- `.inventory-section` + `.section-header` + `.section-actions`
+- `.warehouse-summary` + `.warehouse-summary-card` (+ `:hover`,
+  `.is-default`) + `.ws-*` (header/title/name/address/badge/
+  progress/progress-label/progress-bar/progress-fill + low/
+  medium/high/full, stats/stat/stat-value + zones/racks/cells/
+  equipment, stat-label, actions, btn-icon-only)
+- `.wh-detail-header` + `.wh-detail-icon` + `.wh-detail-info` +
+  `.wh-detail-address` — градиент `var(--accent)` → `var(--purple)`
+- `.detail-tabs` / `.detail-tab` (+ `.active`) / `.detail-tab-content`
+  (+ `.active`) — локальные, JS работает с ними
+- `.inventory-table` + `th` / `td` / `tr:hover`
+- `.occupancy-item/cell/code/name/bar/bar-fill/count`
+
+Было: ~534 строки. Стало: ~370 строк.
+Убрано дублей: ~70 строк.
+
+`inventory.css` уже был в списке проверяемых `scripts/check-css.js` —
+35 переменных объявлены, все проверки зелёные.
+
+**1.11.3 — public/js/inventory.js → унификация классов**
+
+- `.catalog-loading` → `.loading-block` (4 места)
+- `.inventory-empty` → `.empty-state` (6 мест) + внутренние `<div>`
+  заменены на `<h3>` / `<p>` (вариант A, соответствует структуре
+  `.empty-state` в `components.css`)
+- `.btn-back` → `.btn-ghost` (1 место — `<a>` на дерево склада)
+- Hex-цвета в `.occupancy-bar-fill` (`#cbd5e0`, `#fc8181`,
+  `#ed8936`, `#48bb78`, `#68d391`) → `var(--border-light)`,
+  `var(--danger)`, `var(--warning)`, `var(--success)`
+- Убраны `console.log` (3 места: DOMContentLoaded, loadSummary,
+  loadTotals)
+- `console.error` уточнены (более информативные сообщения)
+- XSS-защита (`escapeHtml`) уже была — сохранена
+- Логика не тронута: `loadSummary`, `loadTotals`, `updateTotals`,
+  `updateWarning`, `renderSummary`, `renderWarehouseCard`,
+  `openWarehouseDetail`, `renderWarehouseDetail`,
+  `closeWarehouseDetailModal`, `switchDetailTab`, `exportInventory`
+
+**1.11.4 — routes/warehouses.js → renderInventory на renderPage**
+
+- `fs.readFileSync` + `res.send` → `renderPage({ title, content,
+  pageCss, pageJs })`
+- `pageCss: '/css/inventory.css'`, `pageJs: '/js/inventory.js'`
+- `title: 'Инвентаризация – MoveIT service'`
+- Переменная `html` → `content` (единообразие с 1.10.7)
+- Убран неиспользуемый `const summary` (сводка грузится через
+  API из JS, в шаблоне её нет)
+- Убраны 2 лишних replace: `{{totals.available_without_cell}}` и
+  `{{totals.total_capacity}}` — их нет в `views/admin-inventory.html`
+- `require('fs')` / `require('path')` оставлены — нужны
+  `renderWarehouses` и `renderWarehouseDetails`
+- 5 API-функций (`getInventorySummaryAPI`, `getInventoryTotalsAPI`,
+  `getWarehouseInventoryAPI`, `getCellOccupancyAPI`,
+  `exportInventoryCSV`) — не тронуты
+- `database/modules/warehouses.js` (4 функции инвентаризации:
+  `getInventorySummary`, `getWarehouseInventory`, `getCellOccupancy`,
+  `getInventoryTotals`) — не тронут
+
+### Файлы, затронутые в Шаге 1.11
+
+**Изменены:**
+- `views/admin-inventory.html` (полностью переписан)
+- `public/css/inventory.css` (534 → ~370 строк)
+- `public/js/inventory.js` (унификация классов + var(--*))
+- `routes/warehouses.js` (renderInventory → renderPage)
+- `package.json` (версия 1.22.0)
+- `CHANGELOG.md`
+
+**Не тронуты:**
+- `database/modules/warehouses.js`
+- `scripts/check-css.js` (inventory.css уже был в списке)
+- `utils/layout.js`
+- 5 API-функций в `routes/warehouses.js`
+
+### Проверено
+
+- `/admin/inventory` открывается через `renderPage`, партиалы
+  (sidebar + header + footer) подгружаются, тёмная тема применяется
+- 6 карточек общих итогов — реальные числа из `/api/admin/inventory/totals`
+- Warning-блок о технике без ячейки — показывается / скрывается
+  по флагу `available_without_cell`
+- Сводка по складам: карточки с прогресс-барами и мини-статистикой
+  (зоны / стеллажи / ячейки / техника)
+- Модалка деталей склада: 2 вкладки (🔧 Техника / 📍 Заполненность)
+  — переключение работает, данные грузятся
+- Кнопки «🏢 Дерево склада» и «📥 Экспорт в CSV» — работают
+- Кнопка «🔄 Обновить» — перезагружает сводку
+- Sidebar подсвечивает «Хранение», Ctrl+K / Ctrl+B работают
+- В консоли браузера ошибок нет
+- `node scripts/check-css.js` — все проверки зелёные
+  (`inventory.css` — 35 переменных объявлены)
+
+### Теги
+
+- v1.21.1 — admin-inventory.html → контент-шаблон
+- v1.21.2 — inventory.css → тёмная тема + чистка
+- v1.21.3 — inventory.js → унификация классов
+- v1.21.4 — routes/warehouses.js → renderInventory на renderPage
+- **v1.22.0 — финал Шага 1.11 (этот)**
+
+### Что дальше
+
+- 1.12 — `pdf.html` (1 HTML + routes/pdf.js, сложность низкая)
+- 1.13 — финальная проверка Этапа 1 (навигация, адаптивность,
+  все ссылки) + тег **v1.22.1** или сразу **v1.23.0**
+
 ## [1.21.0] - 2026-10-02
 
 **🎉 Шаг 1.10 завершён: /admin/warehouses + /admin/warehouse-details
