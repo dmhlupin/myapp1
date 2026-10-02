@@ -1,184 +1,73 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Редактировать пользователя</title>
-    <link rel="stylesheet" href="/css/style.css">
-    <style>
-        body {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            background: #f0f2f5;
-            padding: 40px 20px;
-        }
-        
-        .container {
-            max-width: 600px;
-            width: 100%;
-            background: white;
-            border-radius: 16px;
-            padding: 40px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-        }
-        
-        .back-link {
-            color: #667eea;
-            text-decoration: none;
-            padding: 8px 16px;
-            border: 1px solid #667eea;
-            border-radius: 6px;
-            transition: all 0.2s;
-        }
-        
-        .back-link:hover {
-            background: #667eea;
-            color: white;
-        }
-        
-        .help-text {
-            font-size: 13px;
-            color: #a0aec0;
-            margin-top: 4px;
-        }
-        
-        .id-badge {
-            display: inline-block;
-            background: #edf2f7;
-            color: #4a5568;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: 600;
-        }
-        
-        .info-box {
-            background: #ebf8ff;
-            border: 1px solid #90cdf4;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            display: flex;
-            gap: 12px;
-            align-items: flex-start;
-        }
-        
-        .info-box p {
-            margin: 0;
-            color: #2a4365;
-            font-size: 13px;
-            line-height: 1.5;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>✏️ Редактировать пользователя</h1>
-            <a href="/admin" class="back-link">← Назад</a>
-        </div>
+<!-- views/admin-user-edit.html -->
+<!-- Контент-шаблон страницы редактирования пользователя -->
 
-        <div style="margin-bottom: 20px;">
-            <span class="id-badge">ID: {{id}}</span>
-            <input type="hidden" id="userId" value="{{id}}">
-        </div>
+<div class="page-header">
+  <div>
+    <h1 class="page-title">✏️ Редактировать пользователя</h1>
+    <div class="page-subtitle">ID: {{id}}</div>
+  </div>
+  <div class="page-actions">
+    <a href="/admin" class="btn btn-ghost btn-sm">← Назад</a>
+  </div>
+</div>
 
-        <div class="info-box">
-            <span>💡</span>
-            <p>Пароль нельзя изменить здесь. Для сброса пароля используйте кнопку 🔑 в списке пользователей.</p>
-        </div>
+<!-- Скрытые поля -->
+<input type="hidden" id="userId" value="{{id}}">
+<input type="hidden" id="currentRole" value="{{role}}">
 
-        <form id="editUserForm" onsubmit="submitForm(event)">
-            <div class="form-group">
-                <label>Логин <span class="required">*</span></label>
-                <input type="text" id="username" required value="{{username}}">
-            </div>
+<div class="info-box">
+  <span class="info-box-icon">💡</span>
+  <p>Пароль нельзя изменить здесь. Для сброса пароля используйте кнопку 🔑 в списке пользователей.</p>
+</div>
 
-            <div class="form-group">
-                <label>Email <span class="required">*</span></label>
-                <input type="email" id="email" required value="{{email}}">
-            </div>
+<form id="editUserForm" onsubmit="submitForm(event)">
 
-            <div class="form-group">
-                <label>ФИО</label>
-                <input type="text" id="full_name" value="{{full_name}}">
-            </div>
-
-            <div class="form-group">
-                <label>Отдел</label>
-                <input type="text" id="department" value="{{department}}">
-            </div>
-
-            <div class="form-group">
-                <label>Телефон</label>
-                <input type="text" id="phone" value="{{phone}}">
-            </div>
-
-            <div class="form-group">
-                <label>Роль</label>
-                <select id="role">
-                    <option value="user">👤 Пользователь</option>
-                    <option value="admin">👑 Администратор</option>
-                </select>
-            </div>
-
-            <div class="form-actions">
-                <button type="submit" class="btn btn-primary" id="submitBtn">💾 Сохранить</button>
-                <a href="/admin" class="btn btn-back">Отмена</a>
-            </div>
-        </form>
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">👤 Учётные данные</h2>
     </div>
+    <div class="card-body">
 
-    <div class="toast-container" id="toastContainer"></div>
+      <div class="form-group">
+        <label>Логин <span class="required">*</span></label>
+        <input type="text" id="username" required value="{{username}}">
+      </div>
 
-    <script src="/js/main.js"></script>
-    <script>
-        const userId = parseInt(document.getElementById('userId').value);
-        const currentRole = '{{role}}';
-        
-        // Устанавливаем текущую роль
-        document.getElementById('role').value = currentRole;
+      <div class="form-group">
+        <label>Email <span class="required">*</span></label>
+        <input type="email" id="email" required value="{{email}}">
+      </div>
 
-        async function submitForm(event) {
-            event.preventDefault();
-            
-            const submitBtn = document.getElementById('submitBtn');
-            submitBtn.disabled = true;
-            submitBtn.textContent = '⏳ Сохранение...';
+      <div class="form-group">
+        <label>ФИО</label>
+        <input type="text" id="full_name" value="{{full_name}}">
+      </div>
 
-            const formData = {
-                username: document.getElementById('username').value.trim(),
-                email: document.getElementById('email').value.trim(),
-                full_name: document.getElementById('full_name').value.trim(),
-                department: document.getElementById('department').value.trim(),
-                phone: document.getElementById('phone').value.trim(),
-                role: document.getElementById('role').value
-            };
+      <div class="form-group">
+        <label>Отдел</label>
+        <input type="text" id="department" value="{{department}}">
+      </div>
 
-            try {
-                const response = await fetch(`/api/admin/users/${userId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(formData)
-                });
+      <div class="form-group">
+        <label>Телефон</label>
+        <input type="text" id="phone" value="{{phone}}">
+      </div>
 
-                const result = await response.json();
+      <div class="form-group">
+        <label>Роль</label>
+        <select id="role">
+          <option value="user">👤 Пользователь</option>
+          <option value="admin">👑 Администратор</option>
+        </select>
+        <div class="help-text">Администратор имеет полный доступ к системе</div>
+      </div>
 
-                if (result.success) {
-                    showToast('✅ Пользователь обновлён!', 'success');
-                    setTimeout(() => window.location.href = '/admin', 1000);
-                } else {
-                    showToast('❌ ' + result.error, 'error');
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = '💾 Сохранить';
-                }
-            } catch (error) {
-                showToast('❌ Ошибка при сохранении', 'error');
-                submitBtn.disabled = false;
-                submitBtn.textContent = '💾 Сохранить';
-            }
-        }
-    </script>
-</body>
-</html>
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary" id="submitBtn">💾 Сохранить</button>
+    <a href="/admin" class="btn btn-ghost">Отмена</a>
+  </div>
+
+</form>

@@ -1,0 +1,71 @@
+// public/js/admin-user-edit.js
+// Логика формы редактирования пользователя
+
+// ============================================================
+// ИНИЦИАЛИЗАЦИЯ
+// ============================================================
+
+const userId = parseInt(document.getElementById('userId')?.value || '0');
+const currentRole = document.getElementById('currentRole')?.value || 'user';
+
+if (!userId || isNaN(userId)) {
+  console.error('❌ ID пользователя не указан');
+}
+
+// Устанавливаем текущую роль
+const roleSelect = document.getElementById('role');
+if (roleSelect) {
+  roleSelect.value = currentRole;
+}
+
+// ============================================================
+// ОТПРАВКА ФОРМЫ
+// ============================================================
+
+async function submitForm(event) {
+  event.preventDefault();
+
+  if (!userId || isNaN(userId)) {
+    showToast('❌ Ошибка: ID пользователя не указан', 'error');
+    return;
+  }
+
+  const submitBtn = document.getElementById('submitBtn');
+  submitBtn.disabled = true;
+  submitBtn.textContent = '⏳ Сохранение...';
+
+  const formData = {
+    username: document.getElementById('username').value.trim(),
+    email: document.getElementById('email').value.trim(),
+    full_name: document.getElementById('full_name').value.trim(),
+    department: document.getElementById('department').value.trim(),
+    phone: document.getElementById('phone').value.trim(),
+    role: document.getElementById('role').value,
+  };
+
+  try {
+    const response = await fetch(`/api/admin/users/${userId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(formData),
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      showToast('✅ Пользователь обновлён!', 'success');
+      setTimeout(() => {
+        window.location.href = '/admin';
+      }, 1000);
+    } else {
+      showToast('❌ ' + result.error, 'error');
+      submitBtn.disabled = false;
+      submitBtn.textContent = '💾 Сохранить';
+    }
+  } catch (error) {
+    console.error('❌ Ошибка при сохранении:', error);
+    showToast('❌ Ошибка при сохранении', 'error');
+    submitBtn.disabled = false;
+    submitBtn.textContent = '💾 Сохранить';
+  }
+}

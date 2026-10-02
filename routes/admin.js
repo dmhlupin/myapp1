@@ -993,41 +993,60 @@ async function unblockUserAPI(req, res) {
 // СТРАНИЦЫ ПОЛЬЗОВАТЕЛЕЙ
 // ============================================================
 
+/**
+ * GET /admin/user/add — страница добавления пользователя
+ */
 function renderAddUser(req, res) {
-  const htmlPath = path.join(__dirname, '..', 'views', 'admin-user-add.html');
-  fs.readFile(htmlPath, 'utf8', (err, html) => {
-    if (err) {
-      res.status(500).send('Ошибка загрузки страницы');
-      return;
-    }
-    res.send(html);
-  });
+  try {
+    const htmlPath = path.join(__dirname, '..', 'views', 'admin-user-add.html');
+    const content = fs.readFileSync(htmlPath, 'utf8');
+
+    const fullHtml = renderPage({
+      title: 'Добавить пользователя – MoveIT service',
+      content,
+      pageJs: '/js/admin-user-add.js',
+    });
+
+    res.send(fullHtml);
+  } catch (error) {
+    console.error('❌ Ошибка загрузки страницы добавления пользователя:', error);
+    res.status(500).send('Ошибка загрузки страницы');
+  }
 }
 
+/**
+ * GET /admin/user/edit/:id — страница редактирования пользователя
+ */
 async function renderEditUser(req, res) {
   try {
     const id = parseInt(req.params.id);
     const user = await getUserById(id);
-    
+
     if (!user) {
       return res.status(404).send('Пользователь не найден');
     }
-    
+
     const htmlPath = path.join(__dirname, '..', 'views', 'admin-user-edit.html');
-    let html = fs.readFileSync(htmlPath, 'utf8');
-    
-    html = html.replace(/\{\{id\}\}/g, user.id);
-    html = html.replace(/\{\{username\}\}/g, user.username || '');
-    html = html.replace(/\{\{email\}\}/g, user.email || '');
-    html = html.replace(/\{\{full_name\}\}/g, user.full_name || '');
-    html = html.replace(/\{\{department\}\}/g, user.department || '');
-    html = html.replace(/\{\{phone\}\}/g, user.phone || '');
-    html = html.replace(/\{\{role\}\}/g, user.role || 'user');
-    html = html.replace(/\{\{is_active\}\}/g, user.is_active ? 'true' : 'false');
-    
-    res.send(html);
+    let content = fs.readFileSync(htmlPath, 'utf8');
+
+    // Скалярные плейсхолдеры — с /g и экранированием
+    content = content.replace(/\{\{id\}\}/g, user.id);
+    content = content.replace(/\{\{username\}\}/g, escapeHtml(user.username || ''));
+    content = content.replace(/\{\{email\}\}/g, escapeHtml(user.email || ''));
+    content = content.replace(/\{\{full_name\}\}/g, escapeHtml(user.full_name || ''));
+    content = content.replace(/\{\{department\}\}/g, escapeHtml(user.department || ''));
+    content = content.replace(/\{\{phone\}\}/g, escapeHtml(user.phone || ''));
+    content = content.replace(/\{\{role\}\}/g, user.role || 'user');
+
+    const fullHtml = renderPage({
+      title: 'Редактировать пользователя – MoveIT service',
+      content,
+      pageJs: '/js/admin-user-edit.js',
+    });
+
+    res.send(fullHtml);
   } catch (error) {
-    console.error('❌ Ошибка:', error);
+    console.error('❌ Ошибка при загрузке страницы редактирования пользователя:', error);
     res.status(500).send('Ошибка при загрузке страницы');
   }
 }

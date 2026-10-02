@@ -1,5 +1,138 @@
 # История изменений
 
+## [1.18.0] - 2026-10-02
+
+**Шаг 1.7: /admin/user/add + /admin/user/edit/:id на новом layout**
+
+Завершён перевод форм пользователя. Страницы `/admin/user/add`
+и `/admin/user/edit/:id` собраны через `renderPage()`
+(sidebar + header + footer через партиалы), тёмная тема,
+общие компоненты из `components.css`. У страниц нет собственного
+CSS-файла — только общие слои (`theme.css`, `layout.css`,
+`components.css`, `help.css`).
+
+### Шаг 1.7.1 — views/admin-user-add.html → контент-шаблон
+
+**public/css/components.css:**
+- Добавлен `.info-box` + `.info-box-icon` + `.info-box p` +
+  `.info-box strong` (общий информационный блок для форм)
+- Добавлен `.password-warning` (+ `strong`, `p`) — предупреждение
+  в модалке временного пароля
+- Добавлен `.password-display` (+ `code`) — крупный показ пароля
+- Добавлен `.password-username` (+ `strong`, `span`) — логин в модалке
+- Все цвета — на переменных `theme.css` (`--info`, `--warning`,
+  `--success`, `--bg-*`, `--text-*`, `--font-mono`, `--text-2xl`)
+
+**views/admin-user-add.html:**
+- Убраны `<!DOCTYPE>`, `<html>`, `<head>`, `<body>`
+- Убраны `<link rel="stylesheet" href="/css/style.css">` и inline `<style>`
+- Убран `<script src="/js/main.js">` и inline `<script>`
+- Убран `<div class="toast-container">` (он в layout)
+- `.header` + `.back-link` → `.page-header` + `.page-actions`
+  с `.btn.btn-ghost.btn-sm`
+- `.info-box` — общий из `components.css` (inline-стили убраны)
+- Форма обёрнута в `.card` с `.card-header` / `.card-body`
+- Кнопка «Отмена» → `.btn.btn-ghost`
+- Модалка пароля переведена на `.modal-overlay` + `.modal` +
+  `.modal-header` (с `<h3>`) + `.modal-actions`
+- Inline-стили модалки (`style="..."`) полностью убраны
+- Открытие модалки через `.classList.add('active')`
+  (в `components.css` управление через `.modal-overlay.active`)
+- Все `id` сохранены: `addUserForm`, `username`, `email`,
+  `full_name`, `department`, `phone`, `role`, `submitBtn`,
+  `passwordModal`, `tempPasswordValue`, `passwordUsername`
+
+**public/js/admin-user-add.js (новый):**
+- Вынесена inline-логика из `<script>` шаблона
+- `submitForm(event)` — POST `/api/admin/users`
+- `finishCreate()` — редирект на `/admin`
+- При успехе — заполняет `#tempPasswordValue` и `#passwordUsername`,
+  открывает `#passwordModal` через `.classList.add('active')`
+- `console.error` для диагностики ошибок
+- Подключается через `pageJs` в `renderPage`
+
+### Шаг 1.7.2 — views/admin-user-edit.html → контент-шаблон
+
+**views/admin-user-edit.html:**
+- Убраны `<!DOCTYPE>`, `<html>`, `<head>`, `<body>`
+- Убраны `<link rel="stylesheet" href="/css/style.css">` и inline `<style>`
+- Убран `<script src="/js/main.js">` и inline `<script>`
+- Убран `<div class="toast-container">` (он в layout)
+- `.header` + `.back-link` → `.page-header` + `.page-actions`
+- `.id-badge` → `.page-subtitle` «ID: N»
+- `.info-box` — общий из `components.css`
+- Форма обёрнута в `.card` с `.card-header` / `.card-body`
+- Кнопка «Отмена» → `.btn.btn-ghost`
+- Роль передаётся через `<input type="hidden" id="currentRole" value="{{role}}">`
+  (вместо `{{role}}` внутри `<option selected>`)
+- `#userId` — hidden-input, как раньше
+- Все `id` сохранены: `editUserForm`, `userId`, `currentRole`,
+  `username`, `email`, `full_name`, `department`, `phone`,
+  `role`, `submitBtn`
+- Плейсхолдеры сохранены: `{{id}}`, `{{role}}`, `{{username}}`,
+  `{{email}}`, `{{full_name}}`, `{{department}}`, `{{phone}}`
+
+**public/js/admin-user-edit.js (новый):**
+- Вынесена inline-логика
+- `userId` и `currentRole` читаются из hidden-inputs
+- `roleSelect.value = currentRole` при загрузке
+- `submitForm(event)` — PUT `/api/admin/users/:id`
+- Валидация: если `userId` нет — тост с ошибкой
+- `showToast` на успех / ошибку, редирект на `/admin`
+  через 1 секунду после успеха
+- Подключается через `pageJs` в `renderPage`
+
+### Шаг 1.7.3 — routes/admin.js → renderPage
+
+**routes/admin.js:**
+- `renderAddUser`:
+  - `fs.readFile` + `res.send` заменены на `renderPage`
+  - `pageJs: '/js/admin-user-add.js'`
+  - `pageCss` не передаётся (своего CSS у страницы нет)
+  - `title: 'Добавить пользователя – MoveIT service'`
+- `renderEditUser`:
+  - Подстановка плейсхолдеров сохранена
+  - Скаляры экранированы через локальный `escapeHtml`
+  - `pageJs: '/js/admin-user-edit.js'`
+  - `pageCss` не передаётся
+  - `title: 'Редактировать пользователя – MoveIT service'`
+  - Убран `{{is_active}}` (в шаблоне не используется)
+- API-функции (`addUserAPI`, `updateUserAPI` и т.д.) без изменений
+
+### Проверено
+
+- `/admin/user/add` открывается через `renderPage`, партиалы
+  (sidebar + header + footer) подгружаются, тёмная тема применяется
+- Форма добавления: все поля работают, сабмит → тост → модалка
+  с паролем, кнопка «Понятно, перейти к списку» → редирект на `/admin`
+- `/admin/user/edit/:id` открывается через `renderPage`
+- Все поля заполнены, роль подставляется в `<select>` из
+  `#currentRole`, сабмит → тост → редирект на `/admin`
+- Обе страницы: sidebar подсвечивает «Админ-панель», Ctrl+K / Ctrl+B
+  работают, dropdown профиля работает, версия в футере — v1.18.0
+- Адаптивность сохранена
+- В консоли браузера ошибок нет
+- `node scripts/check-css.js` — все проверки зелёные
+  (объявленные переменные, классы, плейсхолдеры)
+
+### Файлы
+
+**Изменены:**
+- `public/css/components.css`
+- `routes/admin.js`
+- `package.json`
+- `CHANGELOG.md`
+
+**Новые:**
+- `views/admin-user-add.html` (был отдельный HTML — стал контент-шаблон)
+- `views/admin-user-edit.html` (то же)
+- `public/js/admin-user-add.js`
+- `public/js/admin-user-edit.js`
+
+**Не тронуты:**
+- `utils/layout.js` — проверили, `pageCss: null` обрабатывается корректно
+- API-функции в `routes/admin.js`
+
 ## [1.17.5] - 2026-10-02
 
 **Шаг 1.6: /admin/add + /admin/edit/:id переведены на новый layout**
