@@ -1,0 +1,117 @@
+/* public/css/pdf.css — Стили страницы PDF-инструкций */
+
+/* ============================================================
+   СПИСОК PDF
+   ============================================================ */
+
+.pdf-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.pdf-item {
+    background: var(--bg-secondary);
+    padding: var(--space-md) var(--space-lg);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+    border-left: 4px solid var(--purple);
+}
+
+.pdf-item:hover {
+    transform: translateX(5px);
+    box-shadow: var(--shadow-md);
+}
+
+.pdf-item .info {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+}
+
+.pdf-item .icon {
+    font-size: 28px;
+}
+
+.pdf-item .name {
+    font-size: var(--text-base);
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.pdf-item .filename {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+}
+
+/* ============================================================
+   КНОПКА СКАЧИВАНИЯ
+   ============================================================ */
+
+.download-link {
+    display: inline-block;
+    padding: 8px 20px;
+    background: var(--purple);
+    color: #fff;
+    text-decoration: none;
+    border-radius: var(--radius-sm);
+    transition: background var(--transition-fast);
+    font-size: var(--text-sm);
+}
+
+.download-link:hover {
+    background: var(--purple-bg);
+    color: var(--purple);
+}
+
+/* ============================================================
+   INFO-BOX
+   ============================================================ */
+
+.info-box {
+    background: var(--warning-bg);
+    border: 1px solid var(--warning);
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
+    margin-top: var(--space-lg);
+    color: var(--text-secondary);
+}
+
+.info-box strong {
+    display: block;
+    margin-bottom: var(--space-xs);
+    color: var(--warning);
+}
+
+.info-box code {
+    background: var(--bg-tertiary);
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--text-primary);
+}
+
+/* ============================================================
+   АДАПТИВНОСТЬ
+   ============================================================ */
+
+@media (max-width: 768px) {
+    .pdf-item {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--space-sm);
+    }
+
+    .pdf-item .info {
+        gap: var(--space-sm);
+    }
+
+    .download-link {
+        text-align: center;
+    }
+}
