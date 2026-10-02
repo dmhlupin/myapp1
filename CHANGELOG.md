@@ -1,5 +1,149 @@
 # История изменений
 
+## [1.21.0] - 2026-10-02
+
+**🎉 Шаг 1.10 завершён: /admin/warehouses + /admin/warehouse-details
+на новом layout**
+
+Две страницы переведены на новый layout через `renderPage()`:
+sidebar + header + footer через партиалы, тёмная тема, общие
+компоненты из `components.css`. Шаг разбит на 8 подшагов —
+от подготовки `components.css` до финальной проверки.
+
+### Итоги Шага 1.10
+
+**1.10.0 — components.css: общие компоненты для модалок и карточек**
+
+Вынесены из `admin.css` / `catalog.css`:
+- `.delete-warning` + `.warning-icon` (warning-вариант;
+  в `admin.css` переопределение на danger)
+- `.modal-body` (базовый padding)
+- `.view-user-modal` (sticky header, max-width 800px)
+- `.detail-grid` / `.detail-item` / `.value`
+- `.equipment-cards` / `.equipment-card` + 8 модификаторов
+- `.status-badge` + 4 модификатора через `.status-badge.status-*`
+
+Дополнена адаптивность `@media (max-width: 768px)`.
+
+**1.10.1 — views/admin-warehouses.html → контент-шаблон**
+
+- `.header` + `.header-actions` → `.page-header` + `.page-actions`
+- `.stats` → `.stats-grid`
+- `.actions-panel` → `.card` + `.card-header` + `.card-title`
+- `.btn-back` → `.btn-ghost`
+- `.catalog-loading` → `.loading-block`
+- Убраны html/head/body/link/script, `#footer-container`,
+  `.toast-container`
+
+**1.10.2 — views/admin-warehouse-details.html → контент-шаблон**
+
+- `#pageData` с `data-warehouse-id/name` — сохранён (критичен)
+- `.warehouse-info-panel`, `.tree-section` — оставлены локальными
+- `.btn-back` → `.btn-ghost` (header + дерево + 5 модалок)
+- `#cellViewModal`: `.modal-body` убран, оставлен `id="cellViewBody"`
+
+**1.10.3 — public/js/warehouses.js — унификация классов**
+
+- `.catalog-empty` → `.empty-state`
+- `.badge-default/active/inactive` → `.badge-warning/success/danger`
+- `.btn-back` → `.btn-ghost` (setDefaultBtn)
+- Убраны `console.log`
+
+**1.10.4 — public/js/warehouse-details.js — унификация классов**
+
+- `.catalog-loading` → `.loading-block`
+- Внешние `.tree-empty` → `.empty-state`
+- **XSS-фикс:** escapeHtml к warehouse_name / zone_name / rack_name
+  в `viewCell`
+- Убрана пустая `updateSubtitle()`, `console.log` → `console.error`
+
+**1.10.5 — public/css/warehouses.css → тёмная тема + чистка**
+
+- Убраны дубли с `components.css` (badge-*, catalog-*, delete-warning,
+  checkbox-label, actions-panel)
+- Все цвета → `var(--*)` из `theme.css`
+- `.warehouse-stat-value.cells`: `#ed64a6` → `var(--purple)`
+- 384 → 190 строк
+
+**1.10.6 — public/css/warehouse-details.css → тёмная тема + чистка**
+
+- Все цвета → `var(--*)`
+- Специфика дерева сохранена (tree-zone / tree-rack / tree-cell,
+  tree-btn, tree-empty + 3 состояния счётчика)
+- `.cell-view-*` — модалка просмотра ячейки
+- 609 → 430 строк
+
+**1.10.7 — routes/warehouses.js → renderPage**
+
+- `renderWarehouses` — убран лишний `getAllWarehouses()`,
+  `pageCss: /css/warehouses.css`, `pageJs: /js/warehouses.js`
+- `renderWarehouseDetails` — **XSS-фикс** (`escapeHtml` на name
+  и description), убраны неиспользуемые replace (`address`,
+  `is_default`, `zones_count`), `pageCss`/`pageJs` подключены
+- Добавлен локальный `escapeHtml`
+- 23 API-функции — не тронуты
+
+**1.10.8 — финал**
+
+- В `admin-warehouses.html` `.warehouses-grid` обёрнут
+  в `.card-body` внутри `.card` (карточки складов визуально
+  внутри общей карточки «Список складов»)
+- В `warehouses.css` убран `margin-bottom` у `.warehouses-grid`
+- Обновлён `scripts/check-css.js`: `warehouses.css`,
+  `warehouse-details.css`, `admin-warehouses.html`,
+  `admin-warehouse-details.html` в списке проверяемых
+
+### Файлы, затронутые в Шаге 1.10
+
+**Изменены:**
+- `public/css/components.css` (+~180 строк)
+- `public/css/warehouses.css` (384 → 190 строк)
+- `public/css/warehouse-details.css` (609 → 430 строк)
+- `views/admin-warehouses.html` (полностью переписан)
+- `views/admin-warehouse-details.html` (полностью переписан)
+- `public/js/warehouses.js` (унификация классов)
+- `public/js/warehouse-details.js` (унификация классов + XSS-фикс)
+- `routes/warehouses.js` (2 функции → renderPage + XSS-фикс)
+- `scripts/check-css.js` (добавлены 2 CSS + 2 HTML)
+- `package.json` (версия 1.21.0)
+- `CHANGELOG.md`
+
+### Проверено
+
+- `/admin/warehouses` открывается через `renderPage`, партиалы
+  подгружаются, тёмная тема применяется
+- Статистика (5 карточек) — реальные числа
+- Карточки складов внутри общей карточки «Список складов»
+- CRUD складов: добавление / редактирование / удаление /
+  установка по умолчанию — работают, тосты показываются
+- `/admin/warehouses/:id` открывается через `renderPage`
+- Панель информации о складе — имя, описание, бейджи
+- Дерево Зоны → Стеллажи → Ячейки — рендерится, разворачивание
+  / сворачивание работает
+- CRUD зон / стеллажей / ячеек работает
+- Просмотр ячейки — модалка с техникой (.equipment-card)
+- Sidebar подсвечивает активный пункт, Ctrl+K / Ctrl+B работают
+- В консоли браузера ошибок нет
+- `node scripts/check-css.js` — все проверки зелёные
+
+### Теги
+
+- v1.20.1 — components.css
+- v1.20.2 — admin-warehouses.html
+- v1.20.3 — admin-warehouse-details.html
+- v1.20.4 — warehouses.js
+- v1.20.5 — warehouse-details.js
+- v1.20.6 — warehouses.css + CHANGELOG (частичный)
+- v1.20.7 — warehouse-details.css
+- v1.20.8 — routes/warehouses.js
+- **v1.21.0 — финал Шага 1.10 (этот)**
+
+### Что дальше
+
+- 1.11 — `/admin/inventory` (3 подшага: шаблон → CSS → роут+JS)
+- 1.12 — `pdf.html` (2 подшага)
+- 1.13 — финальная проверка Этапа 1 + тег v1.22.0
+
 ## [1.20.6] - 2026-10-02
 
 **Шаг 1.10.5: /admin/warehouses на новом layout — CSS**

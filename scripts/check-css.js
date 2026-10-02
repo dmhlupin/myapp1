@@ -259,6 +259,31 @@ const placeholderChecks = [
                'id="statusInfo"', 'id="assignSection"', 'id="submitBtn"',
                '{{status_options}}', '{{user_options}}'],
   },
+  
+  {
+    file: 'admin-warehouses.html',
+    expected: ['id="warehouseModal"', 'id="warehouseForm"', 'id="warehouseId"',
+               'id="warehouseName"', 'id="warehousesList"', 'id="deleteModal"',
+               'id="activeGroup"', 'onclick="openWarehouseModal()"',
+               'onsubmit="saveWarehouse(event)"',
+               'class="stats-grid"', 'class="warehouses-grid"',
+               'class="page-header"', 'class="page-actions"',
+               '{{total_warehouses}}', '{{total_zones}}', '{{total_racks}}',
+               '{{total_cells}}', '{{equipment_on_stock}}'],
+  },
+  {
+    file: 'admin-warehouse-details.html',
+    expected: ['id="pageData"', 'id="warehouseSubtitle"', 'id="warehouseBadges"',
+               'id="warehouseDescription"', 'id="warehouseTree"',
+               'id="zoneModal"', 'id="rackModal"', 'id="cellModal"',
+               'id="cellViewModal"', 'id="cellViewBody"', 'id="deleteModal"',
+               'data-warehouse-id', 'data-warehouse-name',
+               'onclick="editWarehouseInfo()"', 'onclick="openZoneModal()"',
+               'onclick="expandAll()"', 'onclick="collapseAll()"',
+               'class="warehouse-info-panel"', 'class="tree-section"',
+               'view-user-modal',
+               '{{warehouse.id}}', '{{warehouse.name}}', '{{warehouse.description}}'],
+  },
 ];
 
 let totalPlaceholderIssues = 0;
