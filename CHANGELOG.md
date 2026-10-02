@@ -1,5 +1,134 @@
 # История изменений
 
+## [1.19.0] - 2026-10-02
+
+**Шаг 1.8: /admin/catalog на новом layout**
+
+Справочник техники переведён на новый layout через `renderPage()`:
+sidebar + header + footer через партиалы, тёмная тема, общие
+компоненты из `components.css`. Страница собрана из трёх
+подшагов — шаблон, CSS, роут. JS не трогали — логика работает
+без изменений.
+
+### Шаг 1.8.1 — views/admin-catalog.html → контент-шаблон
+
+**views/admin-catalog.html:**
+- Убраны `<!DOCTYPE>`, `<html>`, `<head>`, `<body>`
+- Убраны `<link>` на `style.css`, `admin.css`, `catalog.css`, `help.css`
+- Убраны `<script>` на `main.js`, `help.js`, `footer.js`, `catalog.js`
+- Убран `#footer-container` (футер в партиале)
+- Убран `.toast-container` (в layout)
+- `.header` с 4 кнопками (Админ-панель / Дашборд / Профиль / Выйти) →
+  `.page-header` + `.page-actions` с одной кнопкой «← Админ-панель»
+  (остальные ссылки уже есть в sidebar + header)
+- `.stats` → `.stats-grid` (общий компонент из `components.css`)
+- `.number green` → `.number success`,
+  `.number orange` → `.number warning` (модификаторы из `components.css`)
+- Inline `style="font-size: 20px; text-align: center;"` на инпутах
+  иконок → класс `.input-emoji`
+- `.btn-back` → `.btn-ghost` (во всех кнопках «Отмена»)
+- `.modal-body` в `#viewEquipmentModal` — убран (класс не стилизован),
+  `id` сохранён для JS
+- Все `id` и inline-обработчики (`onclick`, `onsubmit`, `onchange`)
+  сохранены — `public/js/catalog.js` работает без правок
+
+### Шаг 1.8.2 — public/css/catalog.css → тёмная тема + чистка дублей
+
+**public/css/catalog.css:**
+- Полностью переписан под тёмную тему (переменные `theme.css`)
+- Убраны дубли, которые уже есть в `components.css`:
+  - `.modal-overlay` / `.modal` / `.modal-header` / `.modal-close`
+    / `.modal-actions` / `.modal-body`
+  - `.form-group` / `.form-row` / `.form-actions`
+  - `.btn-back` (заменён на `.btn-ghost` в шаблоне)
+  - `.stats` / `.stat-card` / `.icon` / `.number` / `.label`
+    (шаблон теперь на `.stats-grid`)
+  - `.badge` / `.badge-*`
+- Убраны светлые цвета: `background: white`, `#2d3748`, `#667eea`,
+  `#e2e8f0`, `#f7fafc`, `#a0aec0`, `#48bb78` и т.д.
+- Все цвета переведены на `var(--*)` из `theme.css`:
+  - `--bg-primary` / `--bg-secondary` / `--bg-tertiary` / `--bg-hover`
+  - `--border` / `--border-light`
+  - `--text-primary` / `--text-secondary` / `--text-muted`
+  - `--accent` / `--success` / `--warning` / `--danger` / `--info` / `--purple`
+- Оставлена специфика страницы:
+  - `.catalog-layout` (2-колоночная сетка)
+  - `.catalog-panel` / `.panel-header`
+  - `.types-filter`
+  - `.catalog-list` + скроллбар
+  - `.category-item` / `.type-item` (+ `:hover`, `.selected`)
+  - `.btn-action` (локальный 32×32, `.btn-edit` / `.btn-delete`)
+  - `.equipment-section` / `.equipment-table` / `.eq-*`
+  - `.equipment-pagination` / `.equipment-pagination-btn`
+  - `.catalog-empty` / `.catalog-loading` / `.catalog-empty .empty-*`
+  - `.category-filter-badge`
+- Оставлены классы карточки техники (используются в `public/js/catalog.js`):
+  - `.view-user-modal`
+  - `.equipment-header-card` / `.equipment-header-icon` / `.equipment-header-info`
+    / `.equipment-header-inv` / `.equipment-header-badges`
+  - `.user-stats` / `.user-stat` / `.user-stat-number` (+ `.active`,
+    `.total`, `.returned`) / `.user-stat-label`
+  - `.user-detail-section` / `.detail-grid` / `.detail-item`
+  - `.current-user-card` / `.current-user-avatar` / `.current-user-info`
+    / `.current-user-name` / `.current-user-dept` / `.current-user-date`
+    / `.current-user-status`
+  - `.empty-equipment`
+  - `.history-table` / `.history-user` / `.history-user-avatar`
+  - `.status-badge` + модификаторы `.status-available` / `.status-assigned`
+    / `.status-maintenance` / `.status-retired`
+- Добавлен `.input-emoji` (был inline-стиль в шаблоне)
+- Адаптивность сохранена и адаптирована под тёмную тему
+
+### Шаг 1.8.3 — routes/catalog.js → renderPage
+
+**routes/catalog.js:**
+- Импортирован `renderPage` из `utils/layout.js`
+- `renderCatalog`:
+  - `fs.readFile` + `res.send` заменены на `renderPage`
+  - `pageCss: '/css/catalog.css'`
+  - `pageJs: '/js/catalog.js'`
+  - `title: 'Справочник техники – MoveIT service'`
+  - Автоматически подключаются партиалы header/sidebar/footer
+    и общие CSS/JS (`theme.css`, `layout.css`, `components.css`,
+    `help.css`, `main.js`, `help.js`, `layout.js`)
+  - Подстановка `{{total_categories}}` / `{{total_types}}` /
+    `{{total_equipment}}` сохранена
+- API-функции (14 штук: категории, типы, техника) — без изменений
+- `public/js/catalog.js` — без изменений
+
+### Проверено
+
+- `/admin/catalog` открывается через `renderPage`, партиалы
+  (sidebar + header + footer) подгружаются, тёмная тема применяется
+- Статистика (3 карточки: категории / типы / техника) на `.stats-grid`
+- Панели категорий и типов загружаются (8 / 35 записей из seed)
+- CRUD категорий и типов работает: модалки, тосты, обновление списка
+- Фильтр типов по категории, подсветка `.selected`
+- Секция техники: таблица, статус-бейджи, аватары владельцев, пагинация
+- Поиск техники: Enter / кнопка / Escape / сброс
+- Карточка техники (просмотр): шапка, статистика, детали, владелец,
+  история
+- Все модалки: закрытие по ✕ / Escape / клику на overlay
+- Sidebar подсвечивает активный пункт, Ctrl+K / Ctrl+B работают
+- Адаптивность сохранена
+- В консоли браузера ошибок нет
+- `node scripts/check-css.js` — все переменные `catalog.css` объявлены
+  в `theme.css`
+
+### Файлы
+
+**Изменены:**
+- `views/admin-catalog.html`
+- `public/css/catalog.css`
+- `routes/catalog.js`
+- `package.json`
+- `CHANGELOG.md`
+
+**Не тронуты:**
+- `public/js/catalog.js` (логика работает как есть)
+- `utils/layout.js`
+- API-функции в `routes/catalog.js`
+
 ## [1.18.0] - 2026-10-02
 
 **Шаг 1.7: /admin/user/add + /admin/user/edit/:id на новом layout**

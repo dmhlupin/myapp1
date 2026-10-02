@@ -19,18 +19,19 @@ const {
   deleteType,
   reorderTypes,
   // 🆕 Для фильтра техники
-  getEquipmentWithUsers,
+  getEquipmentWithLocation,
   getEquipmentCountsByCategory,
   getEquipmentCountsByType,
 } = require('../database/db');
 const { logAction } = require('../utils/logger');
+const { renderPage } = require('../utils/layout');
 
 // ============================================================
 // СТРАНИЦА
 // ============================================================
 
 /**
- * GET /admin/catalog — страница справочника
+ * GET /admin/catalog — страница справочника техники
  */
 async function renderCatalog(req, res) {
   try {
@@ -39,19 +40,26 @@ async function renderCatalog(req, res) {
       getAllCategories(),
       getAllTypes(),
     ]);
-    
+
     const totalCategories = categories.length;
     const totalTypes = types.length;
     const totalEquipment = types.reduce((sum, t) => sum + (t.equipment_count || 0), 0);
-    
+
     const htmlPath = path.join(__dirname, '..', 'views', 'admin-catalog.html');
-    let html = fs.readFileSync(htmlPath, 'utf8');
-    
-    html = html.replace(/\{\{total_categories\}\}/g, totalCategories);
-    html = html.replace(/\{\{total_types\}\}/g, totalTypes);
-    html = html.replace(/\{\{total_equipment\}\}/g, totalEquipment);
-    
-    res.send(html);
+    let content = fs.readFileSync(htmlPath, 'utf8');
+
+    content = content.replace(/\{\{total_categories\}\}/g, totalCategories);
+    content = content.replace(/\{\{total_types\}\}/g, totalTypes);
+    content = content.replace(/\{\{total_equipment\}\}/g, totalEquipment);
+
+    const fullHtml = renderPage({
+      title: 'Справочник техники – MoveIT service',
+      content,
+      pageCss: '/css/catalog.css',
+      pageJs: '/js/catalog.js',
+    });
+
+    res.send(fullHtml);
   } catch (error) {
     console.error('❌ Ошибка загрузки справочника:', error);
     res.status(500).send('Ошибка загрузки страницы');
@@ -473,7 +481,7 @@ async function getFilteredEquipmentAPI(req, res) {
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
     const offset = (page - 1) * limit;
     
-    const result = await getEquipmentWithUsers({
+    const result = await getEquipmentWithLocation({
       category_id,
       type_id,
       search,
@@ -481,26 +489,22 @@ async function getFilteredEquipmentAPI(req, res) {
       offset,
       include_total: true,
     });
-    
-    const totalPages = Math.ceil(result.total / limit);
-    
+
+    const totalPages = Math.ceil((result.total || 0) / limit);
+
     res.json({
-      items: result.items,
-      total: result.total,
+      items: result.items || [],
+      total: result.total || 0,
       page,
       limit,
       totalPages,
-      filters: {
-        category_id,
-        type_id,
-        search,
-      },
+      filters: { category_id, type_id, search },
     });
-  } catch (error) {
-    console.error('❌ Ошибка получения техники:', error);
-    res.status(500).json({ error: error.message });
-  }
-}
+      } catch (error) {
+        console.error('❌ Ошибка получения техники:', error);
+        res.status(500).json({ error: error.message });
+      }
+    }
 
 /**
  * GET /api/admin/equipment/counts
