@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { renderPage } = require('../utils/layout');
 
 const pdfLinks = [
   { name: 'Инструкция по установке', file: 'install.pdf' },
@@ -8,40 +9,61 @@ const pdfLinks = [
   { name: 'Инструкция по устранению неисправностей', file: 'troubleshoot.pdf' }
 ];
 
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 function renderPdfList(req, res) {
-  const htmlPath = path.join(__dirname, '..', 'views', 'pdf.html');
-  let html = fs.readFileSync(htmlPath, 'utf8');
-  
-  let pdfItemsHtml = '';
-  pdfLinks.forEach(link => {
-    pdfItemsHtml += `
-      <div class="pdf-item">
-        <div class="info">
-          <span class="icon">📄</span>
-          <div>
-            <div class="name">${link.name}</div>
-            <div class="filename">${link.file}</div>
+  try {
+    const htmlPath = path.join(__dirname, '..', 'views', 'pdf.html');
+    let content = fs.readFileSync(htmlPath, 'utf8');
+
+    // Рендерим список PDF ({{#each pdfLinks}} ... {{/each}})
+    let pdfItemsHtml = '';
+    pdfLinks.forEach(link => {
+      pdfItemsHtml += `
+        <div class="pdf-item">
+          <div class="info">
+            <span class="icon">📄</span>
+            <div>
+              <div class="name">${escapeHtml(link.name)}</div>
+              <div class="filename">${escapeHtml(link.file)}</div>
+            </div>
           </div>
+          <a href="/pdf/${escapeHtml(link.file)}" target="_blank" class="download-link">
+            📥 Открыть
+          </a>
         </div>
-        <a href="/pdf/${link.file}" target="_blank" class="download-link">
-          📥 Открыть
-        </a>
-      </div>
-    `;
-  });
-  
-  const startMarker = '{{#each pdfLinks}}';
-  const endMarker = '{{/each}}';
-  const startIndex = html.indexOf(startMarker);
-  const endIndex = html.indexOf(endMarker) + endMarker.length;
-  
-  if (startIndex !== -1 && endIndex !== -1) {
-    const before = html.substring(0, startIndex);
-    const after = html.substring(endIndex);
-    html = before + pdfItemsHtml + after;
+      `;
+    });
+
+    const startMarker = '{{#each pdfLinks}}';
+    const endMarker = '{{/each}}';
+    const startIndex = content.indexOf(startMarker);
+    const endIndex = content.indexOf(endMarker) + endMarker.length;
+
+    if (startIndex !== -1 && endIndex !== -1) {
+      const before = content.substring(0, startIndex);
+      const after = content.substring(endIndex);
+      content = before + pdfItemsHtml + after;
+    }
+
+    const fullHtml = renderPage({
+      title: 'PDF инструкции – MoveIT service',
+      content,
+      pageCss: '/css/pdf.css',
+    });
+    res.send(fullHtml);
+  } catch (error) {
+    console.error('❌ Ошибка загрузки PDF-инструкций:', error);
+    res.status(500).send('Ошибка загрузки страницы');
   }
-  
-  res.send(html);
 }
 
 function renderPdfFile(req, res) {
