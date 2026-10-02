@@ -1,5 +1,39 @@
 # История изменений
 
+## [1.16.1] - 2026-10-02
+
+**Личный кабинет полностью переведён на новый дизайн**
+
+### Изменения: ###
+
+**views/profile.html:**
+- Превращён в контент-шаблон без `<html>/<head>/<body>`
+- Убраны inline `<style>` и старые подключения CSS/JS
+- Убраны кнопки 'Сменить пароль'/'Выйти' — теперь в хедере
+- Убран блок #adminLinks — в новом layout админ-ссылки
+  видны в sidebar
+- Профиль, техника, история обёрнуты в .card из components.css
+- Бейджи статусов через .badge-*
+
+**routes/profile.js:**
+- Использован renderPage() из utils/layout.js
+- Локальные хелперы escapeHtml/formatDate/emptyRow
+- Параллельная загрузка данных через Promise.all
+- Логика updateProfileAPI не изменилась
+
+**public/css/profile.css:**
+- Полностью переписан под тёмную тему (переменные theme.css)
+- Свои стили: только .profile-card, .profile-grid, .profile-item
+- Всё остальное — из components.css
+- Адаптивность для узких экранов
+
+**public/js/profile.js:**
+- Убран блок DOMContentLoaded с adminLinks (не нужен)
+- Логика toggleEditProfile/saveProfile сохранена
+
+Проверено: layout, редактирование профиля, сохранение,
+таблицы, пустые состояния, адаптивность."
+
 ## [1.16.0] - 2026-10-02
 
 ### Изменения:
