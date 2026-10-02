@@ -128,6 +128,7 @@ function highlightActiveSection() {
     else if (path === '/admin/moves' || path.startsWith('/admin/moves/')) activePage = 'moves';
     else if (path === '/admin/logs') activePage = 'logs';
     else if (path === '/admin/catalog') activePage = 'catalog';
+    else if (path === '/pdf' || path.startsWith('/pdf/')) activePage = 'pdf';
     else if (path === '/admin' || path.startsWith('/admin/')) activePage = 'admin';
     
     console.log(`🎯 Активный раздел: ${activePage || 'не определён'}`);
