@@ -48,6 +48,9 @@ const {
 
 const { logAction } = require('../utils/logger');
 
+// Layout
+const { renderPage } = require('../utils/layout');
+
 // ============================================================
 // СТРАНИЦЫ
 // ============================================================
@@ -193,7 +196,14 @@ async function renderAdmin(req, res) {
     });
     html = html.replace('{{user_rows}}', userRows);
     
-    res.send(html);
+    const fullHtml = renderPage({
+      title: 'Админ-панель – MoveIT service',
+      content: html,
+      pageCss: '/css/admin.css',
+      pageJs: '/js/admin.js',
+    });
+    
+    res.send(fullHtml);
   } catch (error) {
     console.error('❌ Ошибка загрузки админ-панели:', error);
     res.status(500).send('Ошибка при загрузке админ-панели');
