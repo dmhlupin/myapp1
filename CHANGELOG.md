@@ -1,5 +1,37 @@
 # История изменений
 
+## [1.16.5] - 2026-10-02
+
+**Админ-панель: renderAdmin переведён на renderPage**
+
+### Изменения:
+
+**routes/admin.js:**
+- Импортирован renderPage из utils/layout.js:
+  `const { renderPage } = require('../utils/layout');`
+- В renderAdmin финальный res.send(html) заменён на renderPage({...})
+- Страница /admin теперь собирается через общий layout:
+  - Автоматически подключаются партиалы header / sidebar / footer
+  - Общие CSS: theme.css, layout.css, components.css, help.css
+  - Общие JS: main.js, help.js, layout.js
+  - pageCss: /css/admin.css
+  - pageJs: /js/admin.js
+- title: 'Админ-панель – MoveIT service'
+
+**Не тронуто в этом шаге:**
+- renderAddEquipment, renderEditEquipment — отдельные шаги (1.6)
+- renderAddUser, renderEditUser — отдельные шаги (1.7)
+- renderLogs — отдельный шаг (1.9)
+- Локальные хелперы escapeHtml / escapeAttr / getInitials оставлены
+  в routes/admin.js (позже уедут в utils/escape.js)
+- API-функции (addEquipmentAPI, updateUserAPI и т.д.) без изменений
+
+Проверено: /admin открывается, партиалы (sidebar + header + footer)
+подгружаются, тёмная тема применяется, табы переключаются,
+таблицы техники (10 колонок) и пользователей (9 колонок) отрисованы,
+модалки (удаление, пароль, просмотр, перемещение) работают,
+поиск в таблицах работает, адаптивность сохранена.
+
 ## [1.16.4] - 2026-10-02
 
 **Админ-панель: перевод CSS на тёмную тему и общие компоненты**
