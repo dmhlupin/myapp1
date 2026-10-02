@@ -495,69 +495,101 @@ async function deleteEquipmentAPI(req, res) {
 // СТРАНИЦЫ ТЕХНИКИ
 // ============================================================
 
+/**
+ * GET /admin/add — страница добавления техники
+ */
 function renderAddEquipment(req, res) {
-  const htmlPath = path.join(__dirname, '..', 'views', 'admin-add.html');
-  fs.readFile(htmlPath, 'utf8', (err, html) => {
-    if (err) {
-      res.status(500).send('Ошибка загрузки страницы');
-      return;
-    }
-    res.send(html);
-  });
+  try {
+    const htmlPath = path.join(__dirname, '..', 'views', 'admin-add.html');
+    const content = fs.readFileSync(htmlPath, 'utf8');
+
+    const fullHtml = renderPage({
+      title: 'Добавить технику – MoveIT service',
+      content,
+      pageCss: '/css/admin-add.css',
+      pageJs: '/js/admin-add.js',
+    });
+
+    res.send(fullHtml);
+  } catch (error) {
+    console.error('❌ Ошибка загрузки страницы добавления:', error);
+    res.status(500).send('Ошибка загрузки страницы');
+  }
 }
 
+/**
+ * GET /admin/edit/:id — страница редактирования техники
+ */
 async function renderEditEquipment(req, res) {
   try {
     const id = parseInt(req.params.id);
-    
+
     if (isNaN(id)) {
       return res.status(400).send('Неверный ID');
     }
-    
+
     const equipment = await getEquipmentById(id);
-    
+
     if (!equipment) {
       return res.status(404).send('Техника не найдена');
     }
-    
+
     const htmlPath = path.join(__dirname, '..', 'views', 'admin-edit.html');
-    let html = fs.readFileSync(htmlPath, 'utf8');
-    
-    html = html.replace(/\{\{id\}\}/g, equipment.id);
-    html = html.replace(/\{\{inventory_number\}\}/g, equipment.inventory_number || '');
-    html = html.replace(/\{\{name\}\}/g, equipment.name || '');
-    html = html.replace(/\{\{model\}\}/g, equipment.model || '');
-    html = html.replace(/\{\{serial_number\}\}/g, equipment.serial_number || '');
-    html = html.replace(/\{\{manufacturer\}\}/g, equipment.manufacturer || '');
-    html = html.replace(/\{\{purchase_date\}\}/g, equipment.purchase_date || '');
-    html = html.replace(/\{\{warranty_until\}\}/g, equipment.warranty_until || '');
-    html = html.replace(/\{\{status\}\}/g, equipment.status || 'available');
-    html = html.replace(/\{\{description\}\}/g, equipment.description || '');
-    
+    let content = fs.readFileSync(htmlPath, 'utf8');
+
+    // Скалярные плейсхолдеры — с /g
+    content = content.replace(/\{\{id\}\}/g, equipment.id);
+    content = content.replace(/\{\{inventory_number\}\}/g, escapeHtml(equipment.inventory_number || ''));
+    content = content.replace(/\{\{name\}\}/g, escapeHtml(equipment.name || ''));
+    content = content.replace(/\{\{model\}\}/g, escapeHtml(equipment.model || ''));
+    content = content.replace(/\{\{serial_number\}\}/g, escapeHtml(equipment.serial_number || ''));
+    content = content.replace(/\{\{manufacturer\}\}/g, escapeHtml(equipment.manufacturer || ''));
+    content = content.replace(/\{\{purchase_date\}\}/g, equipment.purchase_date || '');
+    content = content.replace(/\{\{warranty_until\}\}/g, equipment.warranty_until || '');
+    content = content.replace(/\{\{status\}\}/g, equipment.status || 'available');
+    content = content.replace(/\{\{description\}\}/g, escapeHtml(equipment.description || ''));
+
     // Категория, тип, ячейка
-    html = html.replace(/\{\{category_id\}\}/g, equipment.category_id || '');
-    html = html.replace(/\{\{type_id\}\}/g, equipment.type_id || '');
-    html = html.replace(/\{\{cell_id\}\}/g, equipment.cell_id || '');
-    
-    // Статусы
+    content = content.replace(/\{\{category_id\}\}/g, equipment.category_id || '');
+    content = content.replace(/\{\{type_id\}\}/g, equipment.type_id || '');
+    content = content.replace(/\{\{cell_id\}\}/g, equipment.cell_id || '');
+
+    // Статусы — русские подписи
+    const statusLabels = {
+      'available':   '✅ Доступна',
+      'assigned':    '👤 Назначена',
+      'maintenance': '🔧 В ремонте',
+      'retired':     '📦 Списана',
+    };
     const statuses = ['available', 'assigned', 'maintenance', 'retired'];
     let statusOptions = '';
     statuses.forEach(s => {
       const selected = s === equipment.status ? 'selected' : '';
-      statusOptions += `<option value="${s}" ${selected}>${s}</option>`;
+      const label = statusLabels[s] || s;
+      statusOptions += `<option value="${s}" ${selected}>${label}</option>`;
     });
-    html = html.replace(/\{\{status_options\}\}/g, statusOptions);
-    
+    // Многострочная вставка — без /g
+    content = content.replace('{{status_options}}', statusOptions);
+
     // Пользователи для назначения
     const users = await getAllUsers();
-    let userOptions = '<option value="">— Выберите пользователя —</option>';
+    let userOptions = '';
     users.forEach(user => {
       const fullName = user.full_name || user.username;
-      userOptions += `<option value="${user.id}">${fullName} (${user.department || 'без отдела'})</option>`;
+      const dept = user.department ? ` (${user.department})` : '';
+      userOptions += `<option value="${user.id}">${escapeHtml(fullName)}${escapeHtml(dept)}</option>`;
     });
-    html = html.replace(/\{\{user_options\}\}/g, userOptions);
-    
-    res.send(html);
+    // Многострочная вставка — без /g
+    content = content.replace('{{user_options}}', userOptions);
+
+    const fullHtml = renderPage({
+      title: 'Редактировать технику – MoveIT service',
+      content,
+      pageCss: '/css/admin-edit.css',
+      pageJs: '/js/admin-edit.js',
+    });
+
+    res.send(fullHtml);
   } catch (error) {
     console.error('❌ Ошибка при загрузке страницы редактирования:', error);
     res.status(500).send('Ошибка при загрузке страницы');
