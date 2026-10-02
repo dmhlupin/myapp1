@@ -1,258 +1,242 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Склад: {{warehouse.name}}</title>
-    <link rel="stylesheet" href="/css/style.css">
-    <link rel="stylesheet" href="/css/admin.css">
-    <link rel="stylesheet" href="/css/warehouses.css">
-    <link rel="stylesheet" href="/css/warehouse-details.css">
-    <link rel="stylesheet" href="/css/help.css">
-</head>
-<body>
-    <!-- Данные склада для JS -->
-    <div id="pageData" 
-         data-warehouse-id="{{warehouse.id}}"
-         data-warehouse-name="{{warehouse.name}}"
-         style="display: none;">
+<!-- ============================================================ -->
+<!-- DATA ДЛЯ JS                                                    -->
+<!-- ============================================================ -->
+
+<div id="pageData"
+     data-warehouse-id="{{warehouse.id}}"
+     data-warehouse-name="{{warehouse.name}}"
+     style="display: none;">
+</div>
+
+<!-- ============================================================ -->
+<!-- PAGE HEADER                                                    -->
+<!-- ============================================================ -->
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title">🏢 {{warehouse.name}}</h1>
+    <div class="page-subtitle" id="warehouseSubtitle"></div>
+  </div>
+  <div class="page-actions">
+    <a href="/admin/warehouses" class="btn btn-ghost btn-sm">← К складам</a>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- ПАНЕЛЬ ИНФОРМАЦИИ О СКЛАДЕ                                     -->
+<!-- ============================================================ -->
+
+<div class="warehouse-info-panel">
+  <div class="warehouse-info-header">
+    <div class="warehouse-info-icon">🏢</div>
+    <div class="warehouse-info-text">
+      <h2>{{warehouse.name}}</h2>
+      <div class="warehouse-info-badges" id="warehouseBadges"></div>
+      <div class="warehouse-info-description" id="warehouseDescription">
+        {{warehouse.description}}
+      </div>
     </div>
-
-    <div class="container">
-        <!-- Header -->
-        <div class="header">
-            <div>
-                <h1>🏢 {{warehouse.name}}</h1>
-                <div class="subtitle" id="warehouseSubtitle">
-                    <!-- Заполняется JS -->
-                </div>
-            </div>
-            <div class="header-actions">
-                <a href="/admin/warehouses" class="btn btn-back btn-sm">← К складам</a>
-                <a href="/admin" class="btn btn-back btn-sm">⚙️ Админ-панель</a>
-                <a href="/" class="btn btn-back btn-sm">📊 Дашборд</a>
-                <a href="/logout" class="btn btn-danger btn-sm">🚪 Выйти</a>
-            </div>
-        </div>
-
-        <!-- Информация о складе -->
-        <div class="warehouse-info-panel">
-            <div class="warehouse-info-header">
-                <div class="warehouse-info-icon">🏢</div>
-                <div class="warehouse-info-text">
-                    <h2>{{warehouse.name}}</h2>
-                    <div class="warehouse-info-badges" id="warehouseBadges">
-                        <!-- Заполняется JS -->
-                    </div>
-                    <div class="warehouse-info-description" id="warehouseDescription">
-                        {{warehouse.description}}
-                    </div>
-                </div>
-                <div class="warehouse-info-actions">
-                    <button onclick="editWarehouseInfo()" class="btn btn-primary btn-sm">
-                        ✏️ Редактировать
-                    </button>
-                    <button onclick="openZoneModal()" class="btn btn-success btn-sm">
-                        ➕ Добавить зону
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Дерево склада -->
-        <div class="tree-section">
-            <div class="tree-header">
-                <h2>📦 Структура склада</h2>
-                <div class="tree-actions">
-                    <button onclick="expandAll()" class="btn btn-back btn-sm" title="Развернуть всё">
-                        🔽 Развернуть
-                    </button>
-                    <button onclick="collapseAll()" class="btn btn-back btn-sm" title="Свернуть всё">
-                        🔼 Свернуть
-                    </button>
-                    <button onclick="loadWarehouseTree()" class="btn btn-back btn-sm" title="Обновить">
-                        🔄 Обновить
-                    </button>
-                </div>
-            </div>
-
-            <div id="warehouseTree" class="warehouse-tree">
-                <div class="catalog-loading">⏳ Загрузка структуры...</div>
-            </div>
-        </div>
-
-        <!-- Footer -->
-        <div id="footer-container"></div>
+    <div class="warehouse-info-actions">
+      <button onclick="editWarehouseInfo()" class="btn btn-primary btn-sm">
+        ✏️ Редактировать
+      </button>
+      <button onclick="openZoneModal()" class="btn btn-success btn-sm">
+        ➕ Добавить зону
+      </button>
     </div>
+  </div>
+</div>
 
-    <!-- ============================================================ -->
-    <!-- МОДАЛЬНОЕ ОКНО: ЗОНА                                          -->
-    <!-- ============================================================ -->
-    <div class="modal-overlay" id="zoneModal">
-        <div class="modal">
-            <div class="modal-header">
-                <h3 id="zoneModalTitle">Добавить зону</h3>
-                <button onclick="closeZoneModal()" class="modal-close">✕</button>
-            </div>
-            <form id="zoneForm" onsubmit="saveZone(event)">
-                <input type="hidden" id="zoneId">
-                <input type="hidden" id="zoneWarehouseId" value="{{warehouse.id}}">
+<!-- ============================================================ -->
+<!-- ДЕРЕВО СКЛАДА                                                  -->
+<!-- ============================================================ -->
 
-                <div class="form-group">
-                    <label>Название <span class="required">*</span></label>
-                    <input type="text" id="zoneName" required placeholder="Например: Зона A">
-                </div>
-
-                <div class="form-group">
-                    <label>Описание</label>
-                    <textarea id="zoneDescription" placeholder="Краткое описание зоны..."></textarea>
-                </div>
-
-                <div class="form-group" id="zoneActiveGroup" style="display: none;">
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="zoneIsActive" checked>
-                        <span>✅ Активна</span>
-                    </label>
-                </div>
-
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary" id="zoneSaveBtn">💾 Сохранить</button>
-                    <button type="button" class="btn btn-back" onclick="closeZoneModal()">Отмена</button>
-                </div>
-            </form>
-        </div>
+<div class="tree-section">
+  <div class="tree-header">
+    <h2>📦 Структура склада</h2>
+    <div class="tree-actions">
+      <button onclick="expandAll()" class="btn btn-ghost btn-sm" title="Развернуть всё">
+        🔽 Развернуть
+      </button>
+      <button onclick="collapseAll()" class="btn btn-ghost btn-sm" title="Свернуть всё">
+        🔼 Свернуть
+      </button>
+      <button onclick="loadWarehouseTree()" class="btn btn-ghost btn-sm" title="Обновить">
+        🔄 Обновить
+      </button>
     </div>
+  </div>
 
-    <!-- ============================================================ -->
-    <!-- МОДАЛЬНОЕ ОКНО: СТЕЛЛАЖ                                       -->
-    <!-- ============================================================ -->
-    <div class="modal-overlay" id="rackModal">
-        <div class="modal">
-            <div class="modal-header">
-                <h3 id="rackModalTitle">Добавить стеллаж</h3>
-                <button onclick="closeRackModal()" class="modal-close">✕</button>
-            </div>
-            <form id="rackForm" onsubmit="saveRack(event)">
-                <input type="hidden" id="rackId">
-                <input type="hidden" id="rackZoneId">
+  <div id="warehouseTree" class="warehouse-tree">
+    <div class="loading-block">⏳ Загрузка структуры...</div>
+  </div>
+</div>
 
-                <div class="form-group">
-                    <label>Название <span class="required">*</span></label>
-                    <input type="text" id="rackName" required placeholder="Например: Стеллаж A-01">
-                </div>
+<!-- ============================================================ -->
+<!-- МОДАЛЬНОЕ ОКНО: ЗОНА                                           -->
+<!-- ============================================================ -->
 
-                <div class="form-group">
-                    <label>Описание</label>
-                    <textarea id="rackDescription" placeholder="Например: Ноутбуки и моноблоки"></textarea>
-                </div>
-
-                <div class="form-group" id="rackActiveGroup" style="display: none;">
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="rackIsActive" checked>
-                        <span>✅ Активен</span>
-                    </label>
-                </div>
-
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary" id="rackSaveBtn">💾 Сохранить</button>
-                    <button type="button" class="btn btn-back" onclick="closeRackModal()">Отмена</button>
-                </div>
-            </form>
-        </div>
+<div class="modal-overlay" id="zoneModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="zoneModalTitle">Добавить зону</h3>
+      <button onclick="closeZoneModal()" class="modal-close">✕</button>
     </div>
+    <form id="zoneForm" onsubmit="saveZone(event)">
+      <input type="hidden" id="zoneId">
+      <input type="hidden" id="zoneWarehouseId" value="{{warehouse.id}}">
 
-    <!-- ============================================================ -->
-    <!-- МОДАЛЬНОЕ ОКНО: ЯЧЕЙКА                                        -->
-    <!-- ============================================================ -->
-    <div class="modal-overlay" id="cellModal">
-        <div class="modal">
-            <div class="modal-header">
-                <h3 id="cellModalTitle">Добавить ячейку</h3>
-                <button onclick="closeCellModal()" class="modal-close">✕</button>
-            </div>
-            <form id="cellForm" onsubmit="saveCell(event)">
-                <input type="hidden" id="cellId">
-                <input type="hidden" id="cellRackId">
+      <div class="form-group">
+        <label>Название <span class="required">*</span></label>
+        <input type="text" id="zoneName" required placeholder="Например: Зона A">
+      </div>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Название <span class="required">*</span></label>
-                        <input type="text" id="cellName" required placeholder="Ячейка 1">
-                    </div>
-                    <div class="form-group">
-                        <label>Код (полный адрес)</label>
-                        <input type="text" id="cellCode" placeholder="A-01-01">
-                    </div>
-                </div>
+      <div class="form-group">
+        <label>Описание</label>
+        <textarea id="zoneDescription" placeholder="Краткое описание зоны..."></textarea>
+      </div>
 
-                <div class="form-group">
-                    <label>Вместимость (макс. единиц)</label>
-                    <input type="number" id="cellCapacity" min="0" placeholder="Оставьте пустым, если без ограничений">
-                </div>
+      <div class="form-group" id="zoneActiveGroup" style="display: none;">
+        <label class="checkbox-label">
+          <input type="checkbox" id="zoneIsActive" checked>
+          <span>✅ Активна</span>
+        </label>
+      </div>
 
-                <div class="form-group">
-                    <label>Описание</label>
-                    <textarea id="cellDescription" placeholder="Дополнительная информация..."></textarea>
-                </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" id="zoneSaveBtn">💾 Сохранить</button>
+        <button type="button" class="btn btn-ghost" onclick="closeZoneModal()">Отмена</button>
+      </div>
+    </form>
+  </div>
+</div>
 
-                <div class="form-group" id="cellActiveGroup" style="display: none;">
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="cellIsActive" checked>
-                        <span>✅ Активна</span>
-                    </label>
-                </div>
+<!-- ============================================================ -->
+<!-- МОДАЛЬНОЕ ОКНО: СТЕЛЛАЖ                                        -->
+<!-- ============================================================ -->
 
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary" id="cellSaveBtn">💾 Сохранить</button>
-                    <button type="button" class="btn btn-back" onclick="closeCellModal()">Отмена</button>
-                </div>
-            </form>
-        </div>
+<div class="modal-overlay" id="rackModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="rackModalTitle">Добавить стеллаж</h3>
+      <button onclick="closeRackModal()" class="modal-close">✕</button>
     </div>
+    <form id="rackForm" onsubmit="saveRack(event)">
+      <input type="hidden" id="rackId">
+      <input type="hidden" id="rackZoneId">
 
-    <!-- ============================================================ -->
-    <!-- МОДАЛЬНОЕ ОКНО: ПРОСМОТР ЯЧЕЙКИ                                -->
-    <!-- ============================================================ -->
-    <div class="modal-overlay" id="cellViewModal">
-        <div class="modal view-user-modal">
-            <div class="modal-header">
-                <h3 id="cellViewTitle">Ячейка</h3>
-                <button onclick="closeCellViewModal()" class="modal-close">✕</button>
-            </div>
-            <div class="modal-body" id="cellViewBody">
-                <!-- Заполняется JS -->
-            </div>
-        </div>
+      <div class="form-group">
+        <label>Название <span class="required">*</span></label>
+        <input type="text" id="rackName" required placeholder="Например: Стеллаж A-01">
+      </div>
+
+      <div class="form-group">
+        <label>Описание</label>
+        <textarea id="rackDescription" placeholder="Например: Ноутбуки и моноблоки"></textarea>
+      </div>
+
+      <div class="form-group" id="rackActiveGroup" style="display: none;">
+        <label class="checkbox-label">
+          <input type="checkbox" id="rackIsActive" checked>
+          <span>✅ Активен</span>
+        </label>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" id="rackSaveBtn">💾 Сохранить</button>
+        <button type="button" class="btn btn-ghost" onclick="closeRackModal()">Отмена</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- МОДАЛЬНОЕ ОКНО: ЯЧЕЙКА                                         -->
+<!-- ============================================================ -->
+
+<div class="modal-overlay" id="cellModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="cellModalTitle">Добавить ячейку</h3>
+      <button onclick="closeCellModal()" class="modal-close">✕</button>
     </div>
+    <form id="cellForm" onsubmit="saveCell(event)">
+      <input type="hidden" id="cellId">
+      <input type="hidden" id="cellRackId">
 
-    <!-- ============================================================ -->
-    <!-- МОДАЛЬНОЕ ОКНО: УДАЛЕНИЕ                                      -->
-    <!-- ============================================================ -->
-    <div class="modal-overlay" id="deleteModal">
-        <div class="modal">
-            <div class="modal-header">
-                <h3>🗑️ Удаление</h3>
-                <button onclick="closeDeleteModal()" class="modal-close">✕</button>
-            </div>
-            <p id="deleteMessage">Вы уверены?</p>
-            <div id="deleteWarning" class="delete-warning" style="display: none;">
-                <span class="warning-icon">⚠️</span>
-                <div>
-                    <strong>Внимание!</strong>
-                    <p id="deleteWarningText"></p>
-                </div>
-            </div>
-            <div class="modal-actions">
-                <button onclick="closeDeleteModal()" class="btn btn-back">Отмена</button>
-                <button onclick="confirmDelete()" class="btn btn-danger">Удалить</button>
-            </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Название <span class="required">*</span></label>
+          <input type="text" id="cellName" required placeholder="Ячейка 1">
         </div>
+        <div class="form-group">
+          <label>Код (полный адрес)</label>
+          <input type="text" id="cellCode" placeholder="A-01-01">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Вместимость (макс. единиц)</label>
+        <input type="number" id="cellCapacity" min="0" placeholder="Оставьте пустым, если без ограничений">
+      </div>
+
+      <div class="form-group">
+        <label>Описание</label>
+        <textarea id="cellDescription" placeholder="Дополнительная информация..."></textarea>
+      </div>
+
+      <div class="form-group" id="cellActiveGroup" style="display: none;">
+        <label class="checkbox-label">
+          <input type="checkbox" id="cellIsActive" checked>
+          <span>✅ Активна</span>
+        </label>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" id="cellSaveBtn">💾 Сохранить</button>
+        <button type="button" class="btn btn-ghost" onclick="closeCellModal()">Отмена</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- МОДАЛЬНОЕ ОКНО: ПРОСМОТР ЯЧЕЙКИ                                -->
+<!-- ============================================================ -->
+
+<div class="modal-overlay" id="cellViewModal">
+  <div class="modal view-user-modal">
+    <div class="modal-header">
+      <h3 id="cellViewTitle">Ячейка</h3>
+      <button onclick="closeCellViewModal()" class="modal-close">✕</button>
     </div>
+    <div id="cellViewBody">
+      <!-- Заполняется JS -->
+    </div>
+  </div>
+</div>
 
-    <div class="toast-container" id="toastContainer"></div>
+<!-- ============================================================ -->
+<!-- МОДАЛЬНОЕ ОКНО: УДАЛЕНИЕ                                       -->
+<!-- ============================================================ -->
 
-    <script src="/js/main.js"></script>
-    <script src="/js/help.js"></script>
-    <script src="/js/footer.js"></script>
-    <script src="/js/warehouse-details.js"></script>
-</body>
-</html>
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>🗑️ Удаление</h3>
+      <button onclick="closeDeleteModal()" class="modal-close">✕</button>
+    </div>
+    <p id="deleteMessage">Вы уверены?</p>
+    <div id="deleteWarning" class="delete-warning" style="display: none;">
+      <span class="warning-icon">⚠️</span>
+      <div>
+        <strong>Внимание!</strong>
+        <p id="deleteWarningText"></p>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button onclick="closeDeleteModal()" class="btn btn-ghost">Отмена</button>
+      <button onclick="confirmDelete()" class="btn btn-danger">Удалить</button>
+    </div>
+  </div>
+</div>
