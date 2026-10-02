@@ -13,7 +13,6 @@ let deleteTarget = null;
 // ============================================================
 
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🏢 Страница складов: загрузка...');
     await loadWarehouses();
 });
 
@@ -28,16 +27,15 @@ async function loadWarehouses() {
         const response = await fetch('/api/admin/warehouses');
         warehouses = await response.json();
 
-        console.log(`✅ Загружено складов: ${warehouses.length}`);
         renderWarehouses();
         updateStats();
     } catch (error) {
-        console.error('❌ Ошибка загрузки:', error);
+        console.error('❌ Ошибка загрузки складов:', error);
         container.innerHTML = `
-            <div class="catalog-empty">
-                <span class="empty-icon">❌</span>
-                <div class="empty-text">Ошибка загрузки</div>
-                <div class="empty-hint">${escapeHtml(error.message)}</div>
+            <div class="empty-state">
+                <span class="emoji">❌</span>
+                <h3>Ошибка загрузки</h3>
+                <p>${escapeHtml(error.message)}</p>
             </div>
         `;
     }
@@ -53,10 +51,10 @@ function renderWarehouses() {
 
     if (warehouses.length === 0) {
         container.innerHTML = `
-            <div class="catalog-empty">
-                <span class="empty-icon">📭</span>
-                <div class="empty-text">Складов пока нет</div>
-                <div class="empty-hint">Нажмите "➕ Добавить склад" чтобы создать первый</div>
+            <div class="empty-state">
+                <span class="emoji">📭</span>
+                <h3>Складов пока нет</h3>
+                <p>Нажмите "➕ Добавить склад" чтобы создать первый</p>
             </div>
         `;
         return;
@@ -74,11 +72,11 @@ function renderWarehouses() {
 
         const badges = [];
         if (isDefault) {
-            badges.push('<span class="badge badge-default">⭐ По умолчанию</span>');
+            badges.push('<span class="badge badge-warning">⭐ По умолчанию</span>');
         }
         badges.push(isInactive 
-            ? '<span class="badge badge-inactive">🚫 Неактивен</span>'
-            : '<span class="badge badge-active">✅ Активен</span>'
+            ? '<span class="badge badge-danger">🚫 Неактивен</span>'
+            : '<span class="badge badge-success">✅ Активен</span>'
         );
 
         const addressHtml = wh.address 
@@ -91,7 +89,7 @@ function renderWarehouses() {
 
         const setDefaultBtn = isDefault
             ? ''
-            : `<button onclick="setDefaultWarehouse(${wh.id})" class="btn btn-back btn-icon-only" title="Сделать по умолчанию">⭐</button>`;
+            : `<button onclick="setDefaultWarehouse(${wh.id})" class="btn btn-ghost btn-sm btn-icon-only" title="Сделать по умолчанию">⭐</button>`;
 
         return `
             <div class="${classes}">
@@ -148,9 +146,8 @@ function renderWarehouses() {
 }
 
 function updateStats() {
-    const statWarehouses = document.querySelector('.stat-card .number');
-    // Статистика обновляется через сервер, ничего не делаем
-    // Если нужно — можно пересчитать на клиенте
+    // Статистика обновляется через сервер (плейсхолдеры {{...}}), 
+    // клиентский пересчёт не требуется.
 }
 
 // ============================================================
