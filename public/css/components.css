@@ -637,6 +637,39 @@ tr:last-child td {
 }
 
 /* ============================================================
+   ПОИСК В ТАБЛИЦАХ
+   ============================================================ */
+
+.table-search {
+    display: flex;
+    gap: var(--space-sm);
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.table-search input {
+    padding: 8px 14px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-size: var(--text-sm);
+    font-family: inherit;
+    width: 200px;
+    transition: all var(--transition-fast);
+}
+
+.table-search input::placeholder {
+    color: var(--text-muted);
+}
+
+.table-search input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-bg);
+}
+
+/* ============================================================
    АДАПТИВНОСТЬ
    ============================================================ */
 

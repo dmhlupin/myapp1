@@ -1,5 +1,62 @@
 # История изменений
 
+## [1.16.4] - 2026-10-02
+
+**Админ-панель: перевод CSS на тёмную тему и общие компоненты**
+
+### Изменения:
+
+**public/css/admin.css:**
+- Полностью переписан под тёмную тему (переменные theme.css)
+- Убраны дубли, которые уже есть в components.css:
+  - .stats / .stat-card / .number / .label / .icon
+  - .tabs / .tab-btn / .tab-content (перенесены в components.css)
+  - .table-container / .table-header / table / th / td
+  - .badge / .badge-active / .badge-inactive
+  - .modal-header / .modal-close
+  - .table-search input (перенесено в components.css)
+- Все цвета переведены на var(--*) из theme.css
+- .btn-icon переопределён локально в .action-buttons (28×28) —
+  глобальный .btn-icon в components.css остаётся 36×36
+- Цветные модификаторы .btn-icon (.btn-info, .btn-edit, .btn-warning,
+  .btn-success, .btn-delete, .btn-move) сохранены как специфика /admin
+- .badge-active / .badge-inactive заменены на
+  .badge-count.has-items / .badge-count.no-items
+- Свои стили оставлены: .assigned-cell, .location-cell, .catalog-badge,
+  .user-cell, .role-badge, .status-badge, .action-buttons,
+  .password-modal, .view-user-modal, .user-header-card,
+  .equipment-header-card, .user-stats, .detail-grid, .equipment-cards,
+  .current-user-card, .empty-equipment, .history-table, .delete-warning,
+  .move-modal, .move-equipment-info, .move-current-location,
+  .move-preview, .location-detail-item, .btn-move-inline, .id-badge,
+  .row-blocked
+- Адаптивность сохранена и адаптирована под новые размеры
+
+**public/css/components.css:**
+- Добавлена секция "Поиск в таблицах" (.table-search и input):
+  - Раньше стили были только в admin.css (светлые)
+  - Теперь общие на переменных theme.css
+  - Понадобится на /users, /admin/catalog и других страницах
+
+**routes/admin.js:**
+- В renderAdmin заменён класс счётчика ТМЦ:
+  - было: .badge .badge-active / .badge-inactive
+  - стало: .badge-count.has-items / .badge-count.no-items
+- Причина: классы .badge-active / .badge-inactive удалены вместе с дублями,
+  счётчик ТМЦ теперь использует новый компонент .badge-count
+
+Связанные подшаги Этапа 1.5 (без отдельных тегов):
+- v1.16.2 — .tabs / .tab-btn / .tab-content вынесены в components.css
+- v1.16.3 — views/admin.html переведён в контент-шаблон
+  (thead таблицы пользователей приведён к 9 колонкам,
+  .btn-back заменён на .btn-ghost, убраны html/head/body
+  и подключения CSS/JS)
+
+Проверено: админ-панель открывается, табы переключаются,
+таблицы техники и пользователей отображаются,
+модалки (удаление, пароль, просмотр, перемещение) работают,
+поиск в таблицах стилизован, адаптивность сохранена.
+
 ## [1.16.1] - 2026-10-02
 
 **Личный кабинет полностью переведён на новый дизайн**

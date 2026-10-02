@@ -176,7 +176,7 @@ async function renderAdmin(req, res) {
           <td>${user.email}</td>
           <td>${user.department || '—'}</td>
           <td>${roleBadge}</td>
-          <td><span class="badge ${hasEquipment ? 'badge-active' : 'badge-inactive'}">${equipmentCount}</span></td>
+          <td><span class="badge-count ${hasEquipment ? 'has-items' : 'no-items'}">${equipmentCount}</span></td>
           <td>${statusBadge}</td>
           <td style="font-size: 12px; color: #666;">${lastLogin}</td>
           <td>
