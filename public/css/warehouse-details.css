@@ -1,21 +1,26 @@
-/* public/css/warehouse-details.css — Стили для страницы деталей склада */
+/* ============================================================
+   public/css/warehouse-details.css — Специфика страницы
+   деталей склада (/admin/warehouses/:id)
+   Общие стили — в theme.css, layout.css, components.css
+   ============================================================ */
 
 /* ============================================================
    ПАНЕЛЬ ИНФОРМАЦИИ О СКЛАДЕ
    ============================================================ */
 
 .warehouse-info-panel {
-    background: white;
-    border-radius: 12px;
-    padding: 25px 30px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-    margin-bottom: 25px;
-    border-left: 4px solid #667eea;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: var(--space-xl);
 }
 
 .warehouse-info-header {
     display: flex;
-    gap: 20px;
+    gap: var(--space-lg);
     align-items: flex-start;
     flex-wrap: wrap;
 }
@@ -23,8 +28,8 @@
 .warehouse-info-icon {
     width: 64px;
     height: 64px;
-    border-radius: 14px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: var(--radius-lg);
+    background: linear-gradient(135deg, var(--accent) 0%, var(--purple) 100%);
     color: white;
     display: flex;
     align-items: center;
@@ -39,50 +44,27 @@
 }
 
 .warehouse-info-text h2 {
-    color: #2d3748;
-    font-size: 22px;
-    margin: 0 0 8px 0;
+    color: var(--text-primary);
+    font-size: var(--text-xl);
+    margin: 0 0 var(--space-sm) 0;
 }
 
 .warehouse-info-badges {
     display: flex;
-    gap: 8px;
+    gap: var(--space-xs);
     flex-wrap: wrap;
-    margin-bottom: 8px;
-}
-
-.warehouse-info-badges .badge {
-    display: inline-block;
-    padding: 3px 10px;
-    border-radius: 10px;
-    font-size: 12px;
-    font-weight: 600;
-}
-
-.warehouse-info-badges .badge-default {
-    background: #feebc8;
-    color: #7b341e;
-}
-
-.warehouse-info-badges .badge-active {
-    background: #c6f6d5;
-    color: #22543d;
-}
-
-.warehouse-info-badges .badge-inactive {
-    background: #fed7d7;
-    color: #742a2a;
+    margin-bottom: var(--space-sm);
 }
 
 .warehouse-info-description {
-    color: #718096;
-    font-size: 14px;
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
     line-height: 1.5;
 }
 
 .warehouse-info-actions {
     display: flex;
-    gap: 8px;
+    gap: var(--space-xs);
     flex-wrap: wrap;
 }
 
@@ -91,81 +73,83 @@
    ============================================================ */
 
 .tree-section {
-    background: white;
-    border-radius: 12px;
-    padding: 25px 30px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-    margin-bottom: 25px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: var(--space-xl);
 }
 
 .tree-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
-    padding-bottom: 15px;
-    border-bottom: 1px solid #e2e8f0;
+    margin-bottom: var(--space-lg);
+    padding-bottom: var(--space-md);
+    border-bottom: 1px solid var(--border);
     flex-wrap: wrap;
-    gap: 10px;
+    gap: var(--space-sm);
 }
 
 .tree-header h2 {
-    color: #2d3748;
-    font-size: 18px;
+    color: var(--text-primary);
+    font-size: var(--text-lg);
     margin: 0;
 }
 
 .tree-actions {
     display: flex;
-    gap: 8px;
+    gap: var(--space-xs);
     flex-wrap: wrap;
 }
 
 /* ============================================================
-   ДЕРЕВО
+   ДЕРЕВО (Зоны → Стеллажи → Ячейки)
    ============================================================ */
 
 .warehouse-tree {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: var(--space-md);
 }
 
-/* Зона (уровень 1) */
+/* --- Зона (уровень 1) --- */
+
 .tree-zone {
-    background: #f7fafc;
-    border: 1px solid #e2e8f0;
-    border-left: 4px solid #667eea;
-    border-radius: 10px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    border-radius: var(--radius-md);
     overflow: hidden;
-    transition: all 0.2s;
+    transition: all var(--transition-fast);
 }
 
 .tree-zone:hover {
-    border-color: #667eea;
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
+    border-color: var(--accent);
+    box-shadow: var(--shadow-sm);
 }
 
 .tree-zone-header {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: var(--space-md);
     padding: 14px 18px;
     cursor: pointer;
     user-select: none;
-    transition: background 0.2s;
+    transition: background var(--transition-fast);
 }
 
 .tree-zone-header:hover {
-    background: #edf2f7;
+    background: var(--bg-hover);
 }
 
 .tree-zone-header .toggle {
-    font-size: 14px;
-    color: #718096;
+    font-size: var(--text-sm);
+    color: var(--text-muted);
     width: 20px;
     text-align: center;
-    transition: transform 0.2s;
+    transition: transform var(--transition-fast);
 }
 
 .tree-zone-header .icon {
@@ -180,21 +164,21 @@
 
 .tree-zone-name {
     font-weight: 600;
-    color: #2d3748;
-    font-size: 15px;
+    color: var(--text-primary);
+    font-size: var(--text-base);
     margin-bottom: 2px;
 }
 
 .tree-zone-description {
-    font-size: 12px;
-    color: #718096;
+    font-size: var(--text-xs);
+    color: var(--text-muted);
 }
 
 .tree-zone-meta {
     display: flex;
-    gap: 15px;
-    font-size: 12px;
-    color: #a0aec0;
+    gap: var(--space-md);
+    font-size: var(--text-xs);
+    color: var(--text-muted);
     flex-shrink: 0;
 }
 
@@ -204,49 +188,50 @@
     flex-shrink: 0;
 }
 
-/* Стеллаж (уровень 2) */
 .tree-zone-body {
     padding: 0 15px 15px 45px;
     display: none;
     flex-direction: column;
-    gap: 10px;
+    gap: var(--space-sm);
 }
 
 .tree-zone.expanded .tree-zone-body {
     display: flex;
 }
 
+/* --- Стеллаж (уровень 2) --- */
+
 .tree-rack {
-    background: white;
-    border: 1px solid #e2e8f0;
-    border-left: 4px solid #48bb78;
-    border-radius: 8px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--success);
+    border-radius: var(--radius-md);
     overflow: hidden;
-    transition: all 0.2s;
+    transition: all var(--transition-fast);
 }
 
 .tree-rack:hover {
-    border-color: #48bb78;
-    box-shadow: 0 3px 8px rgba(72, 187, 120, 0.1);
+    border-color: var(--success);
+    box-shadow: var(--shadow-sm);
 }
 
 .tree-rack-header {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: var(--space-sm);
     padding: 12px 16px;
     cursor: pointer;
     user-select: none;
-    transition: background 0.2s;
+    transition: background var(--transition-fast);
 }
 
 .tree-rack-header:hover {
-    background: #f7fafc;
+    background: var(--bg-hover);
 }
 
 .tree-rack-header .toggle {
-    font-size: 13px;
-    color: #718096;
+    font-size: var(--text-xs);
+    color: var(--text-muted);
     width: 18px;
     text-align: center;
 }
@@ -263,21 +248,21 @@
 
 .tree-rack-name {
     font-weight: 600;
-    color: #2d3748;
-    font-size: 14px;
+    color: var(--text-primary);
+    font-size: var(--text-sm);
     margin-bottom: 2px;
 }
 
 .tree-rack-description {
     font-size: 11px;
-    color: #a0aec0;
+    color: var(--text-muted);
 }
 
 .tree-rack-meta {
     display: flex;
-    gap: 12px;
-    font-size: 12px;
-    color: #a0aec0;
+    gap: var(--space-sm);
+    font-size: var(--text-xs);
+    color: var(--text-muted);
     flex-shrink: 0;
 }
 
@@ -287,34 +272,35 @@
     flex-shrink: 0;
 }
 
-/* Ячейки (уровень 3) */
 .tree-rack-body {
     padding: 0 12px 12px 40px;
     display: none;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--space-xs);
 }
 
 .tree-rack.expanded .tree-rack-body {
     display: flex;
 }
 
+/* --- Ячейка (уровень 3) --- */
+
 .tree-cell {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: var(--space-sm);
     padding: 10px 14px;
-    background: #f7fafc;
-    border: 1px solid #e2e8f0;
-    border-left: 3px solid #ed64a6;
-    border-radius: 6px;
-    transition: all 0.2s;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--purple);
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-fast);
     cursor: pointer;
 }
 
 .tree-cell:hover {
-    background: #fff5f7;
-    border-color: #ed64a6;
+    background: var(--bg-hover);
+    border-color: var(--purple);
     transform: translateX(3px);
 }
 
@@ -330,50 +316,50 @@
 
 .tree-cell-name {
     font-weight: 500;
-    color: #2d3748;
-    font-size: 13px;
+    color: var(--text-primary);
+    font-size: var(--text-sm);
 }
 
 .tree-cell-code {
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-size: 11px;
-    color: #667eea;
-    background: #ebf8ff;
+    color: var(--accent);
+    background: var(--accent-bg);
     padding: 1px 6px;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     display: inline-block;
     margin-top: 2px;
 }
 
 .tree-cell-meta {
     display: flex;
-    gap: 12px;
+    gap: var(--space-sm);
     font-size: 11px;
-    color: #a0aec0;
+    color: var(--text-muted);
     flex-shrink: 0;
     align-items: center;
 }
 
 .tree-cell-count {
     padding: 2px 8px;
-    border-radius: 10px;
+    border-radius: var(--radius-full);
     font-size: 11px;
     font-weight: 600;
 }
 
 .tree-cell-count.empty {
-    background: #edf2f7;
-    color: #a0aec0;
+    background: var(--bg-hover);
+    color: var(--text-muted);
 }
 
 .tree-cell-count.has-items {
-    background: #c6f6d5;
-    color: #22543d;
+    background: var(--success-bg);
+    color: var(--success);
 }
 
 .tree-cell-count.full {
-    background: #fed7d7;
-    color: #742a2a;
+    background: var(--danger-bg);
+    color: var(--danger);
 }
 
 .tree-cell-actions {
@@ -382,84 +368,166 @@
     flex-shrink: 0;
 }
 
-/* Кнопки-иконки в дереве */
+/* --- Кнопки-иконки в дереве --- */
+
 .tree-btn {
     width: 28px;
     height: 28px;
     padding: 0;
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    background: white;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
     cursor: pointer;
-    font-size: 12px;
+    font-size: var(--text-xs);
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s;
+    transition: all var(--transition-fast);
     flex-shrink: 0;
 }
 
 .tree-btn:hover {
     transform: translateY(-1px);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-sm);
 }
 
 .tree-btn.edit {
-    color: #2b6cb0;
+    color: var(--accent);
 }
 
 .tree-btn.edit:hover {
-    background: #ebf8ff;
-    border-color: #90cdf4;
+    background: var(--accent-bg);
+    border-color: var(--accent);
 }
 
 .tree-btn.delete {
-    color: #c53030;
+    color: var(--danger);
 }
 
 .tree-btn.delete:hover {
-    background: #fff5f5;
-    border-color: #fc8181;
+    background: var(--danger-bg);
+    border-color: var(--danger);
 }
 
 .tree-btn.add {
-    color: #2f855a;
+    color: var(--success);
 }
 
 .tree-btn.add:hover {
-    background: #f0fff4;
-    border-color: #9ae6b4;
+    background: var(--success-bg);
+    border-color: var(--success);
 }
 
 /* ============================================================
-   ПУСТЫЕ СОСТОЯНИЯ
+   ПУСТЫЕ СОСТОЯНИЯ (вложенные в дерево)
    ============================================================ */
 
 .tree-empty {
-    padding: 40px 20px;
+    padding: var(--space-xl) var(--space-lg);
     text-align: center;
-    color: #a0aec0;
-    background: #f7fafc;
-    border-radius: 10px;
-    border: 2px dashed #e2e8f0;
+    color: var(--text-muted);
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+    border: 2px dashed var(--border);
 }
 
 .tree-empty .empty-icon {
     font-size: 48px;
     display: block;
-    margin-bottom: 12px;
+    margin-bottom: var(--space-md);
     opacity: 0.5;
 }
 
 .tree-empty .empty-text {
-    font-size: 15px;
-    color: #4a5568;
+    font-size: var(--text-base);
+    color: var(--text-secondary);
     font-weight: 600;
     margin-bottom: 6px;
 }
 
 .tree-empty .empty-hint {
-    font-size: 13px;
+    font-size: var(--text-sm);
+}
+
+/* ============================================================
+   МОДАЛКА ПРОСМОТРА ЯЧЕЙКИ
+   ============================================================ */
+
+#cellViewModal .view-user-modal {
+    max-width: 700px;
+}
+
+.cell-view-header {
+    background: linear-gradient(135deg, var(--purple) 0%, #a855f7 100%);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    color: white;
+    margin-bottom: var(--space-lg);
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+}
+
+.cell-view-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: var(--radius-lg);
+    background: rgba(255, 255, 255, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    flex-shrink: 0;
+}
+
+.cell-view-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.cell-view-info h2 {
+    color: white;
+    font-size: var(--text-xl);
+    margin: 0 0 var(--space-xs) 0;
+}
+
+.cell-view-code {
+    font-family: var(--font-mono);
+    background: rgba(255, 255, 255, 0.2);
+    padding: 2px 10px;
+    border-radius: var(--radius-sm);
+    font-size: var(--text-sm);
+    display: inline-block;
+}
+
+.cell-view-section {
+    margin-bottom: var(--space-lg);
+}
+
+.cell-view-section h4 {
+    color: var(--text-primary);
+    font-size: var(--text-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: var(--space-md);
+    padding-bottom: var(--space-sm);
+    border-bottom: 2px solid var(--border);
+}
+
+.cell-view-empty {
+    text-align: center;
+    padding: var(--space-xl);
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+    color: var(--text-muted);
+}
+
+.cell-view-empty .emoji {
+    font-size: 40px;
+    display: block;
+    margin-bottom: var(--space-sm);
+    opacity: 0.5;
 }
 
 /* ============================================================
@@ -469,7 +537,7 @@
 @media (max-width: 768px) {
     .warehouse-info-header {
         flex-direction: column;
-        gap: 15px;
+        gap: var(--space-md);
     }
 
     .warehouse-info-icon {
@@ -488,7 +556,7 @@
     }
 
     .tree-section {
-        padding: 20px 15px;
+        padding: var(--space-md);
     }
 
     .tree-header {
@@ -518,7 +586,7 @@
 
     .tree-zone-name,
     .tree-rack-name {
-        font-size: 13px;
+        font-size: var(--text-sm);
     }
 
     .tree-btn {
@@ -526,84 +594,4 @@
         height: 26px;
         font-size: 11px;
     }
-}
-
-/* ============================================================
-   МОДАЛКА ПРОСМОТРА ЯЧЕЙКИ
-   ============================================================ */
-
-#cellViewModal .view-user-modal {
-    max-width: 700px;
-}
-
-.cell-view-header {
-    background: linear-gradient(135deg, #ed64a6 0%, #d53f8c 100%);
-    border-radius: 12px;
-    padding: 20px;
-    color: white;
-    margin-bottom: 20px;
-    display: flex;
-    align-items: center;
-    gap: 15px;
-}
-
-.cell-view-icon {
-    width: 60px;
-    height: 60px;
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.25);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 32px;
-    flex-shrink: 0;
-}
-
-.cell-view-info {
-    flex: 1;
-    min-width: 0;
-}
-
-.cell-view-info h2 {
-    color: white;
-    font-size: 20px;
-    margin: 0 0 4px 0;
-}
-
-.cell-view-code {
-    font-family: 'Courier New', monospace;
-    background: rgba(255, 255, 255, 0.2);
-    padding: 2px 10px;
-    border-radius: 6px;
-    font-size: 13px;
-    display: inline-block;
-}
-
-.cell-view-section {
-    margin-bottom: 20px;
-}
-
-.cell-view-section h4 {
-    color: #2d3748;
-    font-size: 14px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 12px;
-    padding-bottom: 8px;
-    border-bottom: 2px solid #e2e8f0;
-}
-
-.cell-view-empty {
-    text-align: center;
-    padding: 30px;
-    background: #f7fafc;
-    border-radius: 10px;
-    color: #a0aec0;
-}
-
-.cell-view-empty .emoji {
-    font-size: 40px;
-    display: block;
-    margin-bottom: 10px;
-    opacity: 0.5;
 }
