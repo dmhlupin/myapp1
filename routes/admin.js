@@ -1055,6 +1055,9 @@ async function renderEditUser(req, res) {
 // ЛОГИ
 // ============================================================
 
+/**
+ * GET /admin/logs — страница логов активности
+ */
 async function renderLogs(req, res) {
   try {
     const filters = {
@@ -1066,32 +1069,32 @@ async function renderLogs(req, res) {
       limit: req.query.limit ? parseInt(req.query.limit) : 50,
       offset: req.query.offset ? parseInt(req.query.offset) : 0
     };
-    
+
     const logs = await getActivityLogs(filters);
     const totalCount = await getActivityLogsCount(filters);
     const stats = await getActivityStats(30);
     const users = await getAllUsers();
     const actions = await getUniqueActions();
-    
+
     const htmlPath = path.join(__dirname, '..', 'views', 'admin-logs.html');
-    let html = fs.readFileSync(htmlPath, 'utf8');
-    
-    html = html.replace(/\{\{stats\.total\}\}/g, stats.total || 0);
-    html = html.replace(/\{\{stats\.unique_users\}\}/g, stats.unique_users || 0);
-    html = html.replace(/\{\{stats\.logins\}\}/g, stats.logins || 0);
-    html = html.replace(/\{\{stats\.failed_logins\}\}/g, stats.failed_logins || 0);
-    html = html.replace(/\{\{stats\.equipment_actions\}\}/g, stats.equipment_actions || 0);
-    html = html.replace(/\{\{stats\.user_actions\}\}/g, stats.user_actions || 0);
-    html = html.replace(/\{\{stats\.deletes\}\}/g, stats.deletes || 0);
-    
+    let content = fs.readFileSync(htmlPath, 'utf8');
+
+    content = content.replace(/\{\{stats\.total\}\}/g, stats.total || 0);
+    content = content.replace(/\{\{stats\.unique_users\}\}/g, stats.unique_users || 0);
+    content = content.replace(/\{\{stats\.logins\}\}/g, stats.logins || 0);
+    content = content.replace(/\{\{stats\.failed_logins\}\}/g, stats.failed_logins || 0);
+    content = content.replace(/\{\{stats\.equipment_actions\}\}/g, stats.equipment_actions || 0);
+    content = content.replace(/\{\{stats\.user_actions\}\}/g, stats.user_actions || 0);
+    content = content.replace(/\{\{stats\.deletes\}\}/g, stats.deletes || 0);
+
     // Список пользователей для фильтра
     let userOptions = '<option value="">Все пользователи</option>';
     users.forEach(u => {
       const selected = filters.userId === u.id ? 'selected' : '';
-      userOptions += `<option value="${u.id}" ${selected}>${u.full_name || u.username}</option>`;
+      userOptions += `<option value="${u.id}" ${selected}>${escapeHtml(u.full_name || u.username)}</option>`;
     });
-    html = html.replace('{{user_options}}', userOptions);
-    
+    content = content.replace('{{user_options}}', userOptions);
+
     // Список действий
     const actionNames = {
       'login': '🔐 Вход',
@@ -1131,19 +1134,19 @@ async function renderLogs(req, res) {
       'cell_update': '📦 Редактирование ячейки',
       'cell_delete': '📦 Удаление ячейки',
     };
-    
+
     let actionOptions = '<option value="">Все действия</option>';
     actions.forEach(a => {
       const selected = filters.action === a.action ? 'selected' : '';
       const label = actionNames[a.action] || a.action;
       actionOptions += `<option value="${a.action}" ${selected}>${label} (${a.count})</option>`;
     });
-    html = html.replace('{{action_options}}', actionOptions);
-    
-    html = html.replace(/\{\{filter\.search\}\}/g, filters.search || '');
-    html = html.replace(/\{\{filter\.dateFrom\}\}/g, filters.dateFrom || '');
-    html = html.replace(/\{\{filter\.dateTo\}\}/g, filters.dateTo || '');
-    
+    content = content.replace('{{action_options}}', actionOptions);
+
+    content = content.replace(/\{\{filter\.search\}\}/g, escapeHtml(filters.search || ''));
+    content = content.replace(/\{\{filter\.dateFrom\}\}/g, filters.dateFrom || '');
+    content = content.replace(/\{\{filter\.dateTo\}\}/g, filters.dateTo || '');
+
     // Строки логов
     let logRows = '';
     if (logs.length === 0) {
@@ -1168,24 +1171,24 @@ async function renderLogs(req, res) {
         else if (log.action === 'login_failed') actionClass = 'log-action-failed';
         else if (log.action.includes('block')) actionClass = 'log-action-block';
         else if (log.action === 'equipment_move') actionClass = 'log-action-move';
-        
+
         const actionLabel = actionNames[log.action] || log.action;
-        
+
         let detailsHtml = '—';
         if (log.details) {
           try {
             const parsed = JSON.parse(log.details);
             detailsHtml = Object.entries(parsed)
-              .map(([k, v]) => `<span class="log-detail-key">${k}:</span> <span class="log-detail-value">${v}</span>`)
+              .map(([k, v]) => `<span class="log-detail-key">${escapeHtml(k)}:</span> <span class="log-detail-value">${escapeHtml(String(v))}</span>`)
               .join('<br>');
           } catch {
             detailsHtml = escapeHtml(log.details);
           }
         }
-        
+
         const userName = log.user_full_name || log.username || '—';
         const userInitials = getInitials(log.user_full_name || log.username);
-        
+
         logRows += `
           <tr>
             <td class="log-date">${formatDateTime(log.created_at)}</td>
@@ -1193,14 +1196,14 @@ async function renderLogs(req, res) {
               <div class="log-user">
                 <span class="log-avatar">${userInitials}</span>
                 <div>
-                  <div class="log-user-name">${userName}</div>
-                  ${log.user_department ? `<div class="log-user-dept">${log.user_department}</div>` : ''}
+                  <div class="log-user-name">${escapeHtml(userName)}</div>
+                  ${log.user_department ? `<div class="log-user-dept">${escapeHtml(log.user_department)}</div>` : ''}
                 </div>
               </div>
             </td>
             <td><span class="log-action ${actionClass}">${actionLabel}</span></td>
             <td class="log-entity">
-              ${log.entity_type ? `<span class="log-entity-type">${log.entity_type}</span>` : ''}
+              ${log.entity_type ? `<span class="log-entity-type">${escapeHtml(log.entity_type)}</span>` : ''}
               ${log.entity_id ? `<span class="log-entity-id">#${log.entity_id}</span>` : ''}
               ${!log.entity_type && !log.entity_id ? '—' : ''}
             </td>
@@ -1210,18 +1213,18 @@ async function renderLogs(req, res) {
         `;
       });
     }
-    html = html.replace('{{log_rows}}', logRows);
-    
+    content = content.replace('{{log_rows}}', logRows);
+
     // Пагинация
     const totalPages = Math.ceil(totalCount / filters.limit);
     const currentPage = Math.floor(filters.offset / filters.limit) + 1;
-    
+
     let pagination = '';
     if (totalPages > 1) {
       pagination = `<div class="pagination">`;
       pagination += `<span class="pagination-info">Страница ${currentPage} из ${totalPages} (всего: ${totalCount})</span>`;
       pagination += `<div class="pagination-buttons">`;
-      
+
       const buildQuery = (offset) => {
         const params = new URLSearchParams();
         if (filters.userId) params.set('userId', filters.userId);
@@ -1233,22 +1236,29 @@ async function renderLogs(req, res) {
         params.set('offset', offset);
         return '?' + params.toString();
       };
-      
+
       if (filters.offset > 0) {
         pagination += `<a href="/admin/logs${buildQuery(filters.offset - filters.limit)}" class="pagination-btn">← Назад</a>`;
       }
-      
+
       if (filters.offset + filters.limit < totalCount) {
         pagination += `<a href="/admin/logs${buildQuery(filters.offset + filters.limit)}" class="pagination-btn">Вперёд →</a>`;
       }
-      
+
       pagination += `</div></div>`;
     } else {
       pagination = `<div class="pagination"><span class="pagination-info">Всего: ${totalCount} записей</span></div>`;
     }
-    html = html.replace('{{pagination}}', pagination);
-    
-    res.send(html);
+    content = content.replace('{{pagination}}', pagination);
+
+    const fullHtml = renderPage({
+      title: 'Логи активности – MoveIT service',
+      content,
+      pageCss: '/css/logs.css',
+      pageJs: '/js/logs.js',
+    });
+
+    res.send(fullHtml);
   } catch (error) {
     console.error('❌ Ошибка загрузки логов:', error);
     res.status(500).send('Ошибка загрузки страницы логов');

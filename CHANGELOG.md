@@ -1,5 +1,130 @@
 # История изменений
 
+## [1.20.0] - 2026-10-02
+
+**Шаг 1.9: /admin/logs на новом layout**
+
+Страница логов активности переведена на новый layout через
+`renderPage()`: sidebar + header + footer через партиалы, тёмная
+тема, общие компоненты из `components.css`. Шаблон, CSS и роут
+обновлены. JS почти не тронут — только проверка на отсутствие
+регрессий.
+
+### Шаг 1.9.1 — views/admin-logs.html → контент-шаблон
+
+**views/admin-logs.html:**
+- Убраны `<!DOCTYPE>`, `<html>`, `<head>`, `<body>`
+- Убраны `<link>` на `style.css`, `admin.css`, `logs.css`, `help.css`
+- Убраны `<script>` на `main.js`, `logs.js`, `help.js`, `footer.js`
+- Убран `#footer-container` (футер в партиале)
+- Убран `.toast-container` (в layout)
+- `.header` с 4 кнопками (Дашборд / Админ-панель / Профиль / Выйти)
+  → `.page-header` + `.page-actions` с одной кнопкой «← Админ-панель»
+- `.stats` → `.stats-grid` (общий компонент из `components.css`)
+- `.number green` → `.number success`,
+  `.number red` → `.number danger`,
+  `.number orange` → `.number warning`,
+  `.number pink` → `.number accent` (модификаторы `components.css`)
+- `.filters-card` → `.card` + `.card-header` + `.card-body`
+- Inline-стили на `<th>` (6 колонок) — убраны (ширины через
+  `nth-child(N)` в `logs.css`)
+- `.btn-back` → `.btn-ghost` (кнопки «Сбросить» / «Обновить»)
+- `.filters-form`, `name="..."` всех полей, все `{{...}}` плейсхолдеры
+  сохранены — `public/js/logs.js` работает без правок
+
+### Шаг 1.9.2 — public/css/logs.css → тёмная тема + чистка
+
+**public/css/logs.css:**
+- Полностью переписан под тёмную тему (переменные `theme.css`)
+- Убраны дубли с `components.css`:
+  - `.stats` / `.stat-card` / `.number` / `.label` / `.icon`
+  - `.number.green` / `.red` / `.orange` / `.pink`
+- Все цвета переведены на `var(--*)`:
+  - `--bg-primary` / `--bg-secondary` / `--bg-tertiary`
+  - `--border` / `--border-light`
+  - `--text-primary` / `--text-secondary` / `--text-muted`
+  - `--accent` / `--success` / `--warning` / `--danger` / `--purple`
+  - `--font-sans` / `--font-mono`
+  - `--space-*` / `--radius-*` / `--transition-fast`
+- Оставлена специфика:
+  - `.filters-form` / `.filter-row` / `.filter-group` /
+    `.filter-group-wide` / `.filter-actions`
+  - `.logs-table` + ширины колонок через `th:nth-child(N)`
+  - `.log-date` (добавлен — в шаблоне используется)
+  - `.log-user` / `.log-avatar` / `.log-user-name` / `.log-user-dept`
+  - `.log-action` + 8 модификаторов (`-default`, `-login`, `-failed`,
+    `-create`, `-update`, `-delete`, `-block`, `-move`)
+  - `.log-entity` / `.log-entity-type` / `.log-entity-id`
+  - `.log-details` / `.log-detail-key` / `.log-detail-value`
+  - `.log-ip`
+  - `.pagination` / `.pagination-info` / `.pagination-buttons` /
+    `.pagination-btn` (в `components.css` их нет — оставлены локально)
+- Адаптивность сохранена: ≤992px скрывает IP, ≤768px — объект и
+  детали, `.filter-row` в одну колонку
+
+### Шаг 1.9.3 — routes/admin.js → renderPage
+
+**routes/admin.js:**
+- `renderLogs`:
+  - `fs.readFile` + `res.send` заменены на `renderPage`
+  - переменная `html` переименована в `content`
+  - `pageCss: '/css/logs.css'`
+  - `pageJs: '/js/logs.js'`
+  - `title: 'Логи активности – MoveIT service'`
+  - Автоматически подключаются партиалы header/sidebar/footer
+    и общие CSS/JS
+  - Логика фильтров, `actionNames` (35+ записей), рендер строк,
+    пагинация — без изменений
+  - **Дополнительно добавлено `escapeHtml`** в 5 местах:
+    - `userOptions` (ФИО / username пользователя)
+    - `filter.search` (пользовательский ввод)
+    - `detailsHtml` (ключи и значения JSON-деталей)
+    - `userName` (ФИО пользователя)
+    - `log.user_department` (отдел)
+    - `log.entity_type` (тип сущности)
+    Это закрывает потенциальную XSS через пользовательские данные
+    в логах (раньше не экранировалось)
+- API-функции (`getLogsAPI`, `cleanLogsAPI` и т.д.) — без изменений
+
+**public/js/logs.js:**
+- Не тронут — работает как есть
+- `cleanLogs` (prompt + confirm + POST), авто-сабмит `select`
+  в `.filters-form` — без изменений
+
+### Проверено
+
+- `/admin/logs` открывается через `renderPage`, партиалы
+  (sidebar + header + footer) подгружаются, тёмная тема применяется
+- Статистика (7 карточек) на `.stats-grid` с модификаторами
+  `accent` / `success` / `danger` / `warning`
+- Фильтры: карточка на `.card`, авто-сабмит при смене
+  пользователя / действия, поле поиска, даты, «Записей на странице»
+- Таблица логов: 6 колонок, аватары, цветные бейджи действий,
+  детали через `key: value`, IP
+- Пагинация: переход между страницами сохраняет фильтры в URL
+- Кнопка «🧹 Очистить старые» — `prompt` + `confirm` + POST
+- Пустое состояние: «📭 Логи не найдены»
+- Адаптивность: ≤992px — IP скрыт, ≤768px — объект и детали
+  скрыты, фильтры в одну колонку
+- Sidebar подсвечивает «Логи», Ctrl+K / Ctrl+B работают
+- В консоли браузера ошибок нет
+- `node scripts/check-css.js` — все переменные `logs.css` объявлены
+  в `theme.css`
+
+### Файлы
+
+**Изменены:**
+- `views/admin-logs.html`
+- `public/css/logs.css`
+- `routes/admin.js`
+- `package.json`
+- `CHANGELOG.md`
+
+**Не тронуты:**
+- `public/js/logs.js`
+- API-функции в `routes/admin.js`
+- `utils/layout.js`
+
 ## [1.19.1] - 2026-10-02
 
 **Fix: /api/admin/equipment/filtered возвращал undefined в items/total**

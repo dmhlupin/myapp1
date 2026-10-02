@@ -1,395 +1,378 @@
-/* public/css/logs.css — Стили для страницы логов */
+/* ============================================================
+   public/css/logs.css — Специфика страницы «Логи активности»
+   Общие стили — в theme.css, layout.css, components.css
+   ============================================================ */
 
-/* Статистика — компактнее */
-.stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 12px;
-    margin-bottom: 20px;
-}
-.stat-card {
-    background: white;
-    padding: 15px;
-    border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-    text-align: center;
-}
-
-.stat-card .number {
-    font-size: 28px;
-    font-weight: bold;
-    color: #667eea;
-}
-
-.stat-card .number.green { color: #48bb78; }
-.stat-card .number.red { color: #fc8181; }
-.stat-card .number.orange { color: #ed8936; }
-.stat-card .number.pink { color: #ed64a6; }
-
-.stat-card .label {
-    color: #666;
-    margin-top: 4px;
-    font-size: 11px;
-    line-height: 1.3;
-}
-
-.stat-card .icon {
-    font-size: 22px;
-    display: block;
-    margin-bottom: 4px;
-}
-
-/* Фильтры */
-.filters-card {
-    background: white;
-    border-radius: 12px;
-    padding: 20px 25px;
-    margin-bottom: 25px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-}
-
-.filters-card h2 {
-    color: #2d3748;
-    font-size: 18px;
-    margin-bottom: 15px;
-}
+/* ============================================================
+   ФИЛЬТРЫ
+   ============================================================ */
 
 .filters-form {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
 }
 
 .filter-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 15px;
-    align-items: end;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-md);
+  align-items: end;
 }
 
 .filter-group {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
 }
 
 .filter-group-wide {
-    grid-column: span 2;
+  grid-column: span 2;
 }
 
 .filter-group label {
-    color: #4a5568;
-    font-size: 12px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .filter-group select,
 .filter-group input {
-    padding: 8px 12px;
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    font-size: 14px;
-    font-family: inherit;
-    background: white;
-    color: #2d3748;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-family: var(--font-sans);
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  transition: all var(--transition-fast);
 }
 
 .filter-group select:focus,
 .filter-group input:focus {
-    outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
 .filter-actions {
-    display: flex;
-    gap: 8px;
-    align-items: end;
-    flex-wrap: wrap;
+  display: flex;
+  gap: var(--space-sm);
+  align-items: end;
+  flex-wrap: wrap;
 }
 
-/* Таблица логов */
+/* ============================================================
+   ТАБЛИЦА ЛОГОВ
+   ============================================================ */
+
 .logs-table {
-    table-layout: fixed;
-    width: 100%;
-    font-size: 13px;
+  table-layout: fixed;
+  width: 100%;
+  font-size: var(--text-sm);
 }
 
 .logs-table th {
-    padding: 12px 12px;
-    font-size: 11px;
+  padding: var(--space-md);
+  font-size: var(--text-xs);
 }
 
 .logs-table td {
-    padding: 10px 12px;
-    vertical-align: top;
-    word-break: break-word;
+  padding: var(--space-sm) var(--space-md);
+  vertical-align: top;
+  word-break: break-word;
 }
 
 /* Явные ширины колонок */
-.logs-table th:nth-child(1),  /* Дата и время */
+.logs-table th:nth-child(1),
 .logs-table td:nth-child(1) {
-    width: 130px;
+  width: 130px; /* Дата и время */
 }
 
-.logs-table th:nth-child(2),  /* Пользователь */
+.logs-table th:nth-child(2),
 .logs-table td:nth-child(2) {
-    width: 250px;
+  width: 250px; /* Пользователь */
 }
 
-.logs-table th:nth-child(3),  /* Действие */
+.logs-table th:nth-child(3),
 .logs-table td:nth-child(3) {
-    width: 220px;
+  width: 220px; /* Действие */
 }
 
-.logs-table th:nth-child(4),  /* Объект */
+.logs-table th:nth-child(4),
 .logs-table td:nth-child(4) {
-    width: 110px;
+  width: 110px; /* Объект */
 }
 
-.logs-table th:nth-child(5),  /* Детали */
+.logs-table th:nth-child(5),
 .logs-table td:nth-child(5) {
-    width: auto;              /* Занимает всё оставшееся место */
-    min-width: 150px;
+  width: auto;    /* Детали — занимают остаток */
+  min-width: 150px;
 }
 
-.logs-table th:nth-child(6),  /* IP */
+.logs-table th:nth-child(6),
 .logs-table td:nth-child(6) {
-    width: 100px;
+  width: 100px; /* IP */
 }
 
-/* Пользователь в логе */
+/* Дата */
+.log-date {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* ============================================================
+   ПОЛЬЗОВАТЕЛЬ В ЛОГЕ
+   ============================================================ */
+
 .log-user {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-width: 0;
 }
 
 .log-avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 600;
-    font-size: 12px;
-    flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--purple) 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: var(--text-xs);
+  flex-shrink: 0;
 }
 
 .log-user-name {
-    font-weight: 600;
-    color: #2d3748;
-    font-size: 13px;
-    line-height: 1.3;
-    white-space: normal;      /* Разрешаем перенос на 2 строки */
-    word-break: break-word;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  line-height: 1.3;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .log-user-dept {
-    font-size: 11px;
-    color: #a0aec0;
-    line-height: 1.3;
-    white-space: normal;
-    word-break: break-word;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  line-height: 1.3;
+  white-space: normal;
+  word-break: break-word;
 }
 
-/* Действие */
+/* ============================================================
+   ДЕЙСТВИЕ (бейджи)
+   ============================================================ */
+
 .log-action {
-    display: inline-block;
-    padding: 5px 12px;
-    border-radius: 12px;
-    font-size: 12px;          /* Было 11px — увеличили */
-    font-weight: 600;
-    white-space: normal;      /* Разрешаем перенос */
-    word-break: break-word;
-    line-height: 1.3;
-    max-width: 100%;
+  display: inline-block;
+  padding: 5px 12px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.3;
+  max-width: 100%;
 }
 
 .log-action-default {
-    background: #e2e8f0;
-    color: #4a5568;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
 }
 
 .log-action-login {
-    background: #c6f6d5;
-    color: #22543d;
+  background: rgba(34, 197, 94, 0.15);
+  color: var(--success);
 }
 
 .log-action-failed {
-    background: #fed7d7;
-    color: #742a2a;
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--danger);
 }
 
 .log-action-create {
-    background: #bee3f8;
-    color: #2a4365;
+  background: rgba(59, 130, 246, 0.15);
+  color: var(--accent);
 }
 
 .log-action-update {
-    background: #fefcbf;
-    color: #744210;
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--warning);
 }
 
 .log-action-delete {
-    background: #fed7d7;
-    color: #742a2a;
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--danger);
 }
 
 .log-action-block {
-    background: #fbb6ce;
-    color: #702459;
+  background: rgba(236, 72, 153, 0.15);
+  color: #ec4899;
 }
 
-/* Объект */
+.log-action-move {
+  background: rgba(168, 85, 247, 0.15);
+  color: var(--purple);
+}
+
+/* ============================================================
+   ОБЪЕКТ
+   ============================================================ */
+
 .log-entity {
-    font-size: 12px;
+  font-size: var(--text-xs);
 }
 
 .log-entity-type {
-    display: inline-block;
-    padding: 2px 8px;
-    background: #edf2f7;
-    color: #4a5568;
-    border-radius: 10px;
-    font-size: 10px;
-    font-weight: 600;
-    text-transform: uppercase;
-    margin-right: 4px;
+  display: inline-block;
+  padding: 2px 8px;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border-radius: var(--radius-full);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-right: var(--space-xs);
 }
 
 .log-entity-id {
-    color: #667eea;
-    font-weight: 600;
+  color: var(--accent);
+  font-weight: 600;
 }
 
-/* Детали */
+/* ============================================================
+   ДЕТАЛИ
+   ============================================================ */
+
 .log-details {
-    font-size: 12px;
-    color: #4a5568;
-    line-height: 1.5;
-    word-break: break-word;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  line-height: 1.5;
+  word-break: break-word;
 }
 
 .log-detail-key {
-    color: #a0aec0;
-    font-weight: 500;
+  color: var(--text-muted);
+  font-weight: 500;
 }
 
 .log-detail-value {
-    color: #2d3748;
+  color: var(--text-primary);
 }
 
-/* IP */
+/* ============================================================
+   IP
+   ============================================================ */
+
 .log-ip {
-    font-family: 'Courier New', monospace;
-    font-size: 11px;
-    color: #a0aec0;
-    white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
 }
 
-/* Пагинация */
+/* ============================================================
+   ПАГИНАЦИЯ ЛОГОВ
+   ============================================================ */
+
 .pagination {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 15px 25px;
-    background: #f7fafc;
-    border-top: 1px solid #e2e8f0;
-    flex-wrap: wrap;
-    gap: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-md) var(--space-lg);
+  background: var(--bg-tertiary);
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+  gap: var(--space-sm);
 }
 
 .pagination-info {
-    color: #4a5568;
-    font-size: 13px;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
 }
 
 .pagination-buttons {
-    display: flex;
-    gap: 8px;
+  display: flex;
+  gap: var(--space-sm);
 }
 
 .pagination-btn {
-    padding: 8px 16px;
-    background: white;
-    color: #4a5568;
-    text-decoration: none;
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    font-size: 13px;
-    font-weight: 500;
-    transition: all 0.2s;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  text-decoration: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  transition: all var(--transition-fast);
 }
 
 .pagination-btn:hover {
-    background: #667eea;
-    color: white;
-    border-color: #667eea;
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
 }
 
-/* Адаптивность */
+/* ============================================================
+   АДАПТИВНОСТЬ
+   ============================================================ */
+
 @media (max-width: 1200px) {
-    .logs-table {
-        font-size: 12px;
-    }
-    
-    .logs-table th,
-    .logs-table td {
-        padding: 8px 8px;
-    }
+  .logs-table {
+    font-size: var(--text-xs);
+  }
+
+  .logs-table th,
+  .logs-table td {
+    padding: var(--space-sm);
+  }
 }
 
 @media (max-width: 992px) {
-    /* Скрываем IP на планшетах */
-    .logs-table th:nth-child(6),
-    .logs-table td:nth-child(6) {
-        display: none;
-    }
+  /* Скрываем IP на планшетах */
+  .logs-table th:nth-child(6),
+  .logs-table td:nth-child(6) {
+    display: none;
+  }
 }
 
 @media (max-width: 768px) {
-    .stats {
-        grid-template-columns: repeat(2, 1fr);
-    }
-    
-    .filter-row {
-        grid-template-columns: 1fr;
-    }
-    
-    .filter-group-wide {
-        grid-column: span 1;
-    }
-    
-    .filter-actions {
-        flex-direction: column;
-    }
-    
-    .filter-actions .btn {
-        width: 100%;
-        justify-content: center;
-    }
-    
-    /* Скрываем детали и объект на мобильных */
-    .logs-table th:nth-child(4),
-    .logs-table td:nth-child(4),
-    .logs-table th:nth-child(5),
-    .logs-table td:nth-child(5) {
-        display: none;
-    }
-    
-    .pagination {
-        flex-direction: column;
-        text-align: center;
-    }
-}
-.log-action-move {
-    background: #e9d8fd;
-    color: #553c9a;
+  .filter-row {
+    grid-template-columns: 1fr;
+  }
+
+  .filter-group-wide {
+    grid-column: span 1;
+  }
+
+  .filter-actions {
+    flex-direction: column;
+  }
+
+  .filter-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Скрываем объект и детали на мобильных */
+  .logs-table th:nth-child(4),
+  .logs-table td:nth-child(4),
+  .logs-table th:nth-child(5),
+  .logs-table td:nth-child(5) {
+    display: none;
+  }
+
+  .pagination {
+    flex-direction: column;
+    text-align: center;
+  }
 }

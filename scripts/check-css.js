@@ -152,6 +152,7 @@ const cssFilesToCheck = [
   'admin-add.css',
   'admin-edit.css',
   'catalog.css',
+  'logs.css',
   'components.css',
   'layout.css',
 ];
