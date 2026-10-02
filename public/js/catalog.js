@@ -529,7 +529,7 @@ async function loadFilteredEquipment(page = 1) {
     if (!container) return;
     
     // Показываем загрузку
-    container.innerHTML = '<div class="catalog-loading">⏳ Загрузка техники...</div>';
+    container.innerHTML = '<div class="loading-block">⏳ Загрузка техники...</div>';
     
     try {
         // Формируем URL
