@@ -1,59 +1,18 @@
 /* public/css/inventory.css — Стили для страницы инвентаризации */
 
 /* ============================================================
-   ОБЩИЕ ИТОГИ (6 карточек)
+   ВНИМАНИЕ: .stats-grid, .stat-card (+ модификаторы),
+   .empty-state — общие, находятся в components.css.
+   Здесь только специфика страницы инвентаризации.
    ============================================================ */
 
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 15px;
-    margin-bottom: 25px;
-}
-
-.stat-card {
-    background: white;
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-    text-align: center;
-    transition: transform 0.2s;
-}
-
-.stat-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
-}
+/* ============================================================
+   HIGHLIGHT-КАРТОЧКА (специфика инвентаризации)
+   ============================================================ */
 
 .stat-card.highlight {
-    background: linear-gradient(135deg, #ebf8ff 0%, #e6fffa 100%);
-    border: 1px solid #90cdf4;
-}
-
-.stat-card .icon {
-    font-size: 28px;
-    display: block;
-    margin-bottom: 8px;
-}
-
-.stat-card .number {
-    font-size: 32px;
-    font-weight: 700;
-    color: #667eea;
-    line-height: 1;
-}
-
-.stat-card .number.green { color: #48bb78; }
-.stat-card .number.orange { color: #ed8936; }
-.stat-card .number.pink { color: #ed64a6; }
-.stat-card .number.blue { color: #4299e1; }
-
-.stat-card .label {
-    color: #718096;
-    margin-top: 8px;
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    background: var(--info-bg);
+    border: 1px solid var(--accent-border);
 }
 
 /* ============================================================
@@ -61,14 +20,14 @@
    ============================================================ */
 
 .inventory-warning {
-    background: #fffaf0;
-    border: 1px solid #f6ad55;
-    border-left: 4px solid #ed8936;
-    padding: 15px 20px;
-    border-radius: 10px;
-    margin-bottom: 25px;
+    background: var(--warning-bg);
+    border: 1px solid var(--warning);
+    border-left: 4px solid var(--warning);
+    padding: var(--space-md) var(--space-lg);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-lg);
     display: flex;
-    gap: 15px;
+    gap: var(--space-md);
     align-items: flex-start;
 }
 
@@ -78,15 +37,15 @@
 }
 
 .inventory-warning strong {
-    color: #c05621;
+    color: var(--warning);
     display: block;
-    margin-bottom: 4px;
+    margin-bottom: var(--space-xs);
 }
 
 .inventory-warning p {
     margin: 0;
-    color: #744210;
-    font-size: 14px;
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
     line-height: 1.5;
 }
 
@@ -95,33 +54,33 @@
    ============================================================ */
 
 .inventory-section {
-    background: white;
-    border-radius: 12px;
-    padding: 25px 30px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-    margin-bottom: 25px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    padding: var(--space-lg) var(--space-xl);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: var(--space-lg);
 }
 
 .section-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
-    padding-bottom: 15px;
-    border-bottom: 1px solid #e2e8f0;
+    margin-bottom: var(--space-md);
+    padding-bottom: var(--space-sm);
+    border-bottom: 1px solid var(--border);
     flex-wrap: wrap;
-    gap: 10px;
+    gap: var(--space-sm);
 }
 
 .section-header h2 {
-    color: #2d3748;
-    font-size: 18px;
+    color: var(--text-primary);
+    font-size: var(--text-lg);
     margin: 0;
 }
 
 .section-actions {
     display: flex;
-    gap: 8px;
+    gap: var(--space-xs);
     flex-wrap: wrap;
 }
 
@@ -132,30 +91,30 @@
 .warehouse-summary {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-    gap: 20px;
+    gap: var(--space-md);
 }
 
 .warehouse-summary-card {
-    background: #f7fafc;
-    border: 1px solid #e2e8f0;
-    border-left: 4px solid #667eea;
-    border-radius: 12px;
-    padding: 20px;
-    transition: all 0.2s;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+    transition: var(--transition-base);
     cursor: pointer;
     position: relative;
 }
 
 .warehouse-summary-card:hover {
-    background: white;
-    border-color: #667eea;
-    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.15);
+    background: var(--bg-hover);
+    border-color: var(--accent);
+    box-shadow: var(--shadow-md);
     transform: translateY(-3px);
 }
 
 .warehouse-summary-card.is-default {
-    border-left-color: #ed8936;
-    background: linear-gradient(135deg, #ffffff 0%, #fffaf0 100%);
+    border-left-color: var(--warning);
+    background: linear-gradient(135deg, var(--bg-tertiary) 0%, var(--warning-bg) 100%);
 }
 
 /* Заголовок карточки */
@@ -163,8 +122,8 @@
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 15px;
-    gap: 10px;
+    margin-bottom: var(--space-sm);
+    gap: var(--space-sm);
 }
 
 .ws-title {
@@ -173,73 +132,73 @@
 }
 
 .ws-name {
-    font-size: 18px;
+    font-size: var(--text-lg);
     font-weight: 700;
-    color: #2d3748;
-    margin-bottom: 4px;
+    color: var(--text-primary);
+    margin-bottom: var(--space-xs);
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-xs);
     flex-wrap: wrap;
 }
 
 .ws-address {
-    font-size: 12px;
-    color: #718096;
+    font-size: var(--text-xs);
+    color: var(--text-secondary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
 .ws-badge {
-    background: #feebc8;
-    color: #7b341e;
+    background: var(--warning-bg);
+    color: var(--warning);
     padding: 2px 8px;
-    border-radius: 10px;
+    border-radius: var(--radius-full);
     font-size: 10px;
     font-weight: 600;
 }
 
 /* Прогресс-бар */
 .ws-progress {
-    margin-bottom: 15px;
+    margin-bottom: var(--space-sm);
 }
 
 .ws-progress-label {
     display: flex;
     justify-content: space-between;
-    font-size: 12px;
-    color: #718096;
-    margin-bottom: 5px;
+    font-size: var(--text-xs);
+    color: var(--text-secondary);
+    margin-bottom: var(--space-xs);
 }
 
 .ws-progress-bar {
     height: 8px;
-    background: #edf2f7;
-    border-radius: 4px;
+    background: var(--bg-primary);
+    border-radius: var(--radius-sm);
     overflow: hidden;
 }
 
 .ws-progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-    border-radius: 4px;
+    background: linear-gradient(90deg, var(--accent) 0%, var(--purple) 100%);
+    border-radius: var(--radius-sm);
     transition: width 0.5s ease;
 }
 
-.ws-progress-fill.low { background: #cbd5e0; }
-.ws-progress-fill.medium { background: linear-gradient(90deg, #48bb78 0%, #38a169 100%); }
-.ws-progress-fill.high { background: linear-gradient(90deg, #ed8936 0%, #dd6b20 100%); }
-.ws-progress-fill.full { background: linear-gradient(90deg, #fc8181 0%, #f56565 100%); }
+.ws-progress-fill.low { background: var(--border); }
+.ws-progress-fill.medium { background: linear-gradient(90deg, var(--success) 0%, var(--success) 100%); }
+.ws-progress-fill.high { background: linear-gradient(90deg, var(--warning) 0%, var(--warning) 100%); }
+.ws-progress-fill.full { background: linear-gradient(90deg, var(--danger) 0%, var(--danger) 100%); }
 
 /* Мини-статистика */
 .ws-stats {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
-    padding: 12px 0;
-    border-top: 1px solid #e2e8f0;
-    border-bottom: 1px solid #e2e8f0;
+    gap: var(--space-xs);
+    padding: var(--space-sm) 0;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
 }
 
 .ws-stat {
@@ -247,30 +206,30 @@
 }
 
 .ws-stat-value {
-    font-size: 16px;
+    font-size: var(--text-base);
     font-weight: 700;
-    color: #2d3748;
+    color: var(--text-primary);
     line-height: 1;
 }
 
-.ws-stat-value.zones { color: #48bb78; }
-.ws-stat-value.racks { color: #ed8936; }
-.ws-stat-value.cells { color: #ed64a6; }
-.ws-stat-value.equipment { color: #4299e1; }
+.ws-stat-value.zones { color: var(--success); }
+.ws-stat-value.racks { color: var(--warning); }
+.ws-stat-value.cells { color: var(--purple); }
+.ws-stat-value.equipment { color: var(--info); }
 
 .ws-stat-label {
     font-size: 10px;
-    color: #a0aec0;
+    color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    margin-top: 4px;
+    margin-top: var(--space-xs);
 }
 
 /* Кнопки действий карточки */
 .ws-actions {
     display: flex;
-    gap: 8px;
-    margin-top: 15px;
+    gap: var(--space-xs);
+    margin-top: var(--space-sm);
     flex-wrap: wrap;
 }
 
@@ -278,7 +237,7 @@
     flex: 1;
     justify-content: center;
     padding: 8px 12px;
-    font-size: 12px;
+    font-size: var(--text-xs);
     white-space: nowrap;
 }
 
@@ -292,20 +251,20 @@
    ============================================================ */
 
 .wh-detail-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 12px;
-    padding: 20px;
-    color: white;
-    margin-bottom: 20px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--purple) 100%);
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+    color: #fff;
+    margin-bottom: var(--space-md);
     display: flex;
     align-items: center;
-    gap: 15px;
+    gap: var(--space-md);
 }
 
 .wh-detail-icon {
     width: 60px;
     height: 60px;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     background: rgba(255, 255, 255, 0.25);
     display: flex;
     align-items: center;
@@ -320,22 +279,22 @@
 }
 
 .wh-detail-info h2 {
-    color: white;
-    font-size: 20px;
-    margin: 0 0 4px 0;
+    color: #fff;
+    font-size: var(--text-xl);
+    margin: 0 0 var(--space-xs) 0;
 }
 
 .wh-detail-address {
     color: rgba(255, 255, 255, 0.85);
-    font-size: 13px;
+    font-size: var(--text-sm);
 }
 
-/* Табы в модалке */
+/* Табы в модалке (локальная специфика — структура отличается от общих .tabs) */
 .detail-tabs {
     display: flex;
-    gap: 8px;
-    margin-bottom: 20px;
-    border-bottom: 2px solid #e2e8f0;
+    gap: var(--space-xs);
+    margin-bottom: var(--space-md);
+    border-bottom: 2px solid var(--border);
 }
 
 .detail-tab {
@@ -345,20 +304,20 @@
     border-bottom: 3px solid transparent;
     margin-bottom: -2px;
     cursor: pointer;
-    font-size: 14px;
+    font-size: var(--text-sm);
     font-weight: 500;
-    color: #718096;
-    transition: all 0.2s;
+    color: var(--text-secondary);
+    transition: var(--transition-fast);
     font-family: inherit;
 }
 
 .detail-tab:hover {
-    color: #667eea;
+    color: var(--accent);
 }
 
 .detail-tab.active {
-    color: #667eea;
-    border-bottom-color: #667eea;
+    color: var(--accent);
+    border-bottom-color: var(--accent);
 }
 
 .detail-tab-content {
@@ -373,19 +332,19 @@
 .inventory-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 13px;
-    background: white;
-    border-radius: 8px;
+    font-size: var(--text-sm);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-sm);
     overflow: hidden;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--border);
 }
 
 .inventory-table th {
-    background: #f7fafc;
-    color: #4a5568;
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
     padding: 10px 12px;
     text-align: left;
-    font-size: 11px;
+    font-size: var(--text-xs);
     text-transform: uppercase;
     letter-spacing: 0.5px;
     font-weight: 600;
@@ -394,23 +353,23 @@
 
 .inventory-table td {
     padding: 10px 12px;
-    border-top: 1px solid #e2e8f0;
-    color: #2d3748;
+    border-top: 1px solid var(--border);
+    color: var(--text-primary);
 }
 
 .inventory-table tr:hover {
-    background: #f7fafc;
+    background: var(--bg-hover);
 }
 
 /* Заполненность ячеек */
 .occupancy-item {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: var(--space-sm);
     padding: 10px 12px;
-    background: #f7fafc;
-    border-radius: 8px;
-    margin-bottom: 8px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-sm);
+    margin-bottom: var(--space-xs);
 }
 
 .occupancy-cell {
@@ -418,57 +377,42 @@
 }
 
 .occupancy-code {
-    font-family: 'Courier New', monospace;
+    font-family: var(--font-mono);
     font-weight: 700;
-    color: #667eea;
-    font-size: 12px;
+    color: var(--accent);
+    font-size: var(--text-xs);
 }
 
 .occupancy-name {
-    font-size: 11px;
-    color: #a0aec0;
+    font-size: var(--text-xs);
+    color: var(--text-muted);
 }
 
 .occupancy-bar {
     flex: 1;
     height: 8px;
-    background: #edf2f7;
-    border-radius: 4px;
+    background: var(--bg-primary);
+    border-radius: var(--radius-sm);
     overflow: hidden;
 }
 
 .occupancy-bar-fill {
     height: 100%;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     transition: width 0.5s ease;
 }
 
 .occupancy-count {
-    font-size: 13px;
+    font-size: var(--text-sm);
     font-weight: 600;
-    color: #2d3748;
+    color: var(--text-primary);
     min-width: 60px;
     text-align: right;
 }
 
-/* Пустое состояние */
-.inventory-empty {
-    text-align: center;
-    padding: 40px 20px;
-    color: #a0aec0;
-    background: #f7fafc;
-    border-radius: 10px;
-}
-
-.inventory-empty .emoji {
-    font-size: 40px;
-    display: block;
-    margin-bottom: 10px;
-    opacity: 0.5;
-}
-
 /* ============================================================
    АДАПТИВНОСТЬ
+   (.stats-grid адаптивность — в components.css)
    ============================================================ */
 
 @media (max-width: 900px) {
@@ -478,12 +422,8 @@
 }
 
 @media (max-width: 768px) {
-    .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-
     .inventory-section {
-        padding: 20px 15px;
+        padding: var(--space-md) var(--space-sm);
     }
 
     .section-header {
@@ -496,7 +436,7 @@
     }
 
     .ws-name {
-        font-size: 16px;
+        font-size: var(--text-base);
     }
 
     .detail-tabs {
@@ -505,15 +445,11 @@
 
     .detail-tab {
         padding: 8px 12px;
-        font-size: 13px;
+        font-size: var(--text-sm);
     }
 }
 
 @media (max-width: 480px) {
-    .stats-grid {
-        grid-template-columns: 1fr;
-    }
-
     .ws-actions {
         flex-direction: column;
     }
@@ -524,7 +460,7 @@
     }
 
     .inventory-table {
-        font-size: 12px;
+        font-size: var(--text-xs);
     }
 
     .inventory-table th,
