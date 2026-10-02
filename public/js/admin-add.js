@@ -3,93 +3,109 @@
 
 let categories = [];
 
+// Кэш данных для превью места хранения
+let locations = {
+  warehouses: [],
+  zones: [],
+  racks: [],
+  cells: [],
+};
+
 // ============================================================
 // ИНИЦИАЛИЗАЦИЯ
 // ============================================================
 
-document.addEventListener('DOMContentLoaded', async function() {
-    console.log('➕ Форма добавления техники: загрузка справочника...');
-    
-    // Загружаем категории
-    await loadCategories();
-    
-    // Генерируем placeholder для инвентарного номера
-    const invInput = document.getElementById('inventory_number');
-    if (invInput && !invInput.value) {
-        invInput.placeholder = generateInventoryNumber();
-    }
+document.addEventListener('DOMContentLoaded', async function () {
+  // Справочник (категории)
+  await loadCategories();
+
+  // Плейсхолдер для инвентарного номера
+  const invInput = document.getElementById('inventory_number');
+  if (invInput && !invInput.value) {
+    invInput.placeholder = generateInventoryNumber();
+  }
+
+  // Склады для места хранения
+  await loadWarehouses();
 });
+
+// ============================================================
+// СПРАВОЧНИК: КАТЕГОРИИ И ТИПЫ
+// ============================================================
 
 /**
  * Загрузить категории
  */
 async function loadCategories() {
-    try {
-        const response = await fetch('/api/admin/categories');
-        categories = await response.json();
-        
-        const select = document.getElementById('category_id');
-        if (!select) return;
-        
-        // Сохраняем текущее значение
-        const currentValue = select.value;
-        
-        // Заполняем
-        select.innerHTML = '<option value="">— Выберите категорию —</option>' +
-            categories.map(cat => `
-                <option value="${cat.id}">
-                    ${cat.icon || '📁'} ${escapeHtml(cat.name)}
-                </option>
-            `).join('');
-        
-        // Восстанавливаем
-        if (currentValue) select.value = currentValue;
-        
-        console.log(`✅ Загружено категорий: ${categories.length}`);
-    } catch (error) {
-        console.error('❌ Ошибка загрузки категорий:', error);
-        showToast('❌ Ошибка загрузки категорий', 'error');
-    }
+  try {
+    const response = await fetch('/api/admin/categories');
+    categories = await response.json();
+
+    const select = document.getElementById('category_id');
+    if (!select) return;
+
+    const currentValue = select.value;
+
+    select.innerHTML =
+      '<option value="">— Выберите категорию —</option>' +
+      categories
+        .map(
+          (cat) => `
+            <option value="${cat.id}">
+              ${cat.icon || '📁'} ${escapeHtml(cat.name)}
+            </option>
+          `
+        )
+        .join('');
+
+    if (currentValue) select.value = currentValue;
+  } catch (error) {
+    console.error('❌ Ошибка загрузки категорий:', error);
+    showToast('❌ Ошибка загрузки категорий', 'error');
+  }
 }
 
 /**
- * Обработка смены категории — загружаем типы
+ * При смене категории — загружаем типы
  */
 async function onCategoryChange() {
-    const categoryId = document.getElementById('category_id').value;
-    const typeSelect = document.getElementById('type_id');
-    
-    // Сбрасываем тип
-    typeSelect.innerHTML = '<option value="">— Загрузка... —</option>';
-    typeSelect.disabled = true;
-    
-    if (!categoryId) {
-        typeSelect.innerHTML = '<option value="">— Сначала выберите категорию —</option>';
-        return;
+  const categoryId = document.getElementById('category_id').value;
+  const typeSelect = document.getElementById('type_id');
+
+  typeSelect.innerHTML = '<option value="">— Загрузка... —</option>';
+  typeSelect.disabled = true;
+
+  if (!categoryId) {
+    typeSelect.innerHTML = '<option value="">— Сначала выберите категорию —</option>';
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/admin/types?category_id=${categoryId}`);
+    const types = await response.json();
+
+    if (types.length === 0) {
+      typeSelect.innerHTML = '<option value="">— Нет типов в категории —</option>';
+      return;
     }
-    
-    try {
-        const response = await fetch(`/api/admin/types?category_id=${categoryId}`);
-        const types = await response.json();
-        
-        if (types.length === 0) {
-            typeSelect.innerHTML = '<option value="">— Нет типов в категории —</option>';
-            return;
-        }
-        
-        typeSelect.innerHTML = '<option value="">— Выберите тип —</option>' +
-            types.map(type => `
-                <option value="${type.id}">
-                    ${type.icon || '📦'} ${escapeHtml(type.name)}
-                </option>
-            `).join('');
-        
-        typeSelect.disabled = false;
-        console.log(`✅ Загружено типов: ${types.length}`);
-    } catch (error) {
-        console.error('❌ Ошибка загрузки типов:', error);
-        typeSelect.innerHTML = '<option value="">— Ошибка загрузки —</option>';
-    }
+
+    typeSelect.innerHTML =
+      '<option value="">— Выберите тип —</option>' +
+      types
+        .map(
+          (type) => `
+            <option value="${type.id}">
+              ${type.icon || '📦'} ${escapeHtml(type.name)}
+            </option>
+          `
+        )
+        .join('');
+
+    typeSelect.disabled = false;
+  } catch (error) {
+    console.error('❌ Ошибка загрузки типов:', error);
+    typeSelect.innerHTML = '<option value="">— Ошибка загрузки —</option>';
+  }
 }
 
 // ============================================================
@@ -97,302 +113,294 @@ async function onCategoryChange() {
 // ============================================================
 
 async function submitForm(event) {
-    event.preventDefault();
-    
-    const submitBtn = document.getElementById('submitBtn');
-    submitBtn.disabled = true;
-    submitBtn.textContent = '⏳ Сохранение...';
+  event.preventDefault();
 
-    const formData = {
-        inventory_number: document.getElementById('inventory_number').value.trim(),
-        category_id: document.getElementById('category_id').value || null,
-        type_id: document.getElementById('type_id').value || null,
-        cell_id: document.getElementById('cellId')?.value || null,  // 🆕
-        name: document.getElementById('name').value.trim(),
-        model: document.getElementById('model').value.trim(),
-        serial_number: document.getElementById('serial_number').value.trim(),
-        manufacturer: document.getElementById('manufacturer').value.trim(),
-        purchase_date: document.getElementById('purchase_date').value || null,
-        warranty_until: document.getElementById('warranty_until').value || null,
-        status: document.getElementById('status').value,
-        description: document.getElementById('description').value.trim()
-    };
-    
-    // Валидация
-    if (!formData.inventory_number) {
-        showToast('❌ Введите инвентарный номер', 'error');
-        submitBtn.disabled = false;
-        submitBtn.textContent = '💾 Сохранить';
-        return;
-    }
-    if (!formData.category_id) {
-        showToast('❌ Выберите категорию', 'error');
-        submitBtn.disabled = false;
-        submitBtn.textContent = '💾 Сохранить';
-        return;
-    }
-    if (!formData.type_id) {
-        showToast('❌ Выберите тип', 'error');
-        submitBtn.disabled = false;
-        submitBtn.textContent = '💾 Сохранить';
-        return;
-    }
-    if (!formData.name) {
-        showToast('❌ Введите название', 'error');
-        submitBtn.disabled = false;
-        submitBtn.textContent = '💾 Сохранить';
-        return;
-    }
+  const submitBtn = document.getElementById('submitBtn');
+  submitBtn.disabled = true;
+  submitBtn.textContent = '⏳ Сохранение...';
 
-    try {
-        const response = await fetch('/api/admin/equipment', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(formData)
-        });
+  const formData = {
+    inventory_number: document.getElementById('inventory_number').value.trim(),
+    category_id: document.getElementById('category_id').value || null,
+    type_id: document.getElementById('type_id').value || null,
+    cell_id: document.getElementById('cellId')?.value || null,
+    name: document.getElementById('name').value.trim(),
+    model: document.getElementById('model').value.trim(),
+    serial_number: document.getElementById('serial_number').value.trim(),
+    manufacturer: document.getElementById('manufacturer').value.trim(),
+    purchase_date: document.getElementById('purchase_date').value || null,
+    warranty_until: document.getElementById('warranty_until').value || null,
+    status: document.getElementById('status').value,
+    description: document.getElementById('description').value.trim(),
+  };
 
-        const result = await response.json();
+  // Валидация
+  if (!formData.inventory_number) {
+    showToast('❌ Введите инвентарный номер', 'error');
+    submitBtn.disabled = false;
+    submitBtn.textContent = '💾 Сохранить';
+    return;
+  }
+  if (!formData.category_id) {
+    showToast('❌ Выберите категорию', 'error');
+    submitBtn.disabled = false;
+    submitBtn.textContent = '💾 Сохранить';
+    return;
+  }
+  if (!formData.type_id) {
+    showToast('❌ Выберите тип', 'error');
+    submitBtn.disabled = false;
+    submitBtn.textContent = '💾 Сохранить';
+    return;
+  }
+  if (!formData.name) {
+    showToast('❌ Введите название', 'error');
+    submitBtn.disabled = false;
+    submitBtn.textContent = '💾 Сохранить';
+    return;
+  }
 
-        if (result.success) {
-            showToast('✅ Техника успешно добавлена!', 'success');
-            setTimeout(() => {
-                window.location.href = '/admin';
-            }, 1500);
-        } else {
-            showToast('❌ ' + result.error, 'error');
-            submitBtn.disabled = false;
-            submitBtn.textContent = '💾 Сохранить';
-        }
-    } catch (error) {
-        console.error('Ошибка:', error);
-        showToast('❌ Ошибка при добавлении техники', 'error');
-        submitBtn.disabled = false;
-        submitBtn.textContent = '💾 Сохранить';
+  try {
+    const response = await fetch('/api/admin/equipment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(formData),
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      showToast('✅ Техника успешно добавлена!', 'success');
+      setTimeout(() => {
+        window.location.href = '/admin';
+      }, 1500);
+    } else {
+      showToast('❌ ' + result.error, 'error');
+      submitBtn.disabled = false;
+      submitBtn.textContent = '💾 Сохранить';
     }
+  } catch (error) {
+    console.error('Ошибка:', error);
+    showToast('❌ Ошибка при добавлении техники', 'error');
+    submitBtn.disabled = false;
+    submitBtn.textContent = '💾 Сохранить';
+  }
 }
 
 // ============================================================
 // МЕСТО ХРАНЕНИЯ (каскадные селекты)
 // ============================================================
 
-let locations = {
-    warehouses: [],
-    zones: [],
-    racks: [],
-    cells: [],
-};
-
 /**
  * Загрузить список складов
  */
 async function loadWarehouses() {
-    try {
-        const response = await fetch('/api/admin/warehouses');
-        const warehouses = await response.json();
+  try {
+    const response = await fetch('/api/admin/warehouses');
+    const warehouses = await response.json();
 
-        locations.warehouses = warehouses;
+    locations.warehouses = warehouses;
 
-        const select = document.getElementById('warehouseId');
-        if (!select) return;
+    const select = document.getElementById('warehouseId');
+    if (!select) return;
 
-        select.innerHTML = '<option value="">— Не указано —</option>' +
-            warehouses.map(w => `
-                <option value="${w.id}">
-                    ${w.is_default ? '⭐ ' : ''}${escapeHtml(w.name)}
-                </option>
-            `).join('');
-
-        console.log(`✅ Загружено складов: ${warehouses.length}`);
-    } catch (error) {
-        console.error('❌ Ошибка загрузки складов:', error);
-    }
+    select.innerHTML =
+      '<option value="">— Не указано —</option>' +
+      warehouses
+        .map(
+          (w) => `
+            <option value="${w.id}">
+              ${w.is_default ? '⭐ ' : ''}${escapeHtml(w.name)}
+            </option>
+          `
+        )
+        .join('');
+  } catch (error) {
+    console.error('❌ Ошибка загрузки складов:', error);
+  }
 }
 
 /**
  * При смене склада — загружаем зоны
  */
 async function onWarehouseChange() {
-    const warehouseId = document.getElementById('warehouseId').value;
-    const zoneSelect = document.getElementById('zoneId');
-    const rackSelect = document.getElementById('rackId');
-    const cellSelect = document.getElementById('cellId');
+  const warehouseId = document.getElementById('warehouseId').value;
+  const zoneSelect = document.getElementById('zoneId');
+  const rackSelect = document.getElementById('rackId');
+  const cellSelect = document.getElementById('cellId');
 
-    // Сбрасываем вложенные селекты
-    rackSelect.innerHTML = '<option value="">— Сначала выберите зону —</option>';
-    rackSelect.disabled = true;
-    cellSelect.innerHTML = '<option value="">— Сначала выберите стеллаж —</option>';
-    cellSelect.disabled = true;
-    updateLocationPreview();
+  rackSelect.innerHTML = '<option value="">— Сначала выберите зону —</option>';
+  rackSelect.disabled = true;
+  cellSelect.innerHTML = '<option value="">— Сначала выберите стеллаж —</option>';
+  cellSelect.disabled = true;
+  updateLocationPreview();
 
-    if (!warehouseId) {
-        zoneSelect.innerHTML = '<option value="">— Сначала выберите склад —</option>';
-        zoneSelect.disabled = true;
-        return;
-    }
-
-    zoneSelect.innerHTML = '<option value="">⏳ Загрузка...</option>';
+  if (!warehouseId) {
+    zoneSelect.innerHTML = '<option value="">— Сначала выберите склад —</option>';
     zoneSelect.disabled = true;
+    return;
+  }
 
-    try {
-        const response = await fetch(`/api/admin/warehouses/${warehouseId}/zones`);
-        const zones = await response.json();
+  zoneSelect.innerHTML = '<option value="">⏳ Загрузка...</option>';
+  zoneSelect.disabled = true;
 
-        locations.zones = zones;
+  try {
+    const response = await fetch(`/api/admin/warehouses/${warehouseId}/zones`);
+    const zones = await response.json();
 
-        if (zones.length === 0) {
-            zoneSelect.innerHTML = '<option value="">— Нет зон —</option>';
-            return;
-        }
+    locations.zones = zones;
 
-        zoneSelect.innerHTML = '<option value="">— Выберите зону —</option>' +
-            zones.map(z => `<option value="${z.id}">${escapeHtml(z.name)}</option>`).join('');
-        zoneSelect.disabled = false;
-        updateLocationPreview();  // 🆕
-    } catch (error) {
-        console.error('❌ Ошибка загрузки зон:', error);
-        zoneSelect.innerHTML = '<option value="">— Ошибка —</option>';
+    if (zones.length === 0) {
+      zoneSelect.innerHTML = '<option value="">— Нет зон —</option>';
+      return;
     }
+
+    zoneSelect.innerHTML =
+      '<option value="">— Выберите зону —</option>' +
+      zones.map((z) => `<option value="${z.id}">${escapeHtml(z.name)}</option>`).join('');
+    zoneSelect.disabled = false;
+    updateLocationPreview();
+  } catch (error) {
+    console.error('❌ Ошибка загрузки зон:', error);
+    zoneSelect.innerHTML = '<option value="">— Ошибка —</option>';
+  }
 }
 
 /**
  * При смене зоны — загружаем стеллажи
  */
 async function onZoneChange() {
-    const zoneId = document.getElementById('zoneId').value;
-    const rackSelect = document.getElementById('rackId');
-    const cellSelect = document.getElementById('cellId');
+  const zoneId = document.getElementById('zoneId').value;
+  const rackSelect = document.getElementById('rackId');
+  const cellSelect = document.getElementById('cellId');
 
-    cellSelect.innerHTML = '<option value="">— Сначала выберите стеллаж —</option>';
-    cellSelect.disabled = true;
-    updateLocationPreview();
+  cellSelect.innerHTML = '<option value="">— Сначала выберите стеллаж —</option>';
+  cellSelect.disabled = true;
+  updateLocationPreview();
 
-    if (!zoneId) {
-        rackSelect.innerHTML = '<option value="">— Сначала выберите зону —</option>';
-        rackSelect.disabled = true;
-        return;
-    }
-
-    rackSelect.innerHTML = '<option value="">⏳ Загрузка...</option>';
+  if (!zoneId) {
+    rackSelect.innerHTML = '<option value="">— Сначала выберите зону —</option>';
     rackSelect.disabled = true;
+    return;
+  }
 
-    try {
-        const response = await fetch(`/api/admin/zones/${zoneId}/racks`);
-        const racks = await response.json();
+  rackSelect.innerHTML = '<option value="">⏳ Загрузка...</option>';
+  rackSelect.disabled = true;
 
-        locations.racks = racks;
+  try {
+    const response = await fetch(`/api/admin/zones/${zoneId}/racks`);
+    const racks = await response.json();
 
-        if (racks.length === 0) {
-            rackSelect.innerHTML = '<option value="">— Нет стеллажей —</option>';
-            return;
-        }
+    locations.racks = racks;
 
-        rackSelect.innerHTML = '<option value="">— Выберите стеллаж —</option>' +
-            racks.map(r => `<option value="${r.id}">${escapeHtml(r.name)}</option>`).join('');
-        rackSelect.disabled = false;
-        updateLocationPreview();  // 🆕
-    } catch (error) {
-        console.error('❌ Ошибка загрузки стеллажей:', error);
-        rackSelect.innerHTML = '<option value="">— Ошибка —</option>';
+    if (racks.length === 0) {
+      rackSelect.innerHTML = '<option value="">— Нет стеллажей —</option>';
+      return;
     }
+
+    rackSelect.innerHTML =
+      '<option value="">— Выберите стеллаж —</option>' +
+      racks.map((r) => `<option value="${r.id}">${escapeHtml(r.name)}</option>`).join('');
+    rackSelect.disabled = false;
+    updateLocationPreview();
+  } catch (error) {
+    console.error('❌ Ошибка загрузки стеллажей:', error);
+    rackSelect.innerHTML = '<option value="">— Ошибка —</option>';
+  }
 }
 
 /**
  * При смене стеллажа — загружаем ячейки
  */
 async function onRackChange() {
-    const rackId = document.getElementById('rackId').value;
-    const cellSelect = document.getElementById('cellId');
+  const rackId = document.getElementById('rackId').value;
+  const cellSelect = document.getElementById('cellId');
 
-    updateLocationPreview();
+  updateLocationPreview();
 
-    if (!rackId) {
-        cellSelect.innerHTML = '<option value="">— Сначала выберите стеллаж —</option>';
-        cellSelect.disabled = true;
-        return;
-    }
-
-    cellSelect.innerHTML = '<option value="">⏳ Загрузка...</option>';
+  if (!rackId) {
+    cellSelect.innerHTML = '<option value="">— Сначала выберите стеллаж —</option>';
     cellSelect.disabled = true;
+    return;
+  }
 
-    try {
-        const response = await fetch(`/api/admin/racks/${rackId}/cells`);
-        const cells = await response.json();
+  cellSelect.innerHTML = '<option value="">⏳ Загрузка...</option>';
+  cellSelect.disabled = true;
 
-        locations.cells = cells;
+  try {
+    const response = await fetch(`/api/admin/racks/${rackId}/cells`);
+    const cells = await response.json();
 
-        if (cells.length === 0) {
-            cellSelect.innerHTML = '<option value="">— Нет ячеек —</option>';
-            return;
-        }
+    locations.cells = cells;
 
-        cellSelect.innerHTML = '<option value="">— Выберите ячейку —</option>' +
-            cells.map(c => {
-                const code = c.code ? ` [${c.code}]` : '';
-                const count = c.equipment_count || 0;
-                const capacity = c.capacity || 0;
-                const countText = capacity > 0 ? ` (${count}/${capacity})` : (count > 0 ? ` (${count})` : '');
-                return `<option value="${c.id}">${escapeHtml(c.name)}${code}${countText}</option>`;
-            }).join('');
-        cellSelect.disabled = false;
-        updateLocationPreview();  // 🆕
-    } catch (error) {
-        console.error('❌ Ошибка загрузки ячеек:', error);
-        cellSelect.innerHTML = '<option value="">— Ошибка —</option>';
+    if (cells.length === 0) {
+      cellSelect.innerHTML = '<option value="">— Нет ячеек —</option>';
+      return;
     }
+
+    cellSelect.innerHTML =
+      '<option value="">— Выберите ячейку —</option>' +
+      cells
+        .map((c) => {
+          const code = c.code ? ` [${c.code}]` : '';
+          const count = c.equipment_count || 0;
+          const capacity = c.capacity || 0;
+          const countText =
+            capacity > 0 ? ` (${count}/${capacity})` : count > 0 ? ` (${count})` : '';
+          return `<option value="${c.id}">${escapeHtml(c.name)}${code}${countText}</option>`;
+        })
+        .join('');
+    cellSelect.disabled = false;
+    updateLocationPreview();
+  } catch (error) {
+    console.error('❌ Ошибка загрузки ячеек:', error);
+    cellSelect.innerHTML = '<option value="">— Ошибка —</option>';
+  }
 }
 
 /**
  * Обновить превью адреса
  */
 function updateLocationPreview() {
-    const warehouseId = document.getElementById('warehouseId')?.value;
-    const zoneId = document.getElementById('zoneId')?.value;
-    const rackId = document.getElementById('rackId')?.value;
-    const cellId = document.getElementById('cellId')?.value;
+  const warehouseId = document.getElementById('warehouseId')?.value;
+  const zoneId = document.getElementById('zoneId')?.value;
+  const rackId = document.getElementById('rackId')?.value;
+  const cellId = document.getElementById('cellId')?.value;
 
-    const preview = document.getElementById('locationPreview');
-    const previewText = document.getElementById('locationPreviewText');
+  const preview = document.getElementById('locationPreview');
+  const previewText = document.getElementById('locationPreviewText');
 
-    if (!preview || !previewText) return;
+  if (!preview || !previewText) return;
 
-    const parts = [];
+  const parts = [];
 
-    if (warehouseId) {
-        const wh = locations.warehouses.find(w => String(w.id) === String(warehouseId));
-        if (wh) parts.push(`🏢 ${wh.name}`);
+  if (warehouseId) {
+    const wh = locations.warehouses.find((w) => String(w.id) === String(warehouseId));
+    if (wh) parts.push(`🏢 ${wh.name}`);
+  }
+  if (zoneId) {
+    const z = locations.zones.find((z) => String(z.id) === String(zoneId));
+    if (z) parts.push(`📍 ${z.name}`);
+  }
+  if (rackId) {
+    const r = locations.racks.find((r) => String(r.id) === String(rackId));
+    if (r) parts.push(`🗄️ ${r.name}`);
+  }
+  if (cellId) {
+    const c = locations.cells.find((c) => String(c.id) === String(cellId));
+    if (c) {
+      const code = c.code ? ` [${c.code}]` : '';
+      parts.push(`📦 ${c.name}${code}`);
     }
-    if (zoneId) {
-        const z = locations.zones.find(z => String(z.id) === String(zoneId));
-        if (z) parts.push(`📍 ${z.name}`);
-    }
-    if (rackId) {
-        const r = locations.racks.find(r => String(r.id) === String(rackId));
-        if (r) parts.push(`🗄️ ${r.name}`);
-    }
-    if (cellId) {
-        const c = locations.cells.find(c => String(c.id) === String(cellId));
-        if (c) {
-            const code = c.code ? ` [${c.code}]` : '';
-            parts.push(`📦 ${c.name}${code}`);
-        }
-    }
+  }
 
-    if (parts.length === 0) {
-        preview.style.display = 'none';
-    } else {
-        preview.style.display = 'flex';
-        previewText.textContent = parts.join(' → ');
-    }
+  if (parts.length === 0) {
+    preview.style.display = 'none';
+  } else {
+    preview.style.display = 'flex';
+    previewText.textContent = parts.join(' → ');
+  }
 }
-
-// ============================================================
-// ЗАГРУЗКА ПРИ СТАРТЕ
-// ============================================================
-
-document.addEventListener('DOMContentLoaded', function() {
-    // Загружаем склады
-    loadWarehouses();
-});
 
 // ============================================================
 // ВСПОМОГАТЕЛЬНЫЕ
@@ -402,21 +410,23 @@ document.addEventListener('DOMContentLoaded', function() {
  * Экранирование HTML
  */
 function escapeHtml(str) {
-    if (!str) return '';
-    return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
 /**
- * Генерация случайного инвентарного номера
+ * Генерация случайного инвентарного номера (пример-плейсхолдер)
  */
 function generateInventoryNumber() {
-    const date = new Date();
-    const year = date.getFullYear();
-    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-    return `Например: EQ-${year}-${random}`;
+  const date = new Date();
+  const year = date.getFullYear();
+  const random = Math.floor(Math.random() * 1000)
+    .toString()
+    .padStart(3, '0');
+  return `Например: EQ-${year}-${random}`;
 }

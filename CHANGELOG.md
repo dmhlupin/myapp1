@@ -1,5 +1,278 @@
 # История изменений
 
+## [1.17.5] - 2026-10-02
+
+**Шаг 1.6: /admin/add + /admin/edit/:id переведены на новый layout**
+
+Этап 1.5 (/admin) закрыт в v1.17.0. Шаг 1.6 завершает перевод
+форм техники. Страницы `/admin/add` и `/admin/edit/:id` собраны
+через `renderPage()` (sidebar + header + footer через партиалы),
+CSS переведён на переменные `theme.css`.
+
+### Шаг 1.6.1 — views/admin-add.html → контент-шаблон
+
+**views/admin-add.html:**
+- Убраны `<!DOCTYPE>`, `<html>`, `<head>`, `<body>`
+- Убраны подключения `style.css`, `admin-add.css`, `help.css`,
+  `main.js`, `help.js`, `footer.js`, `admin-add.js`
+  (всё это подключает `utils/layout.js` через `renderPage`)
+- Убран `#footer-container` (футер теперь в партиале)
+- Убран `.toast-container` (в layout)
+- `.header` + `.back-link` заменены на `.page-header` + `.page-actions`
+- Форма обёрнута в `.card` с `.card-header` / `.card-body`
+- Секция «Место хранения» — отдельный `.card`
+- Кнопки формы — в `.form-actions`
+- Убран inline-style у `.help-text` (класс переехал в `components.css`)
+- Все `id` элементов сохранены — `admin-add.js` их ждёт
+- Функционал не менялся
+
+### Шаг 1.6.2 — views/admin-edit.html → контент-шаблон
+
+**views/admin-edit.html:**
+- Убраны `<!DOCTYPE>`, `<html>`, `<head>`, `<body>`
+- Убраны подключения `style.css`, `admin-edit.css`, `help.css`,
+  `main.js`, `help.js`, `footer.js`, `admin-edit.js`
+- Убран `#footer-container` и `.toast-container`
+- Вынесен inline `<style>` (`status-warning`, `status-info`,
+  `assign-section`, `id-badge`, `location-section`, `location-title`,
+  `location-preview`, `location-preview-icon`, `help-text`) —
+  стили переехали в `admin-edit.css`
+- `.header` + `.back-link` заменены на `.page-header` + `.page-actions`
+- `.id-badge` заменён на `.page-subtitle` «ID: N»
+- Форма обёрнута в `.card`
+- Секция «Место хранения» — отдельный `.card`
+- Контекстные блоки (`status-warning`, `status-info`, `assign-section`)
+  оставлены внутри основного `.card`
+- Скрытые поля (`equipmentId`, `currentStatus`, `currentCategoryId`,
+  `currentTypeId`, `currentCellId`) сохранены — `admin-edit.js` их ждёт
+- Плейсхолдеры `{{...}}` сохранены (`{{status_options}}`, `{{user_options}}`)
+- Функционал не менялся
+
+### Шаг 1.6.3 — CSS: тёмная тема + components.css
+
+**public/css/components.css:**
+- Добавлен `.required` (красная звёздочка, `var(--danger)`)
+- Добавлен `.help-text` (`var(--text-xs)`, `var(--text-muted)`)
+- Понадобятся в 1.7 (`/admin/user/add`, `/admin/user/edit`)
+
+**public/css/admin-add.css:**
+- Полностью переписан: убраны `body`, `.container`, `.back-link`
+  (светлая тема)
+- Оставлена только специфика: `.location-preview`,
+  `.location-preview-icon`
+- Все цвета — на переменных `theme.css`
+
+**public/css/admin-edit.css:**
+- Полностью переписан: убраны `body`, `.container`, `.back-link`
+- Оставлена специфика: `.status-warning`, `.status-info`,
+  `.assign-section`, `.location-preview`, `.location-preview-icon`
+- Уведомления переведены на `rgba`-фон + `var(--warning)` / `var(--info)`
+- Секция назначения: `var(--bg-tertiary)` + `border-left var(--accent)`
+- Все цвета — на переменных `theme.css`
+- Inline `<style>` из `views/admin-edit.html` полностью переехал сюда
+- Дубли с `components.css` (`.btn`, `.card`, `.form-group`, `.form-row`,
+  `.form-actions`, `.help-text`, `.required`) не создавались
+
+### Шаг 1.6.4 — routes/admin.js → renderPage
+
+**routes/admin.js:**
+- `renderAddEquipment`:
+  - `fs.readFile` + `res.send` заменены на `renderPage`
+  - `pageCss: /css/admin-add.css`, `pageJs: /js/admin-add.js`
+  - `title: 'Добавить технику – MoveIT service'`
+  - Автоматически подключаются партиалы header/sidebar/footer
+    и общие CSS/JS (`theme.css`, `layout.css`, `components.css`,
+    `help.css`, `main.js`, `help.js`, `layout.js`)
+- `renderEditEquipment`:
+  - Подстановка плейсхолдеров сохранена
+  - Скалярные значения экранированы через локальный `escapeHtml`
+  - Многострочные вставки (`{{status_options}}`, `{{user_options}}`)
+    заменяются без флага `/g`
+  - `status_options` переведены на русские подписи:
+    `✅ Доступна` / `👤 Назначена` / `🔧 В ремонте` / `📦 Списана`
+  - В `user_options` строка «— Выберите пользователя —» убрана
+    (опция теперь в шаблоне `admin-edit.html`)
+  - Финальная сборка через `renderPage`
+  - `pageCss: /css/admin-edit.css`, `pageJs: /js/admin-edit.js`
+  - `title: 'Редактировать технику – MoveIT service'`
+- API-функции не затронуты
+
+### Шаг 1.6.5 — public/js/admin-add.js → чистка
+
+**public/js/admin-add.js:**
+- Два обработчика `DOMContentLoaded` объединены в один
+  (было: `loadCategories` + плейсхолдер в первом, `loadWarehouses`
+  во втором; стало: категории → плейсхолдер → склады в одном)
+- Убраны `console.log` (успешные сценарии)
+- `console.error` / `console.warn` сохранены для реальных проблем
+- Функционал не менялся: каскады склад→зона→стеллаж→ячейка,
+  превью адреса, валидация формы, `submitForm` — без изменений
+- `escapeHtml` и `generateInventoryNumber` оставлены локально
+  (позже уедут в `utils/escape.js` вместе с другими роутами)
+
+**public/js/admin-edit.js:**
+- Не трогали — работает как есть
+
+### Проверено
+
+- `/admin/add` открывается через `renderPage`, партиалы
+  (sidebar + header + footer) подгружаются, тёмная тема применяется
+- Форма добавления: категории загружаются, типы подгружаются
+  при выборе категории, каскады места хранения работают,
+  превью адреса обновляется, сабмит → тост → редирект на `/admin`
+- `/admin/edit/:id` открывается через `renderPage`, поля заполнены,
+  место хранения предзаполнено, статус — русские подписи,
+  контекстные блоки (`status-warning` / `status-info` /
+  `assign-section`) показываются по сценарию
+- Обе страницы: sidebar подсвечивает «Админ-панель», Ctrl+K / Ctrl+B
+  работают, dropdown профиля в хедере работает, версия в футере — v1.17.5
+- Адаптивность сохранена
+- В консоли браузера ошибок нет
+
+### Файлы
+
+**Изменены:**
+- `views/admin-add.html`
+- `views/admin-edit.html`
+- `public/css/components.css`
+- `public/css/admin-add.css`
+- `public/css/admin-edit.css`
+- `routes/admin.js`
+- `public/js/admin-add.js`
+
+**Не тронуты:**
+- `public/js/admin-edit.js`
+- API-функции в `routes/admin.js`
+
+### Связанные теги
+
+- v1.17.0 — Этап 1.5: /admin на новом layout (закрыт ранее)
+- v1.17.1 — 1.6.1: views/admin-add.html → контент-шаблон
+- v1.17.2 — 1.6.2: views/admin-edit.html → контент-шаблон
+- v1.17.3 — 1.6.3: CSS admin-add/admin-edit → тёмная тема
+- v1.17.4 — 1.6.4: renderAddEquipment/renderEditEquipment → renderPage
+- v1.17.5 — 1.6.5: admin-add.js — чистка
+
+## [1.17.0] - 2026-10-02
+
+**🎉 Этап 1.5 завершён: админ-панель (/admin) полностью переведена
+на новый layout**
+
+### Итоги:
+
+**Что сделано:**
+- Компонент табов (.tabs / .tab-btn / .tab-content) вынесен
+  в components.css (v1.16.2)
+- views/admin.html переписан в контент-шаблон:
+  - Убраны html/head/body, подключения CSS/JS, header-навигация,
+    footer-container
+  - thead таблицы пользователей приведён к 9 колонкам
+    (соответствие renderAdmin — раньше было 6)
+  - .btn-back заменён на .btn-ghost
+  - Inline-обработчики пока оставлены (рефакторинг на 1.5.6)
+  (v1.16.3)
+- public/css/admin.css переписан на переменные theme.css:
+  - Убраны дубли (.stats, .stat-card, .table-container,
+    .table-header, .badge, .modal-*, table/th/td)
+  - Все цвета → var(--*)
+  - .btn-icon переопределён в .action-buttons (28×28)
+  - Цветные модификаторы .btn-icon сохранены
+  - .badge-active/-inactive → .badge-count.has-items/.no-items
+  (v1.16.4)
+- В components.css добавлены стили .table-search (v1.16.4)
+- routes/admin.js: renderAdmin переведён на renderPage:
+  - Автоматически подключаются партиалы header/sidebar/footer
+  - Общие CSS: theme.css, layout.css, components.css, help.css
+  - Общие JS: main.js, help.js, layout.js
+  - pageCss: /css/admin.css, pageJs: /js/admin.js
+  (v1.16.5)
+- Проверена совместимость admin.js с новым layout (v1.16.6)
+  - Правок не потребовалось
+
+**Файлы, затронутые в Этапе 1.5:**
+- public/css/components.css (+ .tabs, + .table-search)
+- public/css/admin.css (переписан на переменные)
+- views/admin.html (контент-шаблон)
+- routes/admin.js (renderAdmin → renderPage)
+- public/js/admin.js (проверено, правок не потребовалось)
+- CHANGELOG.md
+
+**Что НЕ сделано (отложено на следующие шаги):**
+- Inline-обработчики (onclick / onkeyup) → addEventListener
+  (шаг 1.5.6)
+- Дубли getInitials и formatDate → utils/escape.js и utils/format.js
+  (отдельный шаг)
+- /admin/add, /admin/edit/:id — на новом layout (шаг 1.6)
+- /admin/user/add, /admin/user/edit/:id (шаг 1.7)
+- /admin/catalog (шаг 1.8)
+- /admin/logs (шаг 1.9)
+- /admin/warehouses, /admin/warehouse-details (шаг 1.10)
+- /admin/inventory (шаг 1.11)
+- /pdf (шаг 1.12)
+- Финальная навигация + адаптивность (шаг 1.13)
+
+**Статистика Этапа 1.5:**
+- Тегов: 5 (v1.16.2 — v1.16.6) + финальный v1.17.0
+- Файлов изменено: 6 (components.css, admin.css, admin.html,
+  admin.js routes, admin.js client, CHANGELOG.md)
+- CSS-строк удалено (дубли): ~150
+- CSS-строк добавлено (components + admin): ~200
+
+Проверено: /admin полностью работает на новом layout,
+все модалки, таблицы, поиск, табы, адаптивность — без ошибок.
+/admin/add и /admin/edit/:id пока в старом дизайне — это ожидаемо,
+они в шаге 1.6.
+
+## [1.16.6] - 2026-10-02
+
+**Админ-панель: проверка совместимости admin.js с новым layout**
+
+### Изменения:
+
+**public/js/admin.js:**
+- Правок не потребовалось — файл полностью совместим с новым layout.
+
+### Проверено на совместимость:
+
+**Конфликты глобальных имён (main.js, layout.js vs admin.js):**
+- showToast — из main.js, используется в admin.js (без переопределения) ✓
+- getInitials — определён и в layout.js, и в admin.js (идентичные
+  реализации, перезапись безопасна, дополнительной логики нет) ✓
+- formatDate — определён и в main.js (длинный формат), и в admin.js
+  (относительное время). На /admin подключается admin.js — побеждает
+  его версия. Так как admin.js работает только на /admin,
+  конфликта нет. Оставлено намеренно: на /admin нужно относительное
+  время («5 мин назад»), а не длинная дата. ✓
+
+**Глобальные обработчики событий:**
+- Escape: и main.js, и admin.js вешают обработчик на keydown.
+  Оба срабатывают — main.js снимает .active со всех модалок,
+  admin.js дополнительно сбрасывает переменные (deleteId,
+  currentTempPassword и т.д.). Дублирование безопасное, дополнительная
+  логика admin.js полезна. ✓
+- Клик на .modal-overlay: аналогично — main.js снимает .active,
+  admin.js вызывает свои close-функции. ✓
+
+**Inline-обработчики (onclick / onkeyup):**
+- switchTab использует event.target — доступен, т.к. inline onclick
+  сохраняет глобальный event. ✓
+- searchTable — работает. ✓
+- Все кнопки действий (viewEquipment, editEquipment, deleteUser и т.д.)
+  — работают. ✓
+
+**Модалки:**
+- .modal-overlay.active — из components.css, совместимо. ✓
+
+### Примечание:
+- Микро-рефакторинг (вынос getInitials и formatDate в utils/escape.js
+  и utils/format.js) отложен до отдельного шага.
+- Удаление inline-обработчиков (onclick → addEventListener)
+  запланировано на 1.5.6.
+
+Проверено: /admin работает, все модалки открываются и закрываются,
+toast-уведомления показываются, поиск в таблицах работает,
+горячие клавиши Ctrl+K / Ctrl+B — работают.
+
 ## [1.16.5] - 2026-10-02
 
 **Админ-панель: renderAdmin переведён на renderPage**
