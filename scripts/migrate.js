@@ -883,6 +883,258 @@ async function seedWarehouses() {
   console.log(`   📦 Ячеек:      ${cellsA1.length + cellsA2.length + cellsB1.length + cellsC1.length}`);
   console.log('');
 }
+
+
+// ============================================================
+// ЭТАП 4.5: РАБОЧИЕ МЕСТА (офис → кабинет → место)
+// ============================================================
+
+async function createOfficesTable() {
+  const exists = await tableExists('offices');
+
+  if (exists) {
+    console.log('⏭️  Таблица offices уже существует\n');
+    return;
+  }
+
+  console.log('📋 Создание таблицы offices (офисы)...');
+  await run(`
+    CREATE TABLE offices (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE,
+      address TEXT,
+      description TEXT,
+      is_default INTEGER NOT NULL DEFAULT 0,
+      is_active INTEGER NOT NULL DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  console.log('✅ Таблица offices создана\n');
+}
+
+async function createRoomsTable() {
+  const exists = await tableExists('rooms');
+
+  if (exists) {
+    console.log('⏭️  Таблица rooms уже существует\n');
+    return;
+  }
+
+  console.log('📋 Создание таблицы rooms (кабинеты)...');
+  await run(`
+    CREATE TABLE rooms (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      office_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      description TEXT,
+      sort_order INTEGER DEFAULT 0,
+      is_active INTEGER NOT NULL DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (office_id) REFERENCES offices(id) ON DELETE CASCADE,
+      UNIQUE(office_id, name)
+    )
+  `);
+  console.log('✅ Таблица rooms создана\n');
+}
+
+async function createWorkplacesTable() {
+  const exists = await tableExists('workplaces');
+
+  if (exists) {
+    console.log('⏭️  Таблица workplaces уже существует\n');
+    return;
+  }
+
+  console.log('📋 Создание таблицы workplaces (рабочие места)...');
+  await run(`
+    CREATE TABLE workplaces (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      room_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      code TEXT,
+      capacity INTEGER,
+      description TEXT,
+      sort_order INTEGER DEFAULT 0,
+      is_active INTEGER NOT NULL DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE,
+      UNIQUE(room_id, name)
+    )
+  `);
+  console.log('✅ Таблица workplaces создана\n');
+}
+
+async function addWorkplaceIdToEquipment() {
+  const exists = await tableExists('equipment');
+  if (!exists) return;
+
+  console.log('📋 Проверка поля workplace_id в equipment...');
+  const fieldExists = await columnExists('equipment', 'workplace_id');
+
+  if (!fieldExists) {
+    await run(`ALTER TABLE equipment ADD COLUMN workplace_id INTEGER REFERENCES workplaces(id) ON DELETE SET NULL`);
+    console.log('  ✅ Добавлено поле: equipment.workplace_id');
+  } else {
+    console.log('  ⏭️  Поле equipment.workplace_id уже есть');
+  }
+  console.log('');
+}
+
+async function createWorkplacesIndexes() {
+  console.log('📋 Создание индексов для рабочих мест...');
+
+  await createIndexIfMissing('idx_offices_default', 'offices', 'is_default');
+  await createIndexIfMissing('idx_offices_active', 'offices', 'is_active');
+  await createIndexIfMissing('idx_rooms_office', 'rooms', 'office_id');
+  await createIndexIfMissing('idx_rooms_sort', 'rooms', 'sort_order');
+  await createIndexIfMissing('idx_workplaces_room', 'workplaces', 'room_id');
+  await createIndexIfMissing('idx_workplaces_sort', 'workplaces', 'sort_order');
+  await createIndexIfMissing('idx_equipment_workplace', 'equipment', 'workplace_id');
+
+  console.log('✅ Индексы для рабочих мест созданы\n');
+}
+
+/**
+ * Начальные данные для рабочих мест:
+ * 2 офиса → 4 кабинета → 8 рабочих мест
+ */
+async function seedOffices() {
+  const existing = await get('SELECT COUNT(*) as count FROM offices');
+
+  if (existing.count > 0) {
+    console.log(`📊 Офисы уже существуют (${existing.count}), пропускаем заполнение\n`);
+    return;
+  }
+
+  console.log('📝 Создание начальных офисов, кабинетов и рабочих мест...\n');
+
+  // ============================================================
+  // ОФИС 1: Головной офис (по умолчанию)
+  // ============================================================
+
+  const off1 = await run(`
+    INSERT INTO offices (name, address, description, is_default, is_active)
+    VALUES (?, ?, ?, 1, 1)
+  `, [
+    'Головной офис',
+    'г. Москва, ул. Ленина, д. 10',
+    'Центральный офис компании.'
+  ]);
+
+  console.log(`✅ 🏢 Создан офис: Головной офис (по умолчанию)`);
+
+  // Кабинет 101 — IT-отдел
+  const room101 = await run(`
+    INSERT INTO rooms (office_id, name, description, sort_order, is_active)
+    VALUES (?, ?, ?, 1, 1)
+  `, [off1.lastID, 'Кабинет 101', 'IT-отдел']);
+
+  console.log(`   ✅ 🚪 Кабинет 101 (IT-отдел)`);
+
+  const wp101 = [
+    { name: 'Рабочее место 101-1', code: 'МСК-101-1' },
+    { name: 'Рабочее место 101-2', code: 'МСК-101-2' },
+  ];
+
+  for (const [i, w] of wp101.entries()) {
+    await run(`
+      INSERT INTO workplaces (room_id, name, code, capacity, sort_order, is_active)
+      VALUES (?, ?, ?, 1, ?, 1)
+    `, [room101.lastID, w.name, w.code, i + 1]);
+  }
+  console.log(`      ✅ ${wp101.length} рабочих мест`);
+
+  // Кабинет 102 — Бухгалтерия
+  const room102 = await run(`
+    INSERT INTO rooms (office_id, name, description, sort_order, is_active)
+    VALUES (?, ?, ?, 2, 1)
+  `, [off1.lastID, 'Кабинет 102', 'Бухгалтерия']);
+
+  console.log(`   ✅ 🚪 Кабинет 102 (Бухгалтерия)`);
+
+  const wp102 = [
+    { name: 'Рабочее место 102-1', code: 'МСК-102-1' },
+    { name: 'Рабочее место 102-2', code: 'МСК-102-2' },
+  ];
+
+  for (const [i, w] of wp102.entries()) {
+    await run(`
+      INSERT INTO workplaces (room_id, name, code, capacity, sort_order, is_active)
+      VALUES (?, ?, ?, 1, ?, 1)
+    `, [room102.lastID, w.name, w.code, i + 1]);
+  }
+  console.log(`      ✅ ${wp102.length} рабочих мест`);
+
+  console.log('');
+
+  // ============================================================
+  // ОФИС 2: Региональный офис
+  // ============================================================
+
+  const off2 = await run(`
+    INSERT INTO offices (name, address, description, is_default, is_active)
+    VALUES (?, ?, ?, 0, 1)
+  `, [
+    'Региональный офис',
+    'г. Санкт-Петербург, ул. Пушкина, д. 25',
+    'Региональное представительство.'
+  ]);
+
+  console.log(`✅ 🏢 Создан офис: Региональный офис`);
+
+  // Кабинет 201 — Отдел продаж
+  const room201 = await run(`
+    INSERT INTO rooms (office_id, name, description, sort_order, is_active)
+    VALUES (?, ?, ?, 1, 1)
+  `, [off2.lastID, 'Кабинет 201', 'Отдел продаж']);
+
+  console.log(`   ✅ 🚪 Кабинет 201 (Отдел продаж)`);
+
+  const wp201 = [
+    { name: 'Рабочее место 201-1', code: 'СПБ-201-1' },
+    { name: 'Рабочее место 201-2', code: 'СПБ-201-2' },
+  ];
+
+  for (const [i, w] of wp201.entries()) {
+    await run(`
+      INSERT INTO workplaces (room_id, name, code, capacity, sort_order, is_active)
+      VALUES (?, ?, ?, 1, ?, 1)
+    `, [room201.lastID, w.name, w.code, i + 1]);
+  }
+  console.log(`      ✅ ${wp201.length} рабочих мест`);
+
+  // Кабинет 202 — Техподдержка
+  const room202 = await run(`
+    INSERT INTO rooms (office_id, name, description, sort_order, is_active)
+    VALUES (?, ?, ?, 2, 1)
+  `, [off2.lastID, 'Кабинет 202', 'Техподдержка']);
+
+  console.log(`   ✅ 🚪 Кабинет 202 (Техподдержка)`);
+
+  const wp202 = [
+    { name: 'Рабочее место 202-1', code: 'СПБ-202-1' },
+    { name: 'Рабочее место 202-2', code: 'СПБ-202-2' },
+  ];
+
+  for (const [i, w] of wp202.entries()) {
+    await run(`
+      INSERT INTO workplaces (room_id, name, code, capacity, sort_order, is_active)
+      VALUES (?, ?, ?, 1, ?, 1)
+    `, [room202.lastID, w.name, w.code, i + 1]);
+  }
+  console.log(`      ✅ ${wp202.length} рабочих мест`);
+
+  console.log('');
+  console.log('✅ Итого:');
+  console.log(`   🏢 Офисов:          2`);
+  console.log(`   🚪 Кабинетов:       4`);
+  console.log(`   💺 Рабочих мест:    ${wp101.length + wp102.length + wp201.length + wp202.length}`);
+  console.log('');
+}
+
 // ============================================================
 // ГЛАВНАЯ ФУНКЦИЯ МИГРАЦИИ
 // ============================================================
@@ -929,8 +1181,18 @@ async function migrate() {
     // ===== ЭТАП 4: Склады =====
     console.log('🏢 ЭТАП 4: Склады\n');
     
-     await seedWarehouses();
-    
+    await seedWarehouses();
+
+    // ===== ЭТАП 4.5: Рабочие места =====
+    console.log('🏢 ЭТАП 4.5: Рабочие места (офис → кабинет → место)\n');
+
+    await createOfficesTable();
+    await createRoomsTable();
+    await createWorkplacesTable();
+    await addWorkplaceIdToEquipment();
+    await createWorkplacesIndexes();
+    await seedOffices();
+
     // ===== ИТОГИ =====
     console.log('═══════════════════════════════════════════════');
     console.log('✅ МИГРАЦИЯ ЗАВЕРШЕНА УСПЕШНО');
@@ -946,7 +1208,10 @@ async function migrate() {
         (SELECT COUNT(*) FROM warehouses) as warehouses,
         (SELECT COUNT(*) FROM zones) as zones,
         (SELECT COUNT(*) FROM racks) as racks,
-        (SELECT COUNT(*) FROM cells) as cells
+        (SELECT COUNT(*) FROM cells) as cells,
+        (SELECT COUNT(*) FROM offices) as offices,
+        (SELECT COUNT(*) FROM rooms) as rooms,
+        (SELECT COUNT(*) FROM workplaces) as workplaces
     `);
     
     console.log('📊 Итоговая статистика:');
@@ -958,6 +1223,9 @@ async function migrate() {
     console.log(`   📍 Зон:            ${stats.zones}`);
     console.log(`   🗄️  Стеллажей:      ${stats.racks}`);
     console.log(`   📦 Ячеек:          ${stats.cells}`);
+    console.log(`   🏢 Офисов:         ${stats.offices}`);
+    console.log(`   🚪 Кабинетов:      ${stats.rooms}`);
+    console.log(`   💺 Рабочих мест:   ${stats.workplaces}`);
     console.log('');
     
   } catch (error) {
