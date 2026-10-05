@@ -275,6 +275,22 @@ const placeholderChecks = [
                '{{total_warehouses}}', '{{total_zones}}', '{{total_racks}}',
                '{{total_cells}}', '{{equipment_on_stock}}'],
   },
+
+  {
+    file: 'equipment.html',
+    expected: [
+              'id="filterCategory"', 'id="filterType"', 'id="filterWarehouse"',
+              'id="filterWorkplace"',                              // 🆕
+              'id="filterStatus"', 'id="equipmentTableBody"',
+              'id="viewEquipmentModal"', 'id="viewEquipmentBody"',
+              '{{category_options}}', '{{warehouse_options}}',
+              '{{workplace_options}}',                             // 🆕
+              '{{equipment_rows}}', '{{{types_json}}}',
+              'onchange="onCategoryFilterChange()"',
+              'onchange="applyFilters()"',
+              'onclick="resetFilters()"',
+    ],
+  },
   {
     file: 'admin-warehouse-details.html',
     expected: ['id="pageData"', 'id="warehouseSubtitle"', 'id="warehouseBadges"',

@@ -8,7 +8,10 @@ const {
   getStats,
   getAllCategories,
   getAllTypes,
-  getAllWarehouses,   // 🆕
+  getAllWarehouses,
+  getAllOffices,          // 🆕
+  getRoomsByOffice,       // 🆕
+  getWorkplacesByRoom,    // 🆕
 } = require('../database/db');
 
 /**
@@ -46,6 +49,29 @@ async function renderEquipmentDashboard(req, res) {
       warehouseOptions += `<option value="${w.id}">${w.is_default ? '⭐ ' : '🏢 '}${w.name} (${w.equipment_count || 0})</option>`;
     });
     html = html.replace('{{warehouse_options}}', warehouseOptions);
+
+        // 🆕 Селект рабочих мест (optgroup по офис/кабинет)
+    let workplaceOptions = '<option value="">Все рабочие места</option>';
+    workplaceOptions += '<option value="__none__">— Не на рабочем месте —</option>';
+
+    const offices = await getAllOffices();
+    for (const office of offices) {
+      const rooms = await getRoomsByOffice(office.id);
+      for (const room of rooms) {
+        const workplaces = await getWorkplacesByRoom(room.id);
+        if (workplaces.length === 0) continue;
+
+        const groupLabel = `🏛️ ${office.name} / 🚪 ${room.name}`;
+        let groupHtml = '';
+        workplaces.forEach(wp => {
+          const code = wp.code ? ` [${wp.code}]` : '';
+          const count = wp.equipment_count || 0;
+          groupHtml += `<option value="${wp.id}">🪑 ${escapeHtml(wp.name)}${code} (${count})</option>`;
+        });
+        workplaceOptions += `<optgroup label="${escapeHtml(groupLabel)}">${groupHtml}</optgroup>`;
+      }
+    }
+    html = html.replace('{{workplace_options}}', workplaceOptions);
     
     // Таблица
     let tableRows = '';
@@ -63,18 +89,25 @@ async function renderEquipmentDashboard(req, res) {
         ? `<span class="type-badge">${item.type_icon || '📦'} ${item.type_name}</span>`
         : '<span style="color: #a0aec0;">—</span>';
       
-      // 🆕 Место хранения
-      const locationCell = item.cell_id
-        ? `<div class="location-cell">
+      // 🆕 Место хранения: склад ИЛИ рабочее место
+      let locationCell = '<span style="color: #cbd5e0;">—</span>';
+      if (item.cell_id) {
+        locationCell = `<div class="location-cell">
              <div class="location-path">${item.warehouse_name} → ${item.zone_name} → ${item.rack_name}</div>
              <div class="location-cell-code">${item.cell_name}${item.cell_code ? ` [${item.cell_code}]` : ''}</div>
-           </div>`
-        : '<span style="color: #cbd5e0;">—</span>';
+           </div>`;
+      } else if (item.workplace_id) {
+        locationCell = `<div class="location-cell">
+             <div class="location-path">🪑 Рабочее место</div>
+             <div class="location-cell-code" style="background: var(--success-bg); color: var(--success);">WP #${item.workplace_id}</div>
+           </div>`;
+      }
       
       tableRows += `
         <tr data-category-id="${item.category_id || ''}" 
             data-type-id="${item.type_id || ''}" 
             data-warehouse-id="${item.warehouse_id || ''}"
+            data-workplace-id="${item.workplace_id || ''}"
             onclick="viewEquipmentFromList(${item.id})"
             style="cursor: pointer;"
             title="Нажмите для просмотра">

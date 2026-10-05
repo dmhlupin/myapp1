@@ -68,6 +68,7 @@ function applyFilters() {
     const categoryId = document.getElementById('filterCategory').value;
     const typeId = document.getElementById('filterType').value;
     const warehouseId = document.getElementById('filterWarehouse').value;
+    const workplaceId = document.getElementById('filterWorkplace')?.value || '';
     const status = document.getElementById('filterStatus').value;
     
     const tbody = document.getElementById('equipmentTableBody');
@@ -80,6 +81,7 @@ function applyFilters() {
         const rowCategoryId = row.dataset.categoryId || '';
         const rowTypeId = row.dataset.typeId || '';
         const rowWarehouseId = row.dataset.warehouseId || '';
+        const rowWorkplaceId = row.dataset.workplaceId || '';
         
         let visible = true;
         
@@ -108,6 +110,21 @@ function applyFilters() {
             }
         }
         
+        // 🆕 Фильтр по рабочему месту
+        if (workplaceId) {
+            if (workplaceId === '__none__') {
+                // "Не на рабочем месте" — техника без workplace_id
+                if (rowWorkplaceId) {
+                    visible = false;
+                }
+            } else {
+                // Конкретное рабочее место
+                if (rowWorkplaceId !== workplaceId) {
+                    visible = false;
+                }
+            }
+        }
+
         // Фильтр по статусу
         if (status) {
             const statusCell = row.querySelector('.status-badge');
@@ -158,7 +175,8 @@ function showEmptyStateIfNeeded(count) {
 function resetFilters() {
     document.getElementById('filterCategory').value = '';
     document.getElementById('filterType').innerHTML = '<option value="">Все типы</option>';
-    document.getElementById('filterWarehouse').value = '';   // 🆕
+    document.getElementById('filterWarehouse').value = '';
+    document.getElementById('filterWorkplace').value = '';   // 🆕
     document.getElementById('filterStatus').value = '';
     
     // Показываем все строки

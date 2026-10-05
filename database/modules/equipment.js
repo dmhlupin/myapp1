@@ -313,6 +313,7 @@ module.exports = ({ db, run, get, all }) => ({
           e.category_id,
           e.type_id,
           e.cell_id,
+          e.workplace_id,
           c.name as category_name,
           c.icon as category_icon,
           t.name as type_name,

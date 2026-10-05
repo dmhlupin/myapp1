@@ -62,6 +62,12 @@
         </select>
     </div>
     <div class="filter-group">
+        <label>Рабочее место</label>
+        <select id="filterWorkplace" onchange="applyFilters()">
+            {{workplace_options}}
+        </select>
+    </div>
+    <div class="filter-group">
         <label>Статус</label>
         <select id="filterStatus" onchange="applyFilters()">
             <option value="">Все статусы</option>
