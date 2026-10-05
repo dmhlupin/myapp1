@@ -97,9 +97,18 @@ async function renderEquipmentDashboard(req, res) {
              <div class="location-cell-code">${item.cell_name}${item.cell_code ? ` [${item.cell_code}]` : ''}</div>
            </div>`;
       } else if (item.workplace_id) {
+        const wpLabel = `${item.workplace_name || 'Рабочее место'}${item.workplace_code ? ` [${item.workplace_code}]` : ''}`;
+        const roomLabel = item.room_name ? `🚪 ${item.room_name}` : '';
+        const officeLabel = item.office_name ? `🏛️ ${item.office_name}` : '';
+        const hierarchy = [officeLabel, roomLabel].filter(Boolean).join(' / ');
+        const link = item.office_id
+          ? `/admin/workplaces/${item.office_id}?highlightWorkplace=${item.workplace_id}`
+          : '#';
         locationCell = `<div class="location-cell">
-             <div class="location-path">🪑 Рабочее место</div>
-             <div class="location-cell-code" style="background: var(--success-bg); color: var(--success);">WP #${item.workplace_id}</div>
+             <div class="location-path">${hierarchy || 'Рабочее место'}</div>
+             <a href="${link}" class="location-cell-link" onclick="event.stopPropagation()" title="Открыть в дереве офиса">
+               <span class="location-cell-code location-cell-code--workplace">🪑 ${wpLabel}</span>
+             </a>
            </div>`;
       }
       

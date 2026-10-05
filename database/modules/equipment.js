@@ -339,7 +339,13 @@ module.exports = ({ db, run, get, all }) => ({
           rack.name as rack_name,
           zone.name as zone_name,
           wh.id as warehouse_id,
-          wh.name as warehouse_name
+          wh.name as warehouse_name,
+          wp.name as workplace_name,
+          wp.code as workplace_code,
+          r.id as room_id,
+          r.name as room_name,
+          o.id as office_id,
+          o.name as office_name
         FROM equipment e
         LEFT JOIN equipment_categories c ON e.category_id = c.id
         LEFT JOIN equipment_types t ON e.type_id = t.id
@@ -349,6 +355,9 @@ module.exports = ({ db, run, get, all }) => ({
         LEFT JOIN racks rack ON cell.rack_id = rack.id
         LEFT JOIN zones zone ON rack.zone_id = zone.id
         LEFT JOIN warehouses wh ON zone.warehouse_id = wh.id
+        LEFT JOIN workplaces wp ON e.workplace_id = wp.id
+        LEFT JOIN rooms r ON wp.room_id = r.id
+        LEFT JOIN offices o ON r.office_id = o.id
         WHERE 1=1
       `;
       const params = [];
@@ -381,10 +390,12 @@ module.exports = ({ db, run, get, all }) => ({
           e.serial_number LIKE ? OR
           u.full_name LIKE ? OR
           u.username LIKE ? OR
-          cell.code LIKE ?
+          cell.code LIKE ? OR
+          wp.name LIKE ? OR
+          wp.code LIKE ?
         )`;
         const term = `%${search}%`;
-        params.push(term, term, term, term, term, term, term);
+        params.push(term, term, term, term, term, term, term, term, term);
       }
       
       sql += ' ORDER BY e.inventory_number ASC';
@@ -404,6 +415,7 @@ module.exports = ({ db, run, get, all }) => ({
           LEFT JOIN racks rack ON cell.rack_id = rack.id
           LEFT JOIN zones zone ON rack.zone_id = zone.id
           LEFT JOIN warehouses wh ON zone.warehouse_id = wh.id
+          LEFT JOIN workplaces wp ON e.workplace_id = wp.id
           WHERE 1=1
         `;
         const countParams = [];
@@ -432,10 +444,12 @@ module.exports = ({ db, run, get, all }) => ({
             e.serial_number LIKE ? OR
             u.full_name LIKE ? OR
             u.username LIKE ? OR
-            cell.code LIKE ?
+            cell.code LIKE ? OR
+            wp.name LIKE ? OR
+            wp.code LIKE ?
           )`;
           const term = `%${search}%`;
-          countParams.push(term, term, term, term, term, term, term);
+          countParams.push(term, term, term, term, term, term, term, term, term);
         }
         
         db.get(countSql, countParams, (err, countRow) => {

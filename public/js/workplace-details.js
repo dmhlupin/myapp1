@@ -24,8 +24,14 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     await loadOfficeTree();
-});
 
+    // 🆕 Подсветка рабочего места из ?highlightWorkplace=ID
+    const params = new URLSearchParams(window.location.search);
+    const highlightId = params.get('highlightWorkplace');
+    if (highlightId) {
+        highlightWorkplace(highlightId);
+    }
+});
 // ============================================================
 // ЗАГРУЗКА ДЕРЕВА
 // ============================================================
@@ -161,7 +167,7 @@ function renderWorkplace(wp) {
     }
 
     return `
-        <div class="tree-workplace" onclick="viewWorkplace(${wp.id})">
+        <div class="tree-workplace" data-workplace-id="${wp.id}" onclick="viewWorkplace(${wp.id})">
             <span class="tree-workplace-icon">🪑</span>
             <div class="tree-workplace-info">
                 <div class="tree-workplace-name">${escapeHtml(wp.name)}</div>
@@ -207,6 +213,34 @@ function expandAll() {
 function collapseAll() {
     document.querySelectorAll('.tree-room').forEach(r => r.classList.remove('expanded'));
     document.querySelectorAll('.tree-room-header .toggle').forEach(t => t.textContent = '▶');
+}
+
+// ============================================================
+// ПОДСВЕТКА РАБОЧЕГО МЕСТА (из ?highlightWorkplace=ID)
+// ============================================================
+
+function highlightWorkplace(workplaceId) {
+    const target = document.querySelector(`.tree-workplace[data-workplace-id="${workplaceId}"]`);
+    if (!target) return;
+
+    // Раскрываем родительский кабинет
+    const parentRoom = target.closest('.tree-room');
+    if (parentRoom && !parentRoom.classList.contains('expanded')) {
+        parentRoom.classList.add('expanded');
+        const toggle = parentRoom.querySelector('.tree-room-header .toggle');
+        if (toggle) toggle.textContent = '▼';
+    }
+
+    // Скролл к элементу
+    setTimeout(() => {
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+
+    // Подсветка
+    target.classList.add('highlight');
+    setTimeout(() => {
+        target.classList.remove('highlight');
+    }, 2200);
 }
 
 // ============================================================
