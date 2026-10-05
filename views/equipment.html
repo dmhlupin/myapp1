@@ -30,6 +30,11 @@
         <div class="label">Доступно</div>
     </div>
     <div class="stat-card">
+        <span class="icon">🪑</span>
+        <div class="number purple">{{placed_equipment}}</div>
+        <div class="label">На местах</div>
+    </div>
+    <div class="stat-card">
         <span class="icon">👤</span>
         <div class="number warning">{{assigned_equipment}}</div>
         <div class="label">Назначено</div>
@@ -72,6 +77,7 @@
         <select id="filterStatus" onchange="applyFilters()">
             <option value="">Все статусы</option>
             <option value="available">✅ Доступна</option>
+            <option value="placed">🪑 На рабочем месте</option>
             <option value="assigned">👤 Назначена</option>
             <option value="maintenance">🔧 В ремонте</option>
             <option value="retired">❌ Списана</option>

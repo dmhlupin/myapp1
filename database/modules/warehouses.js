@@ -930,7 +930,10 @@ module.exports = ({ db, run, get, all }) => ({
         checkCell(() => {
           db.run(`
             UPDATE equipment 
-            SET cell_id = ?, workplace_id = NULL, updated_at = CURRENT_TIMESTAMP 
+            SET cell_id = ?,
+                workplace_id = NULL,
+                status = CASE WHEN status IN ('available', 'placed') THEN 'available' ELSE status END,
+                updated_at = CURRENT_TIMESTAMP 
             WHERE id = ?
           `, [cellId, equipmentId], function(err) {
             if (err) {

@@ -733,6 +733,11 @@ tr:last-child td {
     color: var(--success);
 }
 
+.status-badge.status-placed {
+    background: var(--purple-bg);
+    color: var(--purple);
+}
+
 .status-badge.status-assigned {
     background: var(--info-bg);
     color: var(--info);
@@ -836,6 +841,7 @@ tr:last-child td {
 .stat-card .number.warning { color: var(--warning); }
 .stat-card .number.danger { color: var(--danger); }
 .stat-card .number.info { color: var(--info); }
+.stat-card .number.purple { color: var(--purple); }
 
 .stat-card .label {
     font-size: var(--text-sm);

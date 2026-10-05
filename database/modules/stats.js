@@ -14,6 +14,7 @@ module.exports = ({ db, run, get, all }) => ({
           (SELECT COUNT(*) FROM users) as total_users,
           (SELECT COUNT(*) FROM equipment) as total_equipment,
           (SELECT COUNT(*) FROM equipment WHERE status = 'available') as available_equipment,
+          (SELECT COUNT(*) FROM equipment WHERE status = 'placed') as placed_equipment,
           (SELECT COUNT(*) FROM equipment WHERE status = 'assigned') as assigned_equipment,
           (SELECT COUNT(*) FROM equipment WHERE status = 'maintenance') as maintenance_equipment,
           (SELECT COUNT(*) FROM equipment WHERE status = 'retired') as retired_equipment,

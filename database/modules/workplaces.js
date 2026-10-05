@@ -806,7 +806,10 @@ module.exports = ({ db, run, get, all }) => ({
         checkWorkplace(() => {
           db.run(`
             UPDATE equipment
-            SET workplace_id = ?, cell_id = NULL, updated_at = CURRENT_TIMESTAMP
+            SET workplace_id = ?,
+                cell_id = NULL,
+                status = CASE WHEN status IN ('available', 'placed') THEN 'placed' ELSE status END,
+                updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
           `, [workplaceId, equipmentId], function(err) {
             if (err) {

@@ -1136,6 +1136,40 @@ async function seedOffices() {
 }
 
 // ============================================================
+// ЭТАП 4.6: СТАТУС 'placed' ДЛЯ ТЕХНИКИ НА РАБОЧИХ МЕСТАХ
+// ============================================================
+
+/**
+ * Проставить status = 'placed' для техники, которая находится
+ * на рабочем месте (workplace_id IS NOT NULL), но имеет статус
+ * 'available' (наследие ранних версий).
+ *
+ * Идемпотентно: повторный запуск не находит записей для обновления.
+ */
+async function migrateEquipmentPlacedStatus() {
+  const exists = await tableExists('equipment');
+  if (!exists) return;
+
+  const hasWorkplaceId = await columnExists('equipment', 'workplace_id');
+  if (!hasWorkplaceId) return;
+
+  console.log('📋 Миграция статуса: available → placed (для техники на рабочих местах)...');
+
+  const result = await run(`
+    UPDATE equipment
+    SET status = 'placed', updated_at = CURRENT_TIMESTAMP
+    WHERE workplace_id IS NOT NULL AND status = 'available'
+  `);
+
+  if (result.changes > 0) {
+    console.log(`  ✅ Обновлено записей: ${result.changes}`);
+  } else {
+    console.log('  ⏭️  Записей для обновления нет');
+  }
+  console.log('');
+}
+
+// ============================================================
 // ГЛАВНАЯ ФУНКЦИЯ МИГРАЦИИ
 // ============================================================
 
@@ -1192,6 +1226,7 @@ async function migrate() {
     await addWorkplaceIdToEquipment();
     await createWorkplacesIndexes();
     await seedOffices();
+    await migrateEquipmentPlacedStatus();
 
     // ===== ИТОГИ =====
     console.log('═══════════════════════════════════════════════');
@@ -1211,7 +1246,8 @@ async function migrate() {
         (SELECT COUNT(*) FROM cells) as cells,
         (SELECT COUNT(*) FROM offices) as offices,
         (SELECT COUNT(*) FROM rooms) as rooms,
-        (SELECT COUNT(*) FROM workplaces) as workplaces
+        (SELECT COUNT(*) FROM workplaces) as workplaces,
+        (SELECT COUNT(*) FROM equipment WHERE status = 'placed') as equipment_placed
     `);
     
     console.log('📊 Итоговая статистика:');
@@ -1219,6 +1255,7 @@ async function migrate() {
     console.log(`   📁 Категорий:      ${stats.categories}`);
     console.log(`   📦 Типов:          ${stats.types}`);
     console.log(`   🔧 Единиц техники: ${stats.equipment}`);
+    console.log(`   🪑 Из них на местах: ${stats.equipment_placed}`);
     console.log(`   🏢 Складов:        ${stats.warehouses}`);
     console.log(`   📍 Зон:            ${stats.zones}`);
     console.log(`   🗄️  Стеллажей:      ${stats.racks}`);

@@ -287,8 +287,9 @@ const placeholderChecks = [
               'id="filterStatus"', 'id="equipmentTableBody"',
               'id="viewEquipmentModal"', 'id="viewEquipmentBody"',
               '{{category_options}}', '{{warehouse_options}}',
-              '{{workplace_options}}',                             // 🆕
+              '{{workplace_options}}',
               '{{equipment_rows}}', '{{{types_json}}}',
+              '{{placed_equipment}}',                              // 🆕
               'onchange="onCategoryFilterChange()"',
               'onchange="applyFilters()"',
               'onclick="resetFilters()"',

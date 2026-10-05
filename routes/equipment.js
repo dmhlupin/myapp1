@@ -32,6 +32,7 @@ async function renderEquipmentDashboard(req, res) {
     // Статистика
     html = html.replace(/\{\{total_equipment\}\}/g, stats.total_equipment || 0);
     html = html.replace(/\{\{available_equipment\}\}/g, stats.available_equipment || 0);
+    html = html.replace(/\{\{placed_equipment\}\}/g, stats.placed_equipment || 0);
     html = html.replace(/\{\{assigned_equipment\}\}/g, stats.assigned_equipment || 0);
     html = html.replace(/\{\{total_users\}\}/g, stats.total_users || 0);
     
@@ -112,6 +113,15 @@ async function renderEquipmentDashboard(req, res) {
            </div>`;
       }
       
+      const statusLabels = {
+        'available':   '✅ Доступна',
+        'placed':      '🪑 На месте',
+        'assigned':    '👤 Назначена',
+        'maintenance': '🔧 В ремонте',
+        'retired':     '❌ Списана',
+      };
+      const statusLabel = statusLabels[item.status] || item.status;
+
       tableRows += `
         <tr data-category-id="${item.category_id || ''}" 
             data-type-id="${item.type_id || ''}" 
@@ -126,7 +136,7 @@ async function renderEquipmentDashboard(req, res) {
           <td>${categoryCell}</td>
           <td>${typeCell}</td>
           <td>${locationCell}</td>
-          <td><span class="status-badge ${statusClass}">${item.status}</span></td>
+          <td><span class="status-badge ${statusClass}">${statusLabel}</span></td>
           <td>${userInfo}</td>
         </tr>
       `;
