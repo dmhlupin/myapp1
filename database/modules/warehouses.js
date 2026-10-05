@@ -889,7 +889,7 @@ module.exports = ({ db, run, get, all }) => ({
   moveEquipmentToCell(equipmentId, cellId) {
     return new Promise((resolve, reject) => {
       // Проверяем технику
-      db.get('SELECT id, name, cell_id FROM equipment WHERE id = ?', [equipmentId], (err, eq) => {
+      db.get('SELECT id, name, cell_id, workplace_id FROM equipment WHERE id = ?', [equipmentId], (err, eq) => {
         if (err) {
           reject(err);
           return;
@@ -930,7 +930,7 @@ module.exports = ({ db, run, get, all }) => ({
         checkCell(() => {
           db.run(`
             UPDATE equipment 
-            SET cell_id = ?, updated_at = CURRENT_TIMESTAMP 
+            SET cell_id = ?, workplace_id = NULL, updated_at = CURRENT_TIMESTAMP 
             WHERE id = ?
           `, [cellId, equipmentId], function(err) {
             if (err) {
@@ -941,6 +941,7 @@ module.exports = ({ db, run, get, all }) => ({
               updated: this.changes,
               old_cell_id: eq.cell_id,
               new_cell_id: cellId,
+              old_workplace_id: eq.workplace_id,
               equipment_name: eq.name
             });
           });

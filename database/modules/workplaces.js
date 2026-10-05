@@ -1,0 +1,984 @@
+// database/modules/workplaces.js
+// Работа с рабочими местами: иерархия Офис → Кабинет → Рабочее место
+
+module.exports = ({ db, run, get, all }) => ({
+
+  // ============================================================
+  // ОФИСЫ (offices)
+  // ============================================================
+
+  /**
+   * Получить все офисы с количеством кабинетов, рабочих мест и техники
+   */
+  getAllOffices() {
+    return new Promise((resolve, reject) => {
+      db.all(`
+        SELECT
+          o.id,
+          o.name,
+          o.address,
+          o.description,
+          o.is_default,
+          o.is_active,
+          o.created_at,
+          o.updated_at,
+          (SELECT COUNT(*) FROM rooms WHERE office_id = o.id AND is_active = 1) as rooms_count,
+          (SELECT COUNT(*) FROM workplaces w
+            JOIN rooms r ON w.room_id = r.id
+            WHERE r.office_id = o.id AND w.is_active = 1
+          ) as workplaces_count,
+          (SELECT COUNT(*) FROM equipment e
+            JOIN workplaces w ON e.workplace_id = w.id
+            JOIN rooms r ON w.room_id = r.id
+            WHERE r.office_id = o.id
+          ) as equipment_count
+        FROM offices o
+        ORDER BY o.is_default DESC, o.name ASC
+      `, (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows || []);
+      });
+    });
+  },
+
+  /**
+   * Получить офис по ID
+   */
+  getOfficeById(id) {
+    return new Promise((resolve, reject) => {
+      db.get(`
+        SELECT
+          o.*,
+          (SELECT COUNT(*) FROM rooms WHERE office_id = o.id) as rooms_count,
+          (SELECT COUNT(*) FROM equipment e
+            JOIN workplaces w ON e.workplace_id = w.id
+            JOIN rooms r ON w.room_id = r.id
+            WHERE r.office_id = o.id
+          ) as equipment_count
+        FROM offices o
+        WHERE o.id = ?
+      `, [id], (err, row) => {
+        if (err) reject(err);
+        else resolve(row);
+      });
+    });
+  },
+
+  /**
+   * Получить офис по умолчанию
+   */
+  getDefaultOffice() {
+    return new Promise((resolve, reject) => {
+      db.get(`
+        SELECT * FROM offices
+        WHERE is_default = 1 AND is_active = 1
+        LIMIT 1
+      `, (err, row) => {
+        if (err) reject(err);
+        else resolve(row);
+      });
+    });
+  },
+
+  /**
+   * Создать офис
+   */
+  createOffice(data) {
+    return new Promise((resolve, reject) => {
+      const { name, address, description, is_default } = data;
+
+      const doInsert = () => {
+        db.run(`
+          INSERT INTO offices (name, address, description, is_default, is_active)
+          VALUES (?, ?, ?, ?, 1)
+        `, [
+          name,
+          address || null,
+          description || null,
+          is_default ? 1 : 0
+        ], function(err) {
+          if (err) {
+            reject(err);
+            return;
+          }
+          resolve({ id: this.lastID, ...data });
+        });
+      };
+
+      // Если is_default = 1 — сбрасываем у других
+      if (is_default) {
+        db.run('UPDATE offices SET is_default = 0', (err) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+          doInsert();
+        });
+      } else {
+        doInsert();
+      }
+    });
+  },
+
+  /**
+   * Обновить офис
+   */
+  updateOffice(id, data) {
+    return new Promise((resolve, reject) => {
+      const { name, address, description, is_default, is_active } = data;
+
+      const doUpdate = () => {
+        db.run(`
+          UPDATE offices
+          SET name = ?, address = ?, description = ?,
+              is_default = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?
+        `, [
+          name,
+          address || null,
+          description || null,
+          is_default ? 1 : 0,
+          is_active !== undefined ? (is_active ? 1 : 0) : 1,
+          id
+        ], function(err) {
+          if (err) {
+            reject(err);
+            return;
+          }
+          if (this.changes === 0) {
+            reject(new Error('Офис не найден'));
+            return;
+          }
+          resolve({ id, ...data });
+        });
+      };
+
+      // Если is_default = 1 — сбрасываем у других
+      if (is_default) {
+        db.run('UPDATE offices SET is_default = 0 WHERE id != ?', [id], (err) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+          doUpdate();
+        });
+      } else {
+        doUpdate();
+      }
+    });
+  },
+
+  /**
+   * Удалить офис
+   * Нельзя удалить, если есть кабинеты или это офис по умолчанию
+   */
+  deleteOffice(id) {
+    return new Promise((resolve, reject) => {
+      db.get('SELECT is_default FROM offices WHERE id = ?', [id], (err, row) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        if (!row) {
+          reject(new Error('Офис не найден'));
+          return;
+        }
+        if (row.is_default) {
+          reject(new Error('Нельзя удалить офис по умолчанию. Сначала назначьте другой.'));
+          return;
+        }
+
+        db.get('SELECT COUNT(*) as count FROM rooms WHERE office_id = ?', [id], (err, roomsRow) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+          if (roomsRow.count > 0) {
+            reject(new Error(`Нельзя удалить офис: в нём ${roomsRow.count} кабинетов. Сначала удалите кабинеты.`));
+            return;
+          }
+
+          db.run('DELETE FROM offices WHERE id = ?', [id], function(err) {
+            if (err) {
+              reject(err);
+              return;
+            }
+            resolve({ deleted: this.changes });
+          });
+        });
+      });
+    });
+  },
+
+  /**
+   * Установить офис по умолчанию
+   */
+  setDefaultOffice(id) {
+    return new Promise((resolve, reject) => {
+      db.serialize(() => {
+        db.run('BEGIN TRANSACTION');
+
+        db.run('UPDATE offices SET is_default = 0', (err) => {
+          if (err) {
+            db.run('ROLLBACK');
+            reject(err);
+            return;
+          }
+
+          db.run('UPDATE offices SET is_default = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [id], function(err) {
+            if (err) {
+              db.run('ROLLBACK');
+              reject(err);
+              return;
+            }
+
+            db.run('COMMIT', (err) => {
+              if (err) {
+                reject(err);
+                return;
+              }
+              resolve({ updated: this.changes });
+            });
+          });
+        });
+      });
+    });
+  },
+
+  // ============================================================
+  // КАБИНЕТЫ (rooms)
+  // ============================================================
+
+  /**
+   * Получить кабинеты офиса
+   */
+  getRoomsByOffice(officeId) {
+    return new Promise((resolve, reject) => {
+      db.all(`
+        SELECT
+          r.id,
+          r.office_id,
+          r.name,
+          r.description,
+          r.sort_order,
+          r.is_active,
+          r.created_at,
+          r.updated_at,
+          (SELECT COUNT(*) FROM workplaces WHERE room_id = r.id AND is_active = 1) as workplaces_count,
+          (SELECT COUNT(*) FROM equipment e
+            JOIN workplaces w ON e.workplace_id = w.id
+            WHERE w.room_id = r.id
+          ) as equipment_count
+        FROM rooms r
+        WHERE r.office_id = ?
+        ORDER BY r.sort_order ASC, r.name ASC
+      `, [officeId], (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows || []);
+      });
+    });
+  },
+
+  /**
+   * Получить кабинет по ID (с адресом офиса)
+   */
+  getRoomById(id) {
+    return new Promise((resolve, reject) => {
+      db.get(`
+        SELECT
+          r.*,
+          o.name as office_name,
+          o.address as office_address
+        FROM rooms r
+        JOIN offices o ON r.office_id = o.id
+        WHERE r.id = ?
+      `, [id], (err, row) => {
+        if (err) reject(err);
+        else resolve(row);
+      });
+    });
+  },
+
+  /**
+   * Создать кабинет
+   */
+  createRoom(data) {
+    return new Promise((resolve, reject) => {
+      const { office_id, name, description, sort_order } = data;
+
+      // Проверяем офис
+      db.get('SELECT id FROM offices WHERE id = ?', [office_id], (err, office) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        if (!office) {
+          reject(new Error('Офис не найден'));
+          return;
+        }
+
+        db.run(`
+          INSERT INTO rooms (office_id, name, description, sort_order, is_active)
+          VALUES (?, ?, ?, ?, 1)
+        `, [office_id, name, description || null, sort_order || 0], function(err) {
+          if (err) {
+            if (err.message.includes('UNIQUE')) {
+              reject(new Error('Кабинет с таким названием уже есть в этом офисе'));
+            } else {
+              reject(err);
+            }
+            return;
+          }
+          resolve({ id: this.lastID, ...data });
+        });
+      });
+    });
+  },
+
+  /**
+   * Обновить кабинет
+   */
+  updateRoom(id, data) {
+    return new Promise((resolve, reject) => {
+      const { name, description, sort_order, is_active } = data;
+
+      db.run(`
+        UPDATE rooms
+        SET name = ?, description = ?, sort_order = ?,
+            is_active = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `, [
+        name,
+        description || null,
+        sort_order || 0,
+        is_active !== undefined ? (is_active ? 1 : 0) : 1,
+        id
+      ], function(err) {
+        if (err) {
+          if (err.message.includes('UNIQUE')) {
+            reject(new Error('Кабинет с таким названием уже есть'));
+          } else {
+            reject(err);
+          }
+          return;
+        }
+        if (this.changes === 0) {
+          reject(new Error('Кабинет не найден'));
+          return;
+        }
+        resolve({ id, ...data });
+      });
+    });
+  },
+
+  /**
+   * Удалить кабинет
+   * Нельзя удалить, если в нём есть рабочие места
+   */
+  deleteRoom(id) {
+    return new Promise((resolve, reject) => {
+      db.get('SELECT COUNT(*) as count FROM workplaces WHERE room_id = ?', [id], (err, row) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        if (row.count > 0) {
+          reject(new Error(`Нельзя удалить кабинет: в нём ${row.count} рабочих мест. Сначала удалите рабочие места.`));
+          return;
+        }
+
+        db.run('DELETE FROM rooms WHERE id = ?', [id], function(err) {
+          if (err) {
+            reject(err);
+            return;
+          }
+          resolve({ deleted: this.changes });
+        });
+      });
+    });
+  },
+
+  
+  // ============================================================
+  // РАБОЧИЕ МЕСТА (workplaces)
+  // ============================================================
+
+  /**
+   * Получить рабочие места кабинета
+   */
+  getWorkplacesByRoom(roomId) {
+    return new Promise((resolve, reject) => {
+      db.all(`
+        SELECT
+          w.id,
+          w.room_id,
+          w.name,
+          w.code,
+          w.capacity,
+          w.description,
+          w.sort_order,
+          w.is_active,
+          w.created_at,
+          w.updated_at,
+          (SELECT COUNT(*) FROM equipment WHERE workplace_id = w.id) as equipment_count
+        FROM workplaces w
+        WHERE w.room_id = ?
+        ORDER BY w.sort_order ASC, w.name ASC
+      `, [roomId], (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows || []);
+      });
+    });
+  },
+
+  /**
+   * Получить рабочее место по ID (с полным адресом офис → кабинет)
+   */
+  getWorkplaceById(id) {
+    return new Promise((resolve, reject) => {
+      db.get(`
+        SELECT
+          w.*,
+          r.name as room_name,
+          r.office_id,
+          o.name as office_name,
+          o.address as office_address,
+          (SELECT COUNT(*) FROM equipment WHERE workplace_id = w.id) as equipment_count
+        FROM workplaces w
+        JOIN rooms r ON w.room_id = r.id
+        JOIN offices o ON r.office_id = o.id
+        WHERE w.id = ?
+      `, [id], (err, row) => {
+        if (err) reject(err);
+        else resolve(row);
+      });
+    });
+  },
+
+  /**
+   * Создать рабочее место
+   */
+  createWorkplace(data) {
+    return new Promise((resolve, reject) => {
+      const { room_id, name, code, capacity, description, sort_order } = data;
+
+      // Проверяем кабинет
+      db.get('SELECT id FROM rooms WHERE id = ?', [room_id], (err, room) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        if (!room) {
+          reject(new Error('Кабинет не найден'));
+          return;
+        }
+
+        db.run(`
+          INSERT INTO workplaces (room_id, name, code, capacity, description, sort_order, is_active)
+          VALUES (?, ?, ?, ?, ?, ?, 1)
+        `, [
+          room_id,
+          name,
+          code || null,
+          capacity || null,
+          description || null,
+          sort_order || 0
+        ], function(err) {
+          if (err) {
+            if (err.message.includes('UNIQUE')) {
+              reject(new Error('Рабочее место с таким названием уже есть в этом кабинете'));
+            } else {
+              reject(err);
+            }
+            return;
+          }
+          resolve({ id: this.lastID, ...data });
+        });
+      });
+    });
+  },
+
+  /**
+   * Обновить рабочее место
+   */
+  updateWorkplace(id, data) {
+    return new Promise((resolve, reject) => {
+      const { name, code, capacity, description, sort_order, is_active } = data;
+
+      db.run(`
+        UPDATE workplaces
+        SET name = ?, code = ?, capacity = ?, description = ?,
+            sort_order = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `, [
+        name,
+        code || null,
+        capacity || null,
+        description || null,
+        sort_order || 0,
+        is_active !== undefined ? (is_active ? 1 : 0) : 1,
+        id
+      ], function(err) {
+        if (err) {
+          if (err.message.includes('UNIQUE')) {
+            reject(new Error('Рабочее место с таким названием уже есть'));
+          } else {
+            reject(err);
+          }
+          return;
+        }
+        if (this.changes === 0) {
+          reject(new Error('Рабочее место не найдено'));
+          return;
+        }
+        resolve({ id, ...data });
+      });
+    });
+  },
+
+  /**
+   * Удалить рабочее место
+   * Нельзя удалить, если на нём есть техника
+   */
+  deleteWorkplace(id) {
+    return new Promise((resolve, reject) => {
+      db.get('SELECT COUNT(*) as count FROM equipment WHERE workplace_id = ?', [id], (err, row) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        if (row.count > 0) {
+          reject(new Error(`Нельзя удалить рабочее место: на нём ${row.count} единиц техники. Сначала переместите технику.`));
+          return;
+        }
+
+        db.run('DELETE FROM workplaces WHERE id = ?', [id], function(err) {
+          if (err) {
+            reject(err);
+            return;
+          }
+          resolve({ deleted: this.changes });
+        });
+      });
+    });
+  },
+
+  // ============================================================
+  // ДЕРЕВО И АГРЕГАТЫ
+  // ============================================================
+
+  /**
+   * Получить дерево одного офиса: офис → кабинеты → рабочие места
+   * Техника НЕ включается (только счётчики equipment_count)
+   */
+  getOfficeTree(officeId) {
+    return new Promise((resolve, reject) => {
+      db.all(`
+        SELECT
+          o.id as office_id,
+          o.name as office_name,
+          o.address as office_address,
+          o.is_default,
+          r.id as room_id,
+          r.name as room_name,
+          r.description as room_description,
+          r.sort_order as room_sort,
+          w.id as workplace_id,
+          w.name as workplace_name,
+          w.code as workplace_code,
+          w.capacity as workplace_capacity,
+          w.sort_order as workplace_sort,
+          (SELECT COUNT(*) FROM equipment WHERE workplace_id = w.id) as equipment_count
+        FROM offices o
+        LEFT JOIN rooms r ON r.office_id = o.id AND r.is_active = 1
+        LEFT JOIN workplaces w ON w.room_id = r.id AND w.is_active = 1
+        WHERE o.id = ?
+        ORDER BY r.sort_order, r.name, w.sort_order, w.name
+      `, [officeId], (err, rows) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+
+        if (!rows || rows.length === 0) {
+          resolve(null);
+          return;
+        }
+
+        // Группируем в дерево
+        const office = {
+          id: rows[0].office_id,
+          name: rows[0].office_name,
+          address: rows[0].office_address,
+          is_default: rows[0].is_default,
+          rooms: {}
+        };
+
+        rows.forEach(row => {
+          if (row.room_id) {
+            if (!office.rooms[row.room_id]) {
+              office.rooms[row.room_id] = {
+                id: row.room_id,
+                name: row.room_name,
+                description: row.room_description,
+                sort_order: row.room_sort,
+                workplaces: []
+              };
+            }
+
+            if (row.workplace_id) {
+              office.rooms[row.room_id].workplaces.push({
+                id: row.workplace_id,
+                name: row.workplace_name,
+                code: row.workplace_code,
+                capacity: row.workplace_capacity,
+                sort_order: row.workplace_sort,
+                equipment_count: row.equipment_count
+              });
+            }
+          }
+        });
+
+        // Объекты → массивы
+        resolve({
+          ...office,
+          rooms: Object.values(office.rooms)
+        });
+      });
+    });
+  },
+
+  /**
+   * Получить дерево всех офисов (для общей страницы)
+   */
+  getFullWorkplaceTree() {
+    return new Promise((resolve, reject) => {
+      db.all(`
+        SELECT
+          o.id as office_id,
+          o.name as office_name,
+          o.address as office_address,
+          o.is_default,
+          r.id as room_id,
+          r.name as room_name,
+          r.sort_order as room_sort,
+          w.id as workplace_id,
+          w.name as workplace_name,
+          w.code as workplace_code,
+          w.sort_order as workplace_sort,
+          (SELECT COUNT(*) FROM equipment WHERE workplace_id = w.id) as equipment_count
+        FROM offices o
+        LEFT JOIN rooms r ON r.office_id = o.id AND r.is_active = 1
+        LEFT JOIN workplaces w ON w.room_id = r.id AND w.is_active = 1
+        WHERE o.is_active = 1
+        ORDER BY o.is_default DESC, o.name, r.sort_order, r.name, w.sort_order, w.name
+      `, (err, rows) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+
+        const tree = {};
+
+        (rows || []).forEach(row => {
+          if (!tree[row.office_id]) {
+            tree[row.office_id] = {
+              id: row.office_id,
+              name: row.office_name,
+              address: row.office_address,
+              is_default: row.is_default,
+              rooms: {}
+            };
+          }
+
+          if (row.room_id) {
+            if (!tree[row.office_id].rooms[row.room_id]) {
+              tree[row.office_id].rooms[row.room_id] = {
+                id: row.room_id,
+                name: row.room_name,
+                sort_order: row.room_sort,
+                workplaces: []
+              };
+            }
+
+            if (row.workplace_id) {
+              tree[row.office_id].rooms[row.room_id].workplaces.push({
+                id: row.workplace_id,
+                name: row.workplace_name,
+                code: row.workplace_code,
+                equipment_count: row.equipment_count
+              });
+            }
+          }
+        });
+
+        resolve(Object.values(tree).map(o => ({
+          ...o,
+          rooms: Object.values(o.rooms)
+        })));
+      });
+    });
+  },
+
+  
+  // ============================================================
+  // ТЕХНИКА НА РАБОЧЕМ МЕСТЕ
+  // ============================================================
+
+  /**
+   * Получить всю технику на рабочем месте
+   */
+  getWorkplaceEquipment(workplaceId) {
+    return new Promise((resolve, reject) => {
+      db.all(`
+        SELECT
+          e.id,
+          e.inventory_number,
+          e.name,
+          e.model,
+          e.serial_number,
+          e.manufacturer,
+          e.status,
+          e.purchase_date,
+          e.warranty_until,
+          c.name as category_name,
+          c.icon as category_icon,
+          t.name as type_name,
+          t.icon as type_icon
+        FROM equipment e
+        LEFT JOIN equipment_categories c ON e.category_id = c.id
+        LEFT JOIN equipment_types t ON e.type_id = t.id
+        WHERE e.workplace_id = ?
+        ORDER BY c.sort_order, t.sort_order, e.inventory_number
+      `, [workplaceId], (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows || []);
+      });
+    });
+  },
+
+  /**
+   * Переместить технику на рабочее место
+   * При этом обнуляется cell_id (техника «или на складе, или на рабочем месте»)
+   */
+  moveEquipmentToWorkplace(equipmentId, workplaceId) {
+    return new Promise((resolve, reject) => {
+      // Проверяем технику
+      db.get('SELECT id, name, cell_id, workplace_id FROM equipment WHERE id = ?', [equipmentId], (err, eq) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        if (!eq) {
+          reject(new Error('Техника не найдена'));
+          return;
+        }
+
+        // Проверяем рабочее место (если указано)
+        const checkWorkplace = (callback) => {
+          if (!workplaceId) {
+            callback(null);
+            return;
+          }
+          db.get(`
+            SELECT w.id, w.capacity,
+                   (SELECT COUNT(*) FROM equipment WHERE workplace_id = w.id) as current_count
+            FROM workplaces w
+            WHERE w.id = ?
+          `, [workplaceId], (err, wp) => {
+            if (err) {
+              reject(err);
+              return;
+            }
+            if (!wp) {
+              reject(new Error('Рабочее место не найдено'));
+              return;
+            }
+            // Проверка на переполнение
+            if (wp.capacity && wp.current_count >= wp.capacity && eq.workplace_id !== workplaceId) {
+              reject(new Error(`Рабочее место переполнено (${wp.current_count}/${wp.capacity})`));
+              return;
+            }
+            callback(wp);
+          });
+        };
+
+        checkWorkplace(() => {
+          db.run(`
+            UPDATE equipment
+            SET workplace_id = ?, cell_id = NULL, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+          `, [workplaceId, equipmentId], function(err) {
+            if (err) {
+              reject(err);
+              return;
+            }
+            resolve({
+              updated: this.changes,
+              old_workplace_id: eq.workplace_id,
+              new_workplace_id: workplaceId,
+              old_cell_id: eq.cell_id,
+              equipment_name: eq.name
+            });
+          });
+        });
+      });
+    });
+  },
+
+  // ============================================================
+  // СТАТИСТИКА
+  // ============================================================
+
+  /**
+   * Общая статистика по рабочим местам
+   */
+  getWorkplaceStats() {
+    return new Promise((resolve, reject) => {
+      db.get(`
+        SELECT
+          (SELECT COUNT(*) FROM offices WHERE is_active = 1) as total_offices,
+          (SELECT COUNT(*) FROM rooms WHERE is_active = 1) as total_rooms,
+          (SELECT COUNT(*) FROM workplaces WHERE is_active = 1) as total_workplaces,
+          (SELECT COUNT(*) FROM equipment WHERE workplace_id IS NOT NULL) as equipment_on_workplaces,
+          (SELECT COUNT(*) FROM equipment WHERE workplace_id IS NULL AND cell_id IS NULL AND status = 'available') as equipment_unassigned,
+          (SELECT COUNT(*) FROM equipment WHERE workplace_id IS NULL AND cell_id IS NOT NULL) as equipment_on_stock
+      `, (err, row) => {
+        if (err) reject(err);
+        else resolve(row || {});
+      });
+    });
+  },
+
+  /**
+   * Сводка по всем офисам (для страницы /admin/workplaces)
+   * Возвращает: список офисов со статистикой
+   */
+  getWorkplaceSummary() {
+    return new Promise((resolve, reject) => {
+      db.all(`
+        SELECT
+          o.id,
+          o.name,
+          o.address,
+          o.is_default,
+          o.is_active,
+          (SELECT COUNT(*) FROM rooms r WHERE r.office_id = o.id AND r.is_active = 1) as rooms_count,
+          (SELECT COUNT(*) FROM workplaces w
+            JOIN rooms r ON w.room_id = r.id
+            WHERE r.office_id = o.id AND w.is_active = 1
+          ) as workplaces_count,
+          (SELECT COUNT(*) FROM equipment e
+            JOIN workplaces w ON e.workplace_id = w.id
+            JOIN rooms r ON w.room_id = r.id
+            WHERE r.office_id = o.id
+          ) as equipment_count,
+          (SELECT COALESCE(SUM(w.capacity), 0) FROM workplaces w
+            JOIN rooms r ON w.room_id = r.id
+            WHERE r.office_id = o.id AND w.is_active = 1
+          ) as total_capacity
+        FROM offices o
+        WHERE o.is_active = 1
+        ORDER BY o.is_default DESC, o.name ASC
+      `, (err, rows) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+
+        const result = (rows || []).map(o => ({
+          ...o,
+          fill_percent: o.total_capacity > 0
+            ? Math.round((o.equipment_count / o.total_capacity) * 100)
+            : (o.workplaces_count > 0
+                ? Math.round((o.equipment_count / o.workplaces_count) * 100)
+                : 0)
+        }));
+
+        resolve(result);
+      });
+    });
+  },
+
+  /**
+   * Техника в офисе (для инвентаризации рабочих мест)
+   */
+  getOfficeEquipment(officeId) {
+    return new Promise((resolve, reject) => {
+      db.all(`
+        SELECT
+          e.id,
+          e.inventory_number,
+          e.name,
+          e.model,
+          e.serial_number,
+          e.manufacturer,
+          e.status,
+          e.purchase_date,
+          e.warranty_until,
+          c.name as category_name,
+          c.icon as category_icon,
+          t.name as type_name,
+          t.icon as type_icon,
+          w.id as workplace_id,
+          w.name as workplace_name,
+          w.code as workplace_code,
+          r.name as room_name,
+          o.name as office_name
+        FROM equipment e
+        LEFT JOIN equipment_categories c ON e.category_id = c.id
+        LEFT JOIN equipment_types t ON e.type_id = t.id
+        JOIN workplaces w ON e.workplace_id = w.id
+        JOIN rooms r ON w.room_id = r.id
+        JOIN offices o ON r.office_id = o.id
+        WHERE r.office_id = ?
+        ORDER BY r.sort_order, r.name, w.sort_order, w.name, c.sort_order, t.sort_order
+      `, [officeId], (err, rows) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        resolve(rows || []);
+      });
+    });
+  },
+
+  /**
+   * Заполненность рабочих мест офиса
+   * Возвращает: список мест с процентом заполнения
+   */
+  getWorkplaceOccupancy(officeId) {
+    return new Promise((resolve, reject) => {
+      db.all(`
+        SELECT
+          w.id,
+          w.name,
+          w.code,
+          w.capacity,
+          (SELECT COUNT(*) FROM equipment e WHERE e.workplace_id = w.id) as current_count,
+          r.name as room_name,
+          o.name as office_name
+        FROM workplaces w
+        JOIN rooms r ON w.room_id = r.id
+        JOIN offices o ON r.office_id = o.id
+        WHERE r.office_id = ? AND w.is_active = 1
+        ORDER BY r.sort_order, r.name, w.sort_order, w.name
+      `, [officeId], (err, rows) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+
+        const result = (rows || []).map(w => ({
+          ...w,
+          percent: w.capacity > 0
+            ? Math.round((w.current_count / w.capacity) * 100)
+            : (w.current_count > 0 ? 100 : 0)
+        }));
+
+        resolve(result);
+      });
+    });
+  }
+
+});
