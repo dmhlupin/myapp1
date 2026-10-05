@@ -1,0 +1,228 @@
+/* ============================================================
+   public/css/workplaces.css — Специфика страницы «Рабочие места»
+   Общие стили — в theme.css, layout.css, components.css
+   ============================================================ */
+
+/* ============================================================
+   СЕТКА ОФИСОВ
+   ============================================================ */
+
+.offices-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: var(--space-lg);
+}
+
+/* ============================================================
+   КАРТОЧКА ОФИСА
+   ============================================================ */
+
+.office-card {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    transition: all var(--transition-fast);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    box-shadow: var(--shadow-sm);
+}
+
+.office-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--accent-border);
+}
+
+.office-card.is-default {
+    border-color: var(--warning);
+    background: linear-gradient(135deg, var(--bg-tertiary) 0%, var(--warning-bg) 100%);
+}
+
+.office-card.is-inactive {
+    opacity: 0.6;
+}
+
+/* Заголовок карточки */
+.office-card-header {
+    display: flex;
+    gap: var(--space-md);
+    align-items: flex-start;
+}
+
+.office-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: var(--radius-lg);
+    background: linear-gradient(135deg, var(--accent) 0%, var(--purple) 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    flex-shrink: 0;
+}
+
+.office-card.is-default .office-icon {
+    background: linear-gradient(135deg, var(--warning) 0%, #d97706 100%);
+}
+
+.office-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.office-name {
+    font-size: var(--text-lg);
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: var(--space-xs);
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
+}
+
+.default-star {
+    color: var(--warning);
+    font-size: var(--text-base);
+}
+
+.office-badges {
+    display: flex;
+    gap: var(--space-xs);
+    flex-wrap: wrap;
+    margin-top: var(--space-xs);
+}
+
+/* Адрес */
+.office-address {
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    margin-bottom: var(--space-xs);
+}
+
+.office-address .icon {
+    font-size: var(--text-base);
+    flex-shrink: 0;
+}
+
+/* Описание */
+.office-description {
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+    line-height: 1.5;
+    padding: var(--space-sm) var(--space-md);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    border-left: 3px solid var(--border);
+}
+
+/* Счётчики */
+.office-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-sm);
+    padding: var(--space-md) 0;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+}
+
+.office-stat {
+    text-align: center;
+}
+
+.office-stat-value {
+    font-size: var(--text-lg);
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1;
+}
+
+.office-stat-value.rooms      { color: var(--success); }
+.office-stat-value.workplaces { color: var(--warning); }
+.office-stat-value.equipment  { color: var(--purple); }
+
+.office-stat-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 4px;
+}
+
+/* Кнопки действий */
+.office-actions {
+    display: flex;
+    gap: var(--space-sm);
+    margin-top: auto;
+}
+
+.office-actions .btn {
+    flex: 1;
+    justify-content: center;
+    padding: 8px 12px;
+    font-size: var(--text-sm);
+}
+
+.office-actions .btn-icon-only {
+    flex: 0 0 auto;
+    width: 38px;
+    padding: 8px 0;
+}
+
+/* ============================================================
+   АДАПТИВНОСТЬ
+   ============================================================ */
+
+@media (max-width: 768px) {
+    /* Сетка — одна колонка */
+    .offices-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* Карточка — компактнее */
+    .office-card {
+        padding: var(--space-md);
+    }
+
+    /* Иконка — меньше */
+    .office-icon {
+        width: 48px;
+        height: 48px;
+        font-size: 24px;
+    }
+
+    /* Имя — меньше */
+    .office-name {
+        font-size: var(--text-base);
+    }
+
+    /* Счётчики — компактнее */
+    .office-stats {
+        grid-template-columns: repeat(3, 1fr);
+        gap: var(--space-xs);
+    }
+
+    .office-stat-value {
+        font-size: var(--text-base);
+    }
+
+    /* Кнопки — перенос и иконки без подписей */
+    .office-actions {
+        flex-wrap: wrap;
+    }
+
+    .office-actions .btn span {
+        display: none;
+    }
+
+    .office-actions .btn-icon-only {
+        flex: 1;
+    }
+}

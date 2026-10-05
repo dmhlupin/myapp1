@@ -835,6 +835,7 @@ tr:last-child td {
 .stat-card .number.success { color: var(--success); }
 .stat-card .number.warning { color: var(--warning); }
 .stat-card .number.danger { color: var(--danger); }
+.stat-card .number.info { color: var(--info); }
 
 .stat-card .label {
     font-size: var(--text-sm);

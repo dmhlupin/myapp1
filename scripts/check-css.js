@@ -159,6 +159,7 @@ const cssFilesToCheck = [
   'warehouse-details.css',
   'inventory.css',
   'pdf.css',
+  'workplaces.css',      // ← добавить
 ];
 
 const missingVars = checkVars(themeVars, cssFilesToCheck);
@@ -285,6 +286,20 @@ const placeholderChecks = [
                'class="warehouse-info-panel"', 'class="tree-section"',
                'view-user-modal',
                '{{warehouse.id}}', '{{warehouse.name}}', '{{warehouse.description}}'],
+  },
+  {
+    file: 'admin-workplaces.html',
+    expected: [
+              'id="officeModal"', 'id="officeForm"', 'id="officeId"',
+              'id="officeName"', 'id="officesList"', 'id="deleteModal"',
+              'id="activeGroup"',
+              'onclick="openOfficeModal()"',
+              'onsubmit="saveOffice(event)"',
+              'class="stats-grid"', 'class="offices-grid"',
+              'class="page-header"', 'class="page-actions"',
+              '{{total_offices}}', '{{total_rooms}}', '{{total_workplaces}}',
+              '{{equipment_on_workplaces}}', '{{equipment_unassigned}}',
+    ],
   },
 ];
 
