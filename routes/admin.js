@@ -299,9 +299,8 @@ async function updateEquipmentAPI(req, res) {
       inventory_number, name, model, serial_number, 
       manufacturer, purchase_date, warranty_until, 
       status, description, assign_user_id, assign_condition,
-      category_id, type_id, cell_id
+      category_id, type_id, cell_id, workplace_id
     } = req.body;
-    
     if (!inventory_number || !name) {
       return res.status(400).json({ 
         error: 'Инвентарный номер и название обязательны' 
@@ -317,11 +316,23 @@ async function updateEquipmentAPI(req, res) {
     const oldStatus = existing.status;
     let assignmentResult = null;
     
-    // 🆕 Финальное значение cell_id
-    // Если статус = assigned — принудительно обнуляем
+    // 🆕 Финальные значения места хранения: склад ИЛИ рабочее место
     let finalCellId = cell_id ? parseInt(cell_id) : null;
+    let finalWorkplaceId = workplace_id ? parseInt(workplace_id) : null;
+
+    // Взаимоисключение: если выбрано рабочее место — обнуляем ячейку
+    if (finalWorkplaceId) {
+      finalCellId = null;
+    }
+    // Если выбрана ячейка — обнуляем рабочее место
+    if (finalCellId) {
+      finalWorkplaceId = null;
+    }
+
+    // Если статус = assigned — принудительно обнуляем оба
     if (status === 'assigned') {
       finalCellId = null;
+      finalWorkplaceId = null;
     }
     
     // Если назначаем технику пользователю
@@ -432,7 +443,8 @@ async function updateEquipmentAPI(req, res) {
       description: description || '',
       category_id: category_id ? parseInt(category_id) : null,
       type_id: type_id ? parseInt(type_id) : null,
-      cell_id: finalCellId,   // 🆕 используем финальное значение
+      cell_id: finalCellId,
+      workplace_id: finalWorkplaceId,
     });
     
     await logAction({
@@ -553,6 +565,7 @@ async function renderEditEquipment(req, res) {
     content = content.replace(/\{\{category_id\}\}/g, equipment.category_id || '');
     content = content.replace(/\{\{type_id\}\}/g, equipment.type_id || '');
     content = content.replace(/\{\{cell_id\}\}/g, equipment.cell_id || '');
+    content = content.replace(/\{\{workplace_id\}\}/g, equipment.workplace_id || '');
 
     // Статусы — русские подписи
     const statusLabels = {

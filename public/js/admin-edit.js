@@ -5,6 +5,7 @@ let categories = [];
 
 // ID для предзаполнения
 const originalCellId = document.getElementById('currentCellId')?.value || '';
+const originalWorkplaceId = document.getElementById('currentWorkplaceId')?.value || '';
 
 // Кэш данных для превью
 let locations = {
@@ -40,10 +41,20 @@ document.addEventListener('DOMContentLoaded', async function() {
         await loadTypesForCategory(originalCategoryId, originalTypeId);
     }
     
-    // 🆕 Загружаем склады и предзаполняем место хранения
+    // 🆕 Загружаем склады и рабочие места
     await loadWarehouses();
-    if (originalCellId) {
+    await loadWorkplaces();
+
+    // 🆕 Определяем тип расположения и предзаполняем
+    if (originalWorkplaceId) {
+        setLocationType('workplace');
+        document.getElementById('workplaceId').value = originalWorkplaceId;
+        updateLocationPreview();
+    } else if (originalCellId) {
+        setLocationType('warehouse');
         await preloadLocation(originalCellId);
+    } else {
+        setLocationType('none');
     }
 });
 
@@ -163,11 +174,17 @@ async function submitForm(event) {
     submitBtn.disabled = true;
     submitBtn.textContent = '⏳ Обновление...';
 
+    // 🆕 Тип расположения
+    const locationType = document.querySelector('input[name="locationType"]:checked')?.value || 'none';
+    const cellId = locationType === 'warehouse' ? (document.getElementById('cellId')?.value || null) : null;
+    const workplaceId = locationType === 'workplace' ? (document.getElementById('workplaceId')?.value || null) : null;
+
     const formData = {
         inventory_number: document.getElementById('inventory_number').value.trim(),
         category_id: document.getElementById('category_id').value || null,
         type_id: document.getElementById('type_id').value || null,
-        cell_id: document.getElementById('cellId')?.value || null,
+        cell_id: cellId,
+        workplace_id: workplaceId,
         name: document.getElementById('name').value.trim(),
         model: document.getElementById('model').value.trim(),
         serial_number: document.getElementById('serial_number').value.trim(),
@@ -248,6 +265,98 @@ async function loadWarehouses() {
     } catch (error) {
         console.error('❌ Ошибка загрузки складов:', error);
     }
+}
+
+// ============================================================
+// 🆕 РАБОЧИЕ МЕСТА (один select с optgroup офис/кабинет)
+// ============================================================
+
+async function loadWorkplaces() {
+    const select = document.getElementById('workplaceId');
+    if (!select) return;
+
+    try {
+        const response = await fetch('/api/admin/offices/tree');
+        const offices = await response.json();
+
+        let html = '<option value="">— Не указано —</option>';
+
+        offices.forEach(office => {
+            (office.rooms || []).forEach(room => {
+                const workplaces = room.workplaces || [];
+                if (workplaces.length === 0) return;
+
+                const groupLabel = `🏛️ ${office.name} / 🚪 ${room.name}`;
+                let groupHtml = '';
+                workplaces.forEach(wp => {
+                    const code = wp.code ? ` [${wp.code}]` : '';
+                    groupHtml += `<option value="${wp.id}">🪑 ${escapeHtml(wp.name)}${code}</option>`;
+                });
+                html += `<optgroup label="${escapeHtml(groupLabel)}">${groupHtml}</optgroup>`;
+            });
+        });
+
+        select.innerHTML = html;
+        console.log(`✅ Рабочие места загружены`);
+    } catch (error) {
+        console.error('❌ Ошибка загрузки рабочих мест:', error);
+        select.innerHTML = '<option value="">— Ошибка загрузки —</option>';
+    }
+}
+
+// ============================================================
+// 🆕 ПЕРЕКЛЮЧАТЕЛЬ ТИПА РАСПОЛОЖЕНИЯ
+// ============================================================
+
+function setLocationType(type) {
+    const radios = document.querySelectorAll('input[name="locationType"]');
+    radios.forEach(r => {
+        r.checked = r.value === type;
+    });
+    applyLocationTypeVisibility(type);
+}
+
+function onLocationTypeChange() {
+    const selected = document.querySelector('input[name="locationType"]:checked');
+    if (!selected) return;
+
+    const type = selected.value;
+    applyLocationTypeVisibility(type);
+
+    // При переключении — сбрасываем значения "другой" ветки
+    if (type === 'workplace') {
+        // Сбрасываем склад
+        document.getElementById('warehouseId').value = '';
+        document.getElementById('zoneId').innerHTML = '<option value="">— Сначала выберите склад —</option>';
+        document.getElementById('zoneId').disabled = true;
+        document.getElementById('rackId').innerHTML = '<option value="">— Сначала выберите зону —</option>';
+        document.getElementById('rackId').disabled = true;
+        document.getElementById('cellId').innerHTML = '<option value="">— Сначала выберите стеллаж —</option>';
+        document.getElementById('cellId').disabled = true;
+    } else if (type === 'warehouse') {
+        // Сбрасываем рабочее место
+        document.getElementById('workplaceId').value = '';
+    } else {
+        // "Не указано" — сбрасываем всё
+        document.getElementById('workplaceId').value = '';
+        document.getElementById('warehouseId').value = '';
+        document.getElementById('zoneId').innerHTML = '<option value="">— Сначала выберите склад —</option>';
+        document.getElementById('zoneId').disabled = true;
+        document.getElementById('rackId').innerHTML = '<option value="">— Сначала выберите зону —</option>';
+        document.getElementById('rackId').disabled = true;
+        document.getElementById('cellId').innerHTML = '<option value="">— Сначала выберите стеллаж —</option>';
+        document.getElementById('cellId').disabled = true;
+    }
+
+    updateLocationPreview();
+}
+
+function applyLocationTypeVisibility(type) {
+    const warehouseBlock = document.getElementById('warehouseBlock');
+    const workplaceBlock = document.getElementById('workplaceBlock');
+
+    if (warehouseBlock) warehouseBlock.style.display = type === 'warehouse' ? 'block' : 'none';
+    if (workplaceBlock) workplaceBlock.style.display = type === 'workplace' ? 'block' : 'none';
 }
 
 async function onWarehouseChange() {
@@ -436,38 +545,53 @@ async function preloadLocation(cellId) {
 }
 
 function updateLocationPreview() {
-    const warehouseId = document.getElementById('warehouseId')?.value;
-    const zoneId = document.getElementById('zoneId')?.value;
-    const rackId = document.getElementById('rackId')?.value;
-    const cellId = document.getElementById('cellId')?.value;
-    
+    const selected = document.querySelector('input[name="locationType"]:checked');
+    const type = selected ? selected.value : 'none';
+
     const preview = document.getElementById('locationPreview');
     const previewText = document.getElementById('locationPreviewText');
-    
     if (!preview || !previewText) return;
-    
+
     const parts = [];
-    
-    if (warehouseId) {
-        const wh = locations.warehouses.find(w => String(w.id) === String(warehouseId));
-        if (wh) parts.push(`🏢 ${wh.name}`);
-    }
-    if (zoneId) {
-        const z = locations.zones.find(z => String(z.id) === String(zoneId));
-        if (z) parts.push(`📍 ${z.name}`);
-    }
-    if (rackId) {
-        const r = locations.racks.find(r => String(r.id) === String(rackId));
-        if (r) parts.push(`🗄️ ${r.name}`);
-    }
-    if (cellId) {
-        const c = locations.cells.find(c => String(c.id) === String(cellId));
-        if (c) {
-            const code = c.code ? ` [${c.code}]` : '';
-            parts.push(`📦 ${c.name}${code}`);
+
+    if (type === 'workplace') {
+        const workplaceId = document.getElementById('workplaceId')?.value;
+        if (workplaceId) {
+            const opt = document.querySelector(`#workplaceId option[value="${workplaceId}"]`);
+            const label = opt ? opt.textContent.trim() : `🪑 WP #${workplaceId}`;
+            // Ищем optgroup-label
+            const group = opt ? opt.closest('optgroup') : null;
+            const groupLabel = group ? group.label : '';
+            if (groupLabel) parts.push(groupLabel);
+            parts.push(label);
+        }
+    } else if (type === 'warehouse') {
+        const warehouseId = document.getElementById('warehouseId')?.value;
+        const zoneId = document.getElementById('zoneId')?.value;
+        const rackId = document.getElementById('rackId')?.value;
+        const cellId = document.getElementById('cellId')?.value;
+
+        if (warehouseId) {
+            const wh = locations.warehouses.find(w => String(w.id) === String(warehouseId));
+            if (wh) parts.push(`🏢 ${wh.name}`);
+        }
+        if (zoneId) {
+            const z = locations.zones.find(z => String(z.id) === String(zoneId));
+            if (z) parts.push(`📍 ${z.name}`);
+        }
+        if (rackId) {
+            const r = locations.racks.find(r => String(r.id) === String(rackId));
+            if (r) parts.push(`🗄️ ${r.name}`);
+        }
+        if (cellId) {
+            const c = locations.cells.find(c => String(c.id) === String(cellId));
+            if (c) {
+                const code = c.code ? ` [${c.code}]` : '';
+                parts.push(`📦 ${c.name}${code}`);
+            }
         }
     }
-    
+
     if (parts.length === 0) {
         preview.style.display = 'none';
     } else {

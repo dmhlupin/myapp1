@@ -259,9 +259,12 @@ const placeholderChecks = [
   {
     file: 'admin-edit.html',
     expected: ['id="equipmentId"', 'id="currentStatus"', 'id="currentCategoryId"',
-               'id="currentTypeId"', 'id="currentCellId"', 'id="statusWarning"',
-               'id="statusInfo"', 'id="assignSection"', 'id="submitBtn"',
-               '{{status_options}}', '{{user_options}}'],
+               'id="currentTypeId"', 'id="currentCellId"', 'id="currentWorkplaceId"',
+               'id="statusWarning"', 'id="statusInfo"', 'id="assignSection"',
+               'id="warehouseBlock"', 'id="workplaceBlock"', 'id="workplaceId"',
+               'name="locationType"',
+               'id="submitBtn"',
+               '{{status_options}}', '{{user_options}}', '{{workplace_id}}'],
   },
   
   {

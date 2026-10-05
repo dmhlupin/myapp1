@@ -47,7 +47,14 @@ module.exports = ({ db, run, get, all }) => ({
           rack.name as rack_name,
           zone.name as zone_name,
           wh.id as warehouse_id,
-          wh.name as warehouse_name
+          wh.name as warehouse_name,
+          wp.id as workplace_id,
+          wp.name as workplace_name,
+          wp.code as workplace_code,
+          r.id as room_id,
+          r.name as room_name,
+          o.id as office_id,
+          o.name as office_name
         FROM equipment e
         LEFT JOIN equipment_categories c ON e.category_id = c.id
         LEFT JOIN equipment_types t ON e.type_id = t.id
@@ -55,6 +62,9 @@ module.exports = ({ db, run, get, all }) => ({
         LEFT JOIN racks rack ON cell.rack_id = rack.id
         LEFT JOIN zones zone ON rack.zone_id = zone.id
         LEFT JOIN warehouses wh ON zone.warehouse_id = wh.id
+        LEFT JOIN workplaces wp ON e.workplace_id = wp.id
+        LEFT JOIN rooms r ON wp.room_id = r.id
+        LEFT JOIN offices o ON r.office_id = o.id
         WHERE e.id = ?
       `, [id], (err, row) => {
         if (err) reject(err);
@@ -109,7 +119,7 @@ module.exports = ({ db, run, get, all }) => ({
       const { 
         inventory_number, name, model, serial_number, 
         manufacturer, purchase_date, warranty_until, 
-        status, description, category_id, type_id, cell_id 
+        status, description, category_id, type_id, cell_id, workplace_id 
       } = eqData;
       
       // Проверяем, существует ли техника
@@ -146,6 +156,7 @@ module.exports = ({ db, run, get, all }) => ({
                     status = ?, description = ?, 
                     category_id = ?, type_id = ?, 
                     cell_id = NULL,
+                    workplace_id = NULL,
                     updated_at = CURRENT_TIMESTAMP 
                 WHERE id = ?
               `, [
@@ -191,14 +202,14 @@ module.exports = ({ db, run, get, all }) => ({
             SET inventory_number = ?, name = ?, model = ?, serial_number = ?, 
                 manufacturer = ?, purchase_date = ?, warranty_until = ?, 
                 status = ?, description = ?, 
-                category_id = ?, type_id = ?, cell_id = ?,
+                category_id = ?, type_id = ?, cell_id = ?, workplace_id = ?,
                 updated_at = CURRENT_TIMESTAMP 
             WHERE id = ?
           `, [
             inventory_number, name, model, serial_number, 
             manufacturer, purchase_date, warranty_until, 
             status, description, 
-            category_id || null, type_id || null, cell_id || null,
+            category_id || null, type_id || null, cell_id || null, workplace_id || null,
             idNum
           ], function(err) {
             if (err) {

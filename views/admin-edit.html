@@ -17,6 +17,7 @@
 <input type="hidden" id="currentCategoryId" value="{{category_id}}">
 <input type="hidden" id="currentTypeId" value="{{type_id}}">
 <input type="hidden" id="currentCellId" value="{{cell_id}}">
+<input type="hidden" id="currentWorkplaceId" value="{{workplace_id}}">
 
 <form id="editForm" onsubmit="submitForm(event)">
 
@@ -135,54 +136,84 @@
   </div>
 
   <!-- ============================================================ -->
-  <!-- МЕСТО ХРАНЕНИЯ                                                -->
+  <!-- РАСПОЛОЖЕНИЕ                                                  -->
   <!-- ============================================================ -->
   <div class="card">
     <div class="card-header">
-      <h2 class="card-title">📍 Место хранения</h2>
+      <h2 class="card-title">📍 Расположение</h2>
     </div>
     <div class="card-body">
       <div class="help-text" style="margin-bottom: 15px;">
-        Укажите, где хранится техника. Необязательно.
+        Укажите, где находится техника: на складе или на рабочем месте. Необязательно.
       </div>
 
-      <div class="form-row">
-        <div class="form-group">
-          <label>Склад</label>
-          <select id="warehouseId" onchange="onWarehouseChange()">
-            <option value="">— Не указано —</option>
-          </select>
+      <!-- Переключатель типа расположения -->
+      <div class="location-type-switch">
+        <label class="location-type-option">
+          <input type="radio" name="locationType" value="none" onchange="onLocationTypeChange()">
+          <span>— Не указано —</span>
+        </label>
+        <label class="location-type-option">
+          <input type="radio" name="locationType" value="warehouse" onchange="onLocationTypeChange()">
+          <span>🏢 Склад</span>
+        </label>
+        <label class="location-type-option">
+          <input type="radio" name="locationType" value="workplace" onchange="onLocationTypeChange()">
+          <span>🪑 Рабочее место</span>
+        </label>
+      </div>
+
+      <!-- Блок: склад -->
+      <div id="warehouseBlock" style="display: none;">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Склад</label>
+            <select id="warehouseId" onchange="onWarehouseChange()">
+              <option value="">— Не указано —</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Зона</label>
+            <select id="zoneId" onchange="onZoneChange()" disabled>
+              <option value="">— Сначала выберите склад —</option>
+            </select>
+          </div>
         </div>
-        <div class="form-group">
-          <label>Зона</label>
-          <select id="zoneId" onchange="onZoneChange()" disabled>
-            <option value="">— Сначала выберите склад —</option>
-          </select>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Стеллаж</label>
+            <select id="rackId" onchange="onRackChange()" disabled>
+              <option value="">— Сначала выберите зону —</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Ячейка</label>
+            <select id="cellId" onchange="updateLocationPreview()" disabled>
+              <option value="">— Сначала выберите стеллаж —</option>
+            </select>
+          </div>
         </div>
       </div>
 
-      <div class="form-row">
+      <!-- Блок: рабочее место -->
+      <div id="workplaceBlock" style="display: none;">
         <div class="form-group">
-          <label>Стеллаж</label>
-          <select id="rackId" onchange="onRackChange()" disabled>
-            <option value="">— Сначала выберите зону —</option>
+          <label>Рабочее место</label>
+          <select id="workplaceId" onchange="updateLocationPreview()">
+            <option value="">— Загрузка... —</option>
           </select>
-        </div>
-        <div class="form-group">
-          <label>Ячейка</label>
-          <select id="cellId" onchange="updateLocationPreview()" disabled>
-            <option value="">— Сначала выберите стеллаж —</option>
-          </select>
+          <div class="help-text">Офис → Кабинет → Место</div>
         </div>
       </div>
 
+      <!-- Превью -->
       <div class="location-preview" id="locationPreview" style="display: none;">
         <span class="location-preview-icon">📍</span>
         <span id="locationPreviewText"></span>
       </div>
     </div>
   </div>
-
   <!-- ============================================================ -->
   <!-- ДЕЙСТВИЯ                                                      -->
   <!-- ============================================================ -->
