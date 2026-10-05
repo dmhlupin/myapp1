@@ -1,0 +1,165 @@
+<!-- ============================================================ -->
+<!-- views/admin-workplaces.html — Шаг 2.6.1                       -->
+<!-- Список офисов на новом layout                                 -->
+<!-- ============================================================ -->
+
+<!-- ============================================================ -->
+<!-- PAGE HEADER                                                    -->
+<!-- ============================================================ -->
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title">🏛️ Рабочие места</h1>
+    <div class="page-subtitle">Офисы → кабинеты → рабочие места → техника</div>
+  </div>
+  <div class="page-actions">
+    <a href="/admin" class="btn btn-ghost btn-sm">← Админ-панель</a>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- СТАТИСТИКА                                                     -->
+<!-- ============================================================ -->
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <span class="icon">🏛️</span>
+    <div class="number">{{total_offices}}</div>
+    <div class="label">Офисов</div>
+  </div>
+  <div class="stat-card">
+    <span class="icon">🚪</span>
+    <div class="number success">{{total_rooms}}</div>
+    <div class="label">Кабинетов</div>
+  </div>
+  <div class="stat-card">
+    <span class="icon">🪑</span>
+    <div class="number warning">{{total_workplaces}}</div>
+    <div class="label">Рабочих мест</div>
+  </div>
+  <div class="stat-card">
+    <span class="icon">🔧</span>
+    <div class="number accent">{{equipment_on_workplaces}}</div>
+    <div class="label">Техники на местах</div>
+  </div>
+  <div class="stat-card">
+    <span class="icon">📦</span>
+    <div class="number info">{{equipment_unassigned}}</div>
+    <div class="label">Без места</div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- ПАНЕЛЬ ДЕЙСТВИЙ                                                -->
+<!-- ============================================================ -->
+
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title">📋 Список офисов</h2>
+    <button onclick="openOfficeModal()" class="btn btn-success btn-sm">
+      ➕ Добавить офис
+    </button>
+  </div>
+  <div class="card-body">
+    <div id="officesList" class="offices-grid">
+      <div class="loading-block">⏳ Загрузка офисов...</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- МОДАЛЬНОЕ ОКНО: СОЗДАНИЕ/РЕДАКТИРОВАНИЕ ОФИСА                  -->
+<!-- ============================================================ -->
+
+<div class="modal-overlay" id="officeModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="officeModalTitle">Добавить офис</h3>
+      <button onclick="closeOfficeModal()" class="modal-close">✕</button>
+    </div>
+    <form id="officeForm" onsubmit="saveOffice(event)">
+      <input type="hidden" id="officeId">
+
+      <div class="form-group">
+        <label>Название <span class="required">*</span></label>
+        <input
+          type="text"
+          id="officeName"
+          required
+          placeholder="Например: Головной офис"
+        >
+      </div>
+
+      <div class="form-group">
+        <label>Адрес</label>
+        <input
+          type="text"
+          id="officeAddress"
+          placeholder="г. Москва, ул. Ленина, д. 10"
+        >
+      </div>
+
+      <div class="form-group">
+        <label>Описание</label>
+        <textarea
+          id="officeDescription"
+          placeholder="Краткое описание офиса..."
+        ></textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input type="checkbox" id="officeIsDefault">
+          <span>⭐ Офис по умолчанию</span>
+        </label>
+        <div class="help-text">
+          Новые кабинеты и рабочие места будут создаваться в этом офисе
+        </div>
+      </div>
+
+      <div class="form-group" id="activeGroup" style="display: none;">
+        <label class="checkbox-label">
+          <input type="checkbox" id="officeIsActive" checked>
+          <span>✅ Активен</span>
+        </label>
+        <div class="help-text">
+          Неактивные офисы не отображаются в выборе
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" id="officeSaveBtn">
+          💾 Сохранить
+        </button>
+        <button type="button" class="btn btn-ghost" onclick="closeOfficeModal()">
+          Отмена
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- МОДАЛЬНОЕ ОКНО: УДАЛЕНИЕ                                       -->
+<!-- ============================================================ -->
+
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>🗑️ Удаление офиса</h3>
+      <button onclick="closeDeleteModal()" class="modal-close">✕</button>
+    </div>
+    <p id="deleteMessage">Вы уверены?</p>
+    <div id="deleteWarning" class="delete-warning" style="display: none;">
+      <span class="warning-icon">⚠️</span>
+      <div>
+        <strong>Внимание!</strong>
+        <p id="deleteWarningText"></p>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button onclick="closeDeleteModal()" class="btn btn-ghost">Отмена</button>
+      <button onclick="confirmDelete()" class="btn btn-danger">Удалить</button>
+    </div>
+  </div>
+</div>
