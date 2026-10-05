@@ -157,6 +157,7 @@ const cssFilesToCheck = [
   'layout.css',
   'warehouses.css',
   'warehouse-details.css',
+  'workplace-details.css',
   'inventory.css',
   'pdf.css',
   'workplaces.css',      // ← добавить
@@ -314,7 +315,7 @@ const placeholderChecks = [
               'onclick="loadOfficeTree()"',
               'onsubmit="saveRoom(event)"', 'onsubmit="saveWorkplace(event)"',
               'class="office-info-panel"', 'class="tree-section"',
-              'class="view-user-modal"',
+              'view-user-modal',
               '{{office.id}}', '{{office.name}}', '{{office.description}}',
     ],
   },
