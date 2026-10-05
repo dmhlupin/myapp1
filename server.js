@@ -105,6 +105,44 @@ const {
   exportInventoryCSV,
 } = require('./routes/warehouses');
 
+
+// Роуты рабочих мест
+const {
+  // Страницы
+  renderWorkplaces,
+  renderWorkplaceDetails,
+  // API офисов
+  getOfficesAPI,
+  getOfficeAPI,
+  createOfficeAPI,
+  updateOfficeAPI,
+  deleteOfficeAPI,
+  setDefaultOfficeAPI,
+  // API дерева и статистики
+  getFullWorkplaceTreeAPI,
+  getOfficeTreeAPI,
+  getWorkplaceStatsAPI,
+  getWorkplaceSummaryAPI,
+  // API кабинетов
+  getRoomsAPI,
+  createRoomAPI,
+  updateRoomAPI,
+  deleteRoomAPI,
+  // API рабочих мест
+  getWorkplacesAPI,
+  getWorkplaceAPI,
+  createWorkplaceAPI,
+  updateWorkplaceAPI,
+  deleteWorkplaceAPI,
+  // API техники
+  getWorkplaceEquipmentAPI,
+  moveEquipmentToWorkplaceAPI,
+  // Сводка и экспорт
+  getOfficeEquipmentAPI,
+  getWorkplaceOccupancyAPI,
+  exportOfficeInventoryCSV,
+} = require('./routes/workplaces');
+
 // Роуты авторизации
 const {
   renderLogin,
@@ -337,6 +375,47 @@ app.get('/api/admin/warehouses/:id/inventory/export', requireAdmin, exportInvent
 app.get('/api/admin/warehouses/:id/inventory', requireAdmin, getWarehouseInventoryAPI);
 app.get('/api/admin/warehouses/:id/occupancy', requireAdmin, getCellOccupancyAPI);
 
+
+// ============================================
+// РАБОЧИЕ МЕСТА (только администраторы!)
+// ============================================
+
+// Страницы
+app.get('/admin/workplaces', requireAdmin, renderWorkplaces);
+app.get('/admin/workplaces/:id', requireAdmin, renderWorkplaceDetails);
+
+// API офисов
+app.get('/api/admin/offices', requireAdmin, getOfficesAPI);
+app.get('/api/admin/offices/tree', requireAdmin, getFullWorkplaceTreeAPI);
+app.get('/api/admin/offices/:id/tree', requireAdmin, getOfficeTreeAPI);
+app.get('/api/admin/offices/:id/rooms', requireAdmin, getRoomsAPI);
+app.get('/api/admin/offices/:id/equipment/export', requireAdmin, exportOfficeInventoryCSV);
+app.get('/api/admin/offices/:id/equipment', requireAdmin, getOfficeEquipmentAPI);
+app.get('/api/admin/offices/:id/occupancy', requireAdmin, getWorkplaceOccupancyAPI);
+app.get('/api/admin/offices/:id', requireAdmin, getOfficeAPI);
+app.post('/api/admin/offices', requireAdmin, createOfficeAPI);
+app.put('/api/admin/offices/:id', requireAdmin, updateOfficeAPI);
+app.delete('/api/admin/offices/:id', requireAdmin, deleteOfficeAPI);
+app.post('/api/admin/offices/:id/set-default', requireAdmin, setDefaultOfficeAPI);
+
+// API статистики и сводки
+app.get('/api/admin/workplaces/stats', requireAdmin, getWorkplaceStatsAPI);
+app.get('/api/admin/workplaces/summary', requireAdmin, getWorkplaceSummaryAPI);
+
+// API кабинетов
+app.post('/api/admin/rooms', requireAdmin, createRoomAPI);
+app.put('/api/admin/rooms/:id', requireAdmin, updateRoomAPI);
+app.delete('/api/admin/rooms/:id', requireAdmin, deleteRoomAPI);
+app.get('/api/admin/rooms/:id/workplaces', requireAdmin, getWorkplacesAPI);
+
+// API рабочих мест
+app.get('/api/admin/workplaces/:id/equipment', requireAdmin, getWorkplaceEquipmentAPI);
+app.post('/api/admin/workplaces/:id/move-equipment', requireAdmin, moveEquipmentToWorkplaceAPI);
+app.get('/api/admin/workplaces/:id', requireAdmin, getWorkplaceAPI);
+app.post('/api/admin/workplaces', requireAdmin, createWorkplaceAPI);
+app.put('/api/admin/workplaces/:id', requireAdmin, updateWorkplaceAPI);
+app.delete('/api/admin/workplaces/:id', requireAdmin, deleteWorkplaceAPI);
+
 // ============================================
 // API ДЛЯ ПОЛЬЗОВАТЕЛЕЙ (только администраторы!)
 // ============================================
@@ -362,6 +441,7 @@ const server = app.listen(PORT, () => {
   console.log(`👤  Профиль:            http://localhost:${PORT}/profile`);
   console.log(`📖  Главная:            http://localhost:${PORT}/`);
   console.log(`⚙️   Админ-панель:       http://localhost:${PORT}/admin`);
+  console.log(`🏛️   Рабочие места:      http://localhost:${PORT}/admin/workplaces`);
   console.log('🚀 ============================================');
   console.log('');
 });
