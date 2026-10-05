@@ -317,6 +317,7 @@ const placeholderChecks = [
               'class="office-info-panel"', 'class="tree-section"',
               'view-user-modal',
               '{{office.id}}', '{{office.name}}', '{{office.description}}',
+              'id="workplaceViewBody"',
     ],
   },
 ];
