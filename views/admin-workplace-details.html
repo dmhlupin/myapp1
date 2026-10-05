@@ -1,0 +1,208 @@
+<!-- ============================================================ -->
+<!-- views/admin-workplace-details.html — Шаг 2.7.1                -->
+<!-- Дерево офиса: офис → кабинеты → рабочие места                 -->
+<!-- ============================================================ -->
+
+<!-- ============================================================ -->
+<!-- DATA ДЛЯ JS                                                    -->
+<!-- ============================================================ -->
+
+<div id="pageData"
+     data-office-id="{{office.id}}"
+     data-office-name="{{office.name}}"
+     style="display: none;">
+</div>
+
+<!-- ============================================================ -->
+<!-- PAGE HEADER                                                    -->
+<!-- ============================================================ -->
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title">🏛️ {{office.name}}</h1>
+    <div class="page-subtitle" id="officeSubtitle"></div>
+  </div>
+  <div class="page-actions">
+    <a href="/admin/workplaces" class="btn btn-ghost btn-sm">← К офисам</a>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- ПАНЕЛЬ ИНФОРМАЦИИ ОБ ОФИСЕ                                     -->
+<!-- ============================================================ -->
+
+<div class="office-info-panel">
+  <div class="office-info-header">
+    <div class="office-info-icon">🏛️</div>
+    <div class="office-info-text">
+      <h2>{{office.name}}</h2>
+      <div class="office-info-badges" id="officeBadges"></div>
+      <div class="office-info-description" id="officeDescription">
+        {{office.description}}
+      </div>
+    </div>
+    <div class="office-info-actions">
+      <button onclick="editOfficeInfo()" class="btn btn-primary btn-sm">
+        ✏️ Редактировать
+      </button>
+      <button onclick="openRoomModal()" class="btn btn-success btn-sm">
+        ➕ Добавить кабинет
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- ДЕРЕВО ОФИСА                                                   -->
+<!-- ============================================================ -->
+
+<div class="tree-section">
+  <div class="tree-header">
+    <h2>📋 Структура офиса</h2>
+    <div class="tree-actions">
+      <button onclick="expandAll()" class="btn btn-ghost btn-sm" title="Развернуть всё">
+        🔽 Развернуть
+      </button>
+      <button onclick="collapseAll()" class="btn btn-ghost btn-sm" title="Свернуть всё">
+        🔼 Свернуть
+      </button>
+      <button onclick="loadOfficeTree()" class="btn btn-ghost btn-sm" title="Обновить">
+        🔄 Обновить
+      </button>
+    </div>
+  </div>
+
+  <div id="officeTree" class="office-tree">
+    <div class="loading-block">⏳ Загрузка структуры...</div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- МОДАЛЬНОЕ ОКНО: КАБИНЕТ                                        -->
+<!-- ============================================================ -->
+
+<div class="modal-overlay" id="roomModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="roomModalTitle">Добавить кабинет</h3>
+      <button onclick="closeRoomModal()" class="modal-close">✕</button>
+    </div>
+    <form id="roomForm" onsubmit="saveRoom(event)">
+      <input type="hidden" id="roomId">
+      <input type="hidden" id="roomOfficeId" value="{{office.id}}">
+
+      <div class="form-group">
+        <label>Название <span class="required">*</span></label>
+        <input type="text" id="roomName" required placeholder="Например: Кабинет 101">
+      </div>
+
+      <div class="form-group">
+        <label>Описание</label>
+        <textarea id="roomDescription" placeholder="Краткое описание кабинета..."></textarea>
+      </div>
+
+      <div class="form-group" id="roomActiveGroup" style="display: none;">
+        <label class="checkbox-label">
+          <input type="checkbox" id="roomIsActive" checked>
+          <span>✅ Активен</span>
+        </label>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" id="roomSaveBtn">💾 Сохранить</button>
+        <button type="button" class="btn btn-ghost" onclick="closeRoomModal()">Отмена</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- МОДАЛЬНОЕ ОКНО: РАБОЧЕЕ МЕСТО                                  -->
+<!-- ============================================================ -->
+
+<div class="modal-overlay" id="workplaceModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="workplaceModalTitle">Добавить рабочее место</h3>
+      <button onclick="closeWorkplaceModal()" class="modal-close">✕</button>
+    </div>
+    <form id="workplaceForm" onsubmit="saveWorkplace(event)">
+      <input type="hidden" id="workplaceId">
+      <input type="hidden" id="workplaceRoomId">
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Название <span class="required">*</span></label>
+          <input type="text" id="workplaceName" required placeholder="Рабочее место 1">
+        </div>
+        <div class="form-group">
+          <label>Код</label>
+          <input type="text" id="workplaceCode" placeholder="101-01">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Вместимость (макс. единиц техники)</label>
+        <input type="number" id="workplaceCapacity" min="0" placeholder="Оставьте пустым, если без ограничений">
+      </div>
+
+      <div class="form-group">
+        <label>Описание</label>
+        <textarea id="workplaceDescription" placeholder="Дополнительная информация..."></textarea>
+      </div>
+
+      <div class="form-group" id="workplaceActiveGroup" style="display: none;">
+        <label class="checkbox-label">
+          <input type="checkbox" id="workplaceIsActive" checked>
+          <span>✅ Активно</span>
+        </label>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" id="workplaceSaveBtn">💾 Сохранить</button>
+        <button type="button" class="btn btn-ghost" onclick="closeWorkplaceModal()">Отмена</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- МОДАЛЬНОЕ ОКНО: ПРОСМОТР РАБОЧЕГО МЕСТА                        -->
+<!-- ============================================================ -->
+
+<div class="modal-overlay" id="workplaceViewModal">
+  <div class="modal view-user-modal">
+    <div class="modal-header">
+      <h3 id="workplaceViewTitle">Рабочее место</h3>
+      <button onclick="closeWorkplaceViewModal()" class="modal-close">✕</button>
+    </div>
+    <div id="workplaceViewBody">
+      <!-- Заполняется JS -->
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- МОДАЛЬНОЕ ОКНО: УДАЛЕНИЕ                                       -->
+<!-- ============================================================ -->
+
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>🗑️ Удаление</h3>
+      <button onclick="closeDeleteModal()" class="modal-close">✕</button>
+    </div>
+    <p id="deleteMessage">Вы уверены?</p>
+    <div id="deleteWarning" class="delete-warning" style="display: none;">
+      <span class="warning-icon">⚠️</span>
+      <div>
+        <strong>Внимание!</strong>
+        <p id="deleteWarningText"></p>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button onclick="closeDeleteModal()" class="btn btn-ghost">Отмена</button>
+      <button onclick="confirmDelete()" class="btn btn-danger">Удалить</button>
+    </div>
+  </div>
+</div>

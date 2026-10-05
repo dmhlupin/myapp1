@@ -301,6 +301,23 @@ const placeholderChecks = [
               '{{equipment_on_workplaces}}', '{{equipment_unassigned}}',
     ],
   },
+  {
+    file: 'admin-workplace-details.html',
+    expected: [
+              'id="pageData"', 'data-office-id', 'data-office-name',
+              'id="officeSubtitle"', 'id="officeBadges"', 'id="officeDescription"',
+              'id="officeTree"',
+              'id="roomModal"', 'id="workplaceModal"', 'id="workplaceViewModal"',
+              'id="deleteModal"', 'id="deleteWarning"', 'id="deleteWarningText"',
+              'onclick="editOfficeInfo()"', 'onclick="openRoomModal()"',
+              'onclick="expandAll()"', 'onclick="collapseAll()"',
+              'onclick="loadOfficeTree()"',
+              'onsubmit="saveRoom(event)"', 'onsubmit="saveWorkplace(event)"',
+              'class="office-info-panel"', 'class="tree-section"',
+              'class="view-user-modal"',
+              '{{office.id}}', '{{office.name}}', '{{office.description}}',
+    ],
+  },
 ];
 
 let totalPlaceholderIssues = 0;
