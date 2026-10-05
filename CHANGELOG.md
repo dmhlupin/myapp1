@@ -1,5 +1,208 @@
 # История изменений
 
+## [2.10.0] - 2026-10-05
+
+**🎉🎉 Этап 2 завершён: Рабочие места (офис → кабинет → место → техника)**
+
+Появилась новая иерархия хранения: офисы → кабинеты → рабочие
+места, к которым привязывается техника. Альтернатива складам:
+техника находится **или** на складе (`cell_id`), **или** на
+рабочем месте (`workplace_id`), не оба одновременно.
+
+Две новые страницы — `/admin/workplaces` (список офисов) и
+`/admin/workplaces/:id` (дерево офиса) — на новом layout.
+Интеграция: фильтр «Рабочее место» на `/equipment` и
+переключатель расположения (склад/место) в форме
+`/admin/edit/:id`. Sidebar-пункт «🏛️ Рабочие места».
+
+Этап 2 закрыт полностью.
+
+### Итоги Этапа 2
+
+**БД (2.1, v2.1.0):**
+- Новые таблицы: `offices` (id, name UNIQUE, address, description,
+  is_default, is_active), `rooms` (id, office_id FK CASCADE, name,
+  description, sort_order, is_active, UNIQUE(office_id, name)),
+  `workplaces` (id, room_id FK CASCADE, name, code, capacity,
+  description, sort_order, is_active, UNIQUE(room_id, name))
+- `equipment.workplace_id` FK `SET NULL` → `workplaces(id)`
+- 7 индексов
+- Seed: 2 офиса × 2 кабинета × 2 места = 8 мест
+
+**Модуль `database/modules/workplaces.js` (2.2, v2.2.0):**
+- 25 функций: офисы (7), кабинеты (5), рабочие места (5),
+  дерево/техника (4), статистика (4)
+
+**Подключение (2.3, v2.3.0):**
+- `database/db.js`: `const workplaces = require('./modules/workplaces')(ctx)`,
+  `...workplaces` в `module.exports`
+
+**Роуты `routes/workplaces.js` (2.4, v2.4.0):**
+- 26 функций: страницы (2), API офисов (6), дерево/статистика (4),
+  кабинеты (4), рабочие места (5), техника (2), сводка/экспорт (3)
+
+**Регистрация в `server.js` (2.5, v2.5.0):**
+- 2 страницы + 24 API-роута под `requireAdmin`
+
+**Страница `/admin/workplaces` (2.6, v2.6.0):**
+- `views/admin-workplaces.html` — page-header, 5 карточек статистики,
+  card со списком офисов, 2 модалки (create/edit, delete)
+- `public/css/workplaces.css` — сетка `.offices-grid`, карточки
+  `.office-card` (+ `is-default`/`is-inactive`), 3 счётчика
+  (кабинеты/места/техника)
+- `public/js/workplaces.js` — загрузка `/api/admin/offices`,
+  CRUD, set-default, delete с предупреждениями
+
+**Страница `/admin/workplaces/:id` (2.7, v2.7.0):**
+- `views/admin-workplace-details.html` — page-header, info-panel
+  офиса, tree-section (кабинеты → рабочие места), 4 модалки
+  (room/workplace/workplaceView/delete)
+- `public/css/workplace-details.css` — панель офиса, дерево
+  на 2 уровня (`.tree-room` → `.tree-workplace`), кнопки `.tree-btn`,
+  модалка просмотра места
+- `public/js/workplace-details.js` — дерево через
+  `/api/admin/offices/:id/tree`, CRUD кабинетов и мест,
+  просмотр места с техникой, expand/collapse
+
+**Sidebar (2.8, v2.8.0):**
+- `views/partials/sidebar.html` — пункт «🏛️ Рабочие места»
+  в секции «Техника» (между «Склады» и «Хранение»)
+- `public/js/layout.js` — ветка `activePage = 'workplaces'`
+  для `/admin/workplaces` и `/admin/workplaces/:id`
+
+**Интеграция (2.9, v2.9.0):**
+- `/equipment`: 5-й фильтр «Рабочее место» (optgroup офис/кабинет,
+  `__none__` — без места), `data-workplace-id` в строках таблицы,
+  колонка «Место хранения» показывает склад ИЛИ место
+- `/admin/edit/:id`: секция «📍 Расположение» с radio-переключателем
+  (не указано / склад / рабочее место), `cell_id` и `workplace_id`
+  взаимоисключающие
+
+### Изменения в существующем коде
+
+- **`database/modules/warehouses.js`**: `moveEquipmentToCell` теперь
+  обнуляет `workplace_id` (симметрично `moveEquipmentToWorkplace`,
+  которая обнуляет `cell_id`)
+- **`database/modules/equipment.js`**:
+  - `getEquipmentWithLocation` — в SELECT добавлено `e.workplace_id`
+  - `getEquipmentById` — JOIN на `workplaces/rooms/offices`,
+    отдаёт `workplace_id`, `workplace_name`, `workplace_code`,
+    `room_name`, `office_name`
+  - `updateEquipment` — принимает `workplace_id`; при возврате
+    техники обнуляет и `cell_id`, и `workplace_id`
+- **`routes/admin.js`**:
+  - `updateEquipmentAPI` — принимает `workplace_id`; взаимоисключение
+    с `cell_id`; при `status = 'assigned'` обнуляются оба
+  - `renderEditEquipment` — пробрасывает `{{workplace_id}}`
+- **`routes/equipment.js`**: собирает `workplace_options`
+  (optgroup по офис/кабинет) через `getAllOffices` /
+  `getRoomsByOffice` / `getWorkplacesByRoom`
+- **`scripts/check-css.js`**: добавлены `workplaces.css`,
+  `workplace-details.css`; проверки плейсхолдеров
+  `admin-workplaces.html`, `admin-workplace-details.html`,
+  `equipment.html`, дополнены `admin-edit.html`
+- **`public/css/components.css`**: добавлен `.stat-card .number.info`
+
+### Фиксы в процессе Этапа 2
+
+- **v2.7.4** — в `#workplaceViewBody` и `#cellViewBody` добавлен
+  класс `.modal-body`: раньше градиентные шапки прижимались
+  к краям модалок без внутренних отступов
+- **v2.7.2-fix** — `scripts/check-css.js`: `'class="view-user-modal"'`
+  → `'view-user-modal'` (класс идёт в составе
+  `class="modal view-user-modal"`, точная подстрока с `class=`
+  не находилась)
+
+### Файлы, затронутые в Этапе 2
+
+**Новые:**
+- `database/modules/workplaces.js`
+- `routes/workplaces.js`
+- `views/admin-workplaces.html`
+- `views/admin-workplace-details.html`
+- `public/css/workplaces.css`
+- `public/css/workplace-details.css`
+- `public/js/workplaces.js`
+- `public/js/workplace-details.js`
+- `scripts/migrate.js` (дополнен) / `scripts/seed.js` (дополнен)
+
+**Изменены:**
+- `database/db.js`
+- `database/modules/equipment.js`
+- `database/modules/warehouses.js`
+- `routes/admin.js`
+- `routes/equipment.js`
+- `server.js`
+- `views/partials/sidebar.html`
+- `views/equipment.html`
+- `views/admin-edit.html`
+- `public/js/layout.js`
+- `public/js/equipment-filter.js`
+- `public/js/admin-edit.js`
+- `public/css/components.css`
+- `public/css/admin-edit.css`
+- `scripts/check-css.js`
+- `package.json`, `CHANGELOG.md`
+
+**Не тронуты:**
+- Auth-страницы (`login.html`, `change-password.html`)
+- `utils/layout.js`
+- API-функции инвентаризации (`routes/warehouses.js`)
+
+### Проверено
+
+- `/admin/workplaces` открывается через `renderPage`, партиалы
+  подгружаются, тёмная тема применяется
+- 5 карточек статистики (офисы / кабинеты / места / техника
+  на местах / без места) — реальные числа из
+  `/api/admin/workplaces/stats`
+- Карточки офисов с счётчиками и бейджами (⭐ default, ✅ active,
+  🚫 inactive), CRUD, set-default, delete с предупреждениями —
+  работают
+- `/admin/workplaces/:id` открывается через `renderPage`
+- Дерево офиса (кабинеты → рабочие места) рендерится,
+  разворачивание / сворачивание работает
+- CRUD кабинетов и рабочих мест, просмотр места с техникой
+  (модалка `.workplace-view-*` с `.modal-body`) — работают
+- Sidebar подсвечивает «🏛️ Рабочие места» на обеих страницах
+- `/equipment`: фильтр «Рабочее место» (optgroup по офис/кабинет),
+  `__none__` — техника без места, сброс работает
+- `/admin/edit/:id`: переключатель «📍 Расположение»
+  (не указано / склад / рабочее место), превью адреса,
+  сохранение через `PUT /api/admin/equipment/:id`;
+  `cell_id` и `workplace_id` взаимоисключающие
+- При статусе `assigned` оба поля пустые
+- В консоли браузера ошибок нет
+- `node scripts/check-css.js` — все проверки зелёные
+
+### Теги
+
+- v2.1.0 — миграция БД (offices, rooms, workplaces)
+- v2.2.0 — модуль `database/modules/workplaces.js` (25 функций)
+- v2.3.0 — подключение в `database/db.js`
+- v2.4.0 — `routes/workplaces.js` (26 функций)
+- v2.5.0 — регистрация в `server.js`
+- v2.6.1 — admin-workplaces.html → контент-шаблон
+- v2.6.2 — workplaces.css → тёмная тема + чистка
+- v2.6.3 — workplaces.js → унификация классов
+- v2.6.0 — финал Шага 2.6
+- v2.7.1 — admin-workplace-details.html → контент-шаблон
+- v2.7.2 — workplace-details.css → тёмная тема + чистка
+- v2.7.3 — workplace-details.js → унификация классов
+- v2.7.4 — .modal-body в модалках просмотра места/ячейки (фикс)
+- v2.7.0 — финал Шага 2.7
+- v2.8.0 — sidebar + layout.js
+- v2.9.1 — фильтр на /equipment
+- v2.9.2 — форма выбора места в /admin/edit/:id
+- **v2.10.0 — Этап 2 завершён (этот)**
+
+### Что дальше — Этап 3
+
+План уточняется в следующей передаточной записке. Возможные
+направления: интеграция с `/admin/inventory` (отображение техники
+на рабочих местах в сводке), отчётность, расширение фильтров,
+экспорт.
+
 ## [1.23.0] - 2026-10-02
 
 **🎉🎉 Этап 1 завершён: все страницы на новом layout**
