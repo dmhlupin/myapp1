@@ -1,4 +1,104 @@
-# История изменений
+## [2.11.3] - 2026-10-05
+
+**Фиксы после Этапа 2: статус `placed`, локализация, ссылки на рабочие места**
+
+Небольшой фикс-этап: закрыты недочёты, выявленные при работе
+с рабочими местами. Отдельный релиз — т.к. `v2.10.0` уже выпущен.
+
+### Added
+
+- **Карточка «На местах»** в шапке `/equipment` (5-я): количество
+  техники со статусом `placed`. В `getStats()` добавлено поле
+  `placed_equipment`, в шаблоне — `.number.purple`.
+- **Фильтр статуса** на `/equipment`: опция «🪑 На рабочем месте».
+- **Ссылка на дерево офиса** из колонки «Место хранения» на
+  `/equipment` и `/admin` — `/admin/workplaces/:office_id?highlightWorkplace=:id`.
+- **Подсветка рабочего места** в дереве офиса при переходе по ссылке
+  из колонки «Место хранения» (pulse-анимация, автоскролл,
+  раскрытие родительского кабинета).
+- **CSS**: `.stat-card .number.purple`, `.status-badge.status-placed`,
+  `.tree-workplace.highlight` + `@keyframes workplacePulse`.
+
+### Changed
+
+- **Статус `placed`** для техники на рабочих местах. Раньше техника
+  на рабочем месте имела статус `available`, что путало учёт
+  «доступной» техники. Теперь:
+  - `available` — на складе или без адреса;
+  - `placed` — на рабочем месте;
+  - `assigned` / `maintenance` / `retired` — без изменений.
+- **`database/modules/equipment.js`**:
+  - `getEquipmentWithLocation` отдаёт `workplace_name`,
+    `workplace_code`, `room_name`, `office_name`, `office_id`
+    (JOIN workplaces/rooms/offices); поиск расширен на `wp.name`
+    и `wp.code`.
+  - `moveEquipmentToCellDetailed` — CASE-логика статуса в обоих
+    UPDATE (убрать из ячейки / переместить в ячейку); при
+    перемещении в ячейку дополнительно обнуляется `workplace_id`.
+- **`database/modules/stats.js`**: `getStats()` возвращает
+  `placed_equipment`.
+- **`database/modules/workplaces.js`**: `moveEquipmentToWorkplace` —
+  CASE-логика статуса (`available`/`placed` → `placed`).
+- **`database/modules/warehouses.js`**: `moveEquipmentToCell` —
+  CASE-логика (`available`/`placed` → `available`).
+- **`routes/equipment.js`**:
+  - в колонке «Место хранения» для техники на рабочем месте —
+    человеческая иерархия (офис / кабинет / место [код]) и ссылка
+    на дерево офиса;
+  - статус в бейдже локализован;
+  - пробрасывается `{{placed_equipment}}` в шаблон.
+- **`routes/admin.js`**:
+  - `renderAdmin`: статус в таблице техники локализован; колонка
+    «Место хранения» показывает рабочее место ссылкой;
+  - `renderEditEquipment`: в `status_options` добавлена опция
+    `placed` (`disabled`, `selected` при `equipment.status === 'placed'`);
+  - `updateEquipmentAPI`: `finalStatus` согласуется с расположением —
+    `placed` без `workplace_id` становится `available`,
+    `available` с `workplace_id` становится `placed`.
+- **`public/js/admin-edit.js`**: защита в `submitForm` — если
+  `<select>` вернул пустое значение, но `currentStatus === 'placed'`,
+  подставляем `placed`.
+- **`public/js/workplace-details.js`**: в `renderWorkplace` добавлен
+  `data-workplace-id`; `DOMContentLoaded` читает
+  `?highlightWorkplace=:id`; новая функция `highlightWorkplace`.
+- **`scripts/migrate.js`**: миграция `migrateEquipmentPlacedStatus`
+  (идемпотентная) — `UPDATE equipment SET status = 'placed' WHERE
+  workplace_id IS NOT NULL AND status = 'available'`. В итоговую
+  статистику добавлено «Из них на местах».
+- **`scripts/check-css.js`**: в проверку `equipment.html` добавлен
+  `{{placed_equipment}}`.
+
+### Fixed
+
+- **`/equipment`**: плейсхолдер `{{placed_equipment}}` теперь
+  подставляется. При первом прогоне 2.11.2 карточка была добавлена
+  в шаблон, но `html.replace` в роуте забыли — на странице
+  отображался сам плейсхолдер.
+
+### Технический долг (отложено)
+
+- **Форма `/admin/edit/:id`** — переработка UX:
+  - убрать или переосмыслить `<select id="status">` в связке
+    с `placed` (сейчас `disabled selected` на опции не мешает
+    смене на другие статусы);
+  - сократить вертикальную длину формы (табы / 2 колонки /
+    аккордеон);
+  - синхронизировать с `/admin/add`;
+  - продумать логику заполнения и подсказок.
+- **Фильтр на `/equipment`** — перевести с клиентского на серверный
+  (после того, как `getEquipmentWithLocation` получит `workplace_id`
+  и `status` в `filters`).
+- **`check-css.js`** — добавить проверку, что все плейсхолдеры
+  из шаблонов реально используются в роутах (ловить баги типа
+  `{{placed_equipment}}` без `replace`).
+
+### Теги
+
+- v2.11.1 — имя рабочего места в таблице + подсветка из /equipment
+- v2.11.2 — статус `placed` + 5-я карточка + фильтр
+- v2.11.2 (fix) — плейсхолдер `{{placed_equipment}}` + локализация
+  в `/admin` + `finalStatus` в `updateEquipmentAPI`
+- **v2.11.3 — фиксы после Этапа 2 (этот)**
 
 ## [2.10.0] - 2026-10-05
 

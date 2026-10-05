@@ -159,7 +159,14 @@ async function submitForm(event) {
     }
     
     const submitBtn = document.getElementById('submitBtn');
-    const newStatus = document.getElementById('status').value;
+    let newStatus = document.getElementById('status').value;
+    const currentStatus = document.getElementById('currentStatus')?.value || '';
+
+    // 🆕 Защита: если статус 'placed' (disabled), оставляем его как есть
+    // — приходит из <select> корректно, но на всякий случай подстрахуемся
+    if (newStatus === '' && currentStatus === 'placed') {
+      newStatus = 'placed';
+    }
     
     // Проверяем, нужно ли назначение
     if (newStatus === 'assigned') {

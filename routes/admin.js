@@ -108,14 +108,34 @@ async function renderAdmin(req, res) {
         ? `<span class="catalog-badge type">${item.type_icon || '📦'} ${item.type_name}</span>`
         : '<span style="color: #cbd5e0;">—</span>';
       
-      // 🆕 Место хранения
-      const cellInfo = item.cell_id
-        ? `<div class="location-cell" title="${item.warehouse_name} → ${item.zone_name} → ${item.rack_name} → ${item.cell_name}">
+      // 🆕 Место хранения: склад ИЛИ рабочее место
+      let cellInfo = '<span style="color: #cbd5e0;">—</span>';
+      if (item.cell_id) {
+        cellInfo = `<div class="location-cell" title="${item.warehouse_name} → ${item.zone_name} → ${item.rack_name} → ${item.cell_name}">
              <div class="location-cell-code">${item.cell_code || item.cell_name}</div>
              <div class="location-path" style="font-size: 10px;">${item.warehouse_name}</div>
-           </div>`
-        : '<span style="color: #cbd5e0;">—</span>';
+           </div>`;
+      } else if (item.workplace_id) {
+        const wpLabel = `${item.workplace_name || 'Место'}${item.workplace_code ? ` [${item.workplace_code}]` : ''}`;
+        const officeLabel = item.office_name || '';
+        const link = item.office_id
+          ? `/admin/workplaces/${item.office_id}?highlightWorkplace=${item.workplace_id}`
+          : '#';
+        cellInfo = `<div class="location-cell">
+             <a href="${link}" class="location-cell-code" style="background: var(--purple-bg); color: var(--purple); text-decoration: none;" title="Открыть в дереве офиса">🪑 ${wpLabel}</a>
+             <div class="location-path" style="font-size: 10px;">${officeLabel}</div>
+           </div>`;
+      }
       
+      const statusLabels = {
+        'available':   '✅ Доступна',
+        'placed':      '🪑 На месте',
+        'assigned':    '👤 Назначена',
+        'maintenance': '🔧 В ремонте',
+        'retired':     '❌ Списана',
+      };
+      const statusLabel = statusLabels[item.status] || item.status;
+
       equipmentRows += `
         <tr>
           <td>${item.id}</td>
@@ -125,7 +145,7 @@ async function renderAdmin(req, res) {
           <td>${categoryCell}</td>
           <td>${typeCell}</td>
           <td>${cellInfo}</td>
-          <td><span class="status-badge ${statusClass}">${item.status}</span></td>
+          <td><span class="status-badge ${statusClass}">${statusLabel}</span></td>
           <td>${assignedInfo}</td>
           <td>
             <div class="action-buttons">
@@ -334,6 +354,17 @@ async function updateEquipmentAPI(req, res) {
       finalCellId = null;
       finalWorkplaceId = null;
     }
+
+    // 🆕 Согласование статуса с расположением.
+    // Если статус 'placed', но место не указано — статус становится 'available'.
+    // Если статус 'available' и указано место — статус становится 'placed'.
+    // 'assigned' / 'maintenance' / 'retired' — не трогаем.
+    let finalStatus = status || 'available';
+    if (finalStatus === 'placed' && !finalWorkplaceId) {
+      finalStatus = 'available';
+    } else if (finalStatus === 'available' && finalWorkplaceId) {
+      finalStatus = 'placed';
+    }
     
     // Если назначаем технику пользователю
     if (status === 'assigned' && assign_user_id) {
@@ -439,7 +470,7 @@ async function updateEquipmentAPI(req, res) {
       manufacturer: manufacturer || '',
       purchase_date: purchase_date || null,
       warranty_until: warranty_until || null,
-      status: status || 'available',
+      status: finalStatus,
       description: description || '',
       category_id: category_id ? parseInt(category_id) : null,
       type_id: type_id ? parseInt(type_id) : null,
@@ -570,16 +601,22 @@ async function renderEditEquipment(req, res) {
     // Статусы — русские подписи
     const statusLabels = {
       'available':   '✅ Доступна',
+      'placed':      '🪑 На месте',
       'assigned':    '👤 Назначена',
       'maintenance': '🔧 В ремонте',
       'retired':     '📦 Списана',
     };
-    const statuses = ['available', 'assigned', 'maintenance', 'retired'];
+    // 'placed' отображается, но выбирать вручную нельзя —
+    // статус ставится автоматически при перемещении на рабочее место
+    const statuses = ['available', 'placed', 'assigned', 'maintenance', 'retired'];
     let statusOptions = '';
     statuses.forEach(s => {
       const selected = s === equipment.status ? 'selected' : '';
+      const isPlaced = s === 'placed';
+      const disabled = isPlaced ? 'disabled' : '';
       const label = statusLabels[s] || s;
-      statusOptions += `<option value="${s}" ${selected}>${label}</option>`;
+      const suffix = isPlaced ? ' (управляется перемещением)' : '';
+      statusOptions += `<option value="${s}" ${selected} ${disabled}>${label}${suffix}</option>`;
     });
     // Многострочная вставка — без /g
     content = content.replace('{{status_options}}', statusOptions);
