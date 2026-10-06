@@ -94,6 +94,7 @@ const meta = require('./modules/meta')(ctx);
 const warehouses = require('./modules/warehouses')(ctx);
 const workplaces = require('./modules/workplaces')(ctx);
 
+
 // ============================================================
 // ЗАКРЫТИЕ БД
 // ============================================================
@@ -126,8 +127,9 @@ module.exports = {
   ...stats,
   ...meta,
   ...warehouses, 
-  ...workplaces, //new
-  
+  ...workplaces, 
+                            
+
   // Управление БД
   closeDatabase
 };

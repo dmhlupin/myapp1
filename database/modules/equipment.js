@@ -1,12 +1,21 @@
 // database/modules/equipment.js
 // Работа с техникой: CRUD + назначения + место хранения
 
+const { checkCellAvailability } = require('./cells');
+
 module.exports = ({ db, run, get, all }) => ({
+  
+  // 🆕 Общий хелпер — экспортируем для роутов (admin.js)
+  checkCellAvailability(cellId, excludeEquipmentId = null) {
+    return checkCellAvailability(db, cellId, excludeEquipmentId);
+  },
   
   // ============================================================
   // CRUD ТЕХНИКИ
   // ============================================================
   
+
+
   /**
    * Получить всю технику с названиями категорий и типов
    */
@@ -811,82 +820,62 @@ module.exports = ({ db, run, get, all }) => ({
           return;
         }
         
-        // Проверяем новую ячейку
-        db.get(`
-          SELECT 
-            c.id, c.name, c.code, c.capacity, c.is_full,
-            rack.name as rack_name,
-            zone.name as zone_name,
-            wh.name as warehouse_name,
-            (SELECT COUNT(*) FROM equipment WHERE cell_id = c.id) as current_count
-          FROM cells c
-          JOIN racks rack ON c.rack_id = rack.id
-          JOIN zones zone ON rack.zone_id = zone.id
-          JOIN warehouses wh ON zone.warehouse_id = wh.id
-          WHERE c.id = ?
-        `, [cellId], (err, cell) => {
-          if (err) {
-            reject(err);
-            return;
-          }
-          if (!cell) {
-            reject(new Error('Ячейка не найдена'));
-            return;
-          }
-          
-          // Если уже в этой ячейке — ничего не делаем
-          if (eq.cell_id === parseInt(cellId)) {
-            resolve({
-              success: true,
-              already_there: true,
-              equipment_id: equipmentId,
-              inventory_number: eq.inventory_number
-            });
-            return;
-          }
-          
-          // 🆕 Ручной флаг «заполнена»
-          if (cell.is_full === 1) {
-            reject(new Error(`Ячейка ${cell.code || cell.name} отмечена как заполненная`));
-            return;
-          }
-          // Числовой лимит (если задан)
-          if (cell.capacity && cell.current_count >= cell.capacity) {
-            reject(new Error(`Ячейка ${cell.code || cell.name} переполнена (${cell.current_count}/${cell.capacity})`));
-            return;
-          }
-          
-          // Перемещаем
-          db.run(`
-            UPDATE equipment 
-            SET cell_id = ?,
-                workplace_id = NULL,
-                status = CASE WHEN status IN ('available', 'placed') THEN 'available' ELSE status END,
-                updated_at = CURRENT_TIMESTAMP 
-            WHERE id = ?
-          `, [cellId, equipmentId], function(err) {
-            if (err) {
-              reject(err);
-              return;
-            }
-            
-            resolve({
-              success: true,
-              equipment_id: equipmentId,
-              inventory_number: eq.inventory_number,
-              equipment_name: eq.name,
-              from_cell_id: eq.cell_id,
-              from_cell_name: eq.cell_name,
-              from_cell_code: eq.cell_code,
-              to_cell_id: cell.id,
-              to_cell_name: cell.name,
-              to_cell_code: cell.code,
-              to_warehouse_name: cell.warehouse_name,
-              to_zone_name: cell.zone_name,
-              to_rack_name: cell.rack_name
-            });
+        // Если уже в этой ячейке — ничего не делаем
+        if (eq.cell_id === parseInt(cellId)) {
+          resolve({
+            success: true,
+            already_there: true,
+            equipment_id: equipmentId,
+            inventory_number: eq.inventory_number
           });
-        });
+          return;
+        }
+
+        // 🆕 Общая проверка ячейки (is_full + capacity)
+        checkCellAvailability(db, cellId, equipmentId)
+          .then(({ ok, reason, cell, label }) => {
+            if (!ok) {
+              if (reason === 'cell_not_found') {
+                return reject(new Error('Ячейка не найдена'));
+              }
+              if (reason === 'is_full') {
+                return reject(new Error(`Ячейка ${label} отмечена как заполненная`));
+              }
+              if (reason === 'over_capacity') {
+                return reject(new Error(`Ячейка ${label} переполнена (${cell.current_count}/${cell.capacity})`));
+              }
+              return reject(new Error(`Ячейка недоступна (${reason})`));
+            }
+
+            // Перемещаем
+            db.run(`
+              UPDATE equipment 
+              SET cell_id = ?,
+                  workplace_id = NULL,
+                  status = CASE WHEN status IN ('available', 'placed') THEN 'available' ELSE status END,
+                  updated_at = CURRENT_TIMESTAMP 
+              WHERE id = ?
+            `, [cellId, equipmentId], function(err) {
+              if (err) return reject(err);
+
+              resolve({
+                success: true,
+                equipment_id: equipmentId,
+                inventory_number: eq.inventory_number,
+                equipment_name: eq.name,
+                from_cell_id: eq.cell_id,
+                from_cell_name: eq.cell_name,
+                from_cell_code: eq.cell_code,
+                to_cell_id: cell.id,
+                to_cell_name: cell.name,
+                to_cell_code: cell.code,
+                to_warehouse_name: cell.warehouse_name,
+                to_zone_name: cell.zone_name,
+                to_rack_name: cell.rack_name
+              });
+            });
+          })
+          .catch(reject);
       });
     });
   },
