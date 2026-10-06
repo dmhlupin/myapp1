@@ -1,8 +1,6 @@
 // database/modules/warehouses.js
 // Работа со складами: иерархия Склад → Зона → Стеллаж → Ячейка
 
-const { checkCellAvailability } = require('./cells');
-
 module.exports = ({ db, run, get, all }) => ({
 
   // ============================================================
@@ -891,68 +889,7 @@ module.exports = ({ db, run, get, all }) => ({
     });
   },
 
-  /**
-   * Переместить технику в ячейку
-   */
-  moveEquipmentToCell(equipmentId, cellId) {
-    return new Promise((resolve, reject) => {
-      // Проверяем технику
-      db.get('SELECT id, name, cell_id, workplace_id FROM equipment WHERE id = ?', [equipmentId], (err, eq) => {
-        if (err) {
-          reject(err);
-          return;
-        }
-        if (!eq) {
-          reject(new Error('Техника не найдена'));
-          return;
-        }
 
-        // Проверяем ячейку (если указана) через общий хелпер
-        const checkCell = async () => {
-          if (!cellId) return null;
-          const result = await checkCellAvailability(db, cellId, equipmentId);
-          if (!result.ok) {
-            if (result.reason === 'cell_not_found') {
-              throw new Error('Ячейка не найдена');
-            }
-            if (result.reason === 'is_full') {
-              throw new Error(`Ячейка ${result.label} отмечена как заполненная`);
-            }
-            if (result.reason === 'over_capacity') {
-              throw new Error(`Ячейка ${result.label} переполнена (${result.cell.current_count}/${result.cell.capacity})`);
-            }
-            throw new Error(`Ячейка недоступна (${result.reason})`);
-          }
-          return result.cell;
-        };
-
-        checkCell()
-          .then(() => {
-            db.run(`
-              UPDATE equipment 
-              SET cell_id = ?,
-                  workplace_id = NULL,
-                  status = CASE WHEN status IN ('available', 'placed') THEN 'available' ELSE status END,
-                  updated_at = CURRENT_TIMESTAMP 
-              WHERE id = ?
-            `, [cellId, equipmentId], function(err) {
-              if (err) {
-                reject(err);
-                return;
-              }
-              resolve({ 
-                updated: this.changes,
-                old_cell_id: eq.cell_id,
-                new_cell_id: cellId,
-                old_workplace_id: eq.workplace_id,
-                equipment_name: eq.name
-              });
-            });
-          })
-          .catch(reject);
-      });
-    });
-  },
 
   /**
    * Получить статистику по складам
