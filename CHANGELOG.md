@@ -1,3 +1,178 @@
+## [2.11.12] - 2026-10-07
+
+**Фиксы и улучшения после v2.11.3: компактные формы, серверный
+фильтр, поиск, единый хелпер проверки ячеек**
+
+Крупный релиз-обёртка, вобравший серию подшагов 2.11.4 – 2.11.12.
+Отдельные теги выпускались по ходу работы; этот раздел — сводка
+по всем изменениям. `package.json` и `README.md` в этом релизе
+не трогались — синхронизация документации запланирована на
+следующий чат.
+
+Основные направления:
+- убрано поле `capacity` у рабочих мест (наследие ранних версий);
+- удалён мёртвый код перемещения техники;
+- общий хелпер `checkCellAvailability` вместо трёх дублей проверки;
+- полностью переработаны формы `/admin/edit/:id` и `/admin/add`
+  (компактный двухколоночный layout + живой предпросмотр);
+- логика статуса `placed` доведена до консистентной модели
+  (статус ↔ место);
+- фильтр и поиск на `/equipment` переведены на серверные
+  (URL-query + пагинация);
+- `check-css.js` расширен: ловит необработанные плейсхолдеры.
+
+### Added
+
+- **`database/modules/cells.js`** — новый модуль с чистой функцией
+  `checkCellAvailability(db, cellId, excludeEquipmentId)`. Единая
+  проверка «можно ли положить технику в ячейку»: учитывает
+  ручной флаг `is_full` и числовой лимит `capacity`.
+- **`checkCellAvailability`** экспортируется через `database/db.js`
+  (метод-обёртка без `db`, `db` — в замыкании). Используется
+  в `moveEquipmentToCellDetailed` и `updateEquipmentAPI`.
+- **Пагинация `/equipment`** — `PAGE_SIZE=10`, `renderPagination()`
+  в `routes/equipment.js`. Кнопки «← Назад» / «Вперёд →»,
+  сохранение фильтров в URL.
+- **Поиск на `/equipment`** — поле `#filterSearch` в панели
+  фильтров: инв. №, название, модель, серийный номер, ФИО
+  пользователя, код ячейки, название рабочего места. Дебаунс
+  300 мс, Enter — мгновенно, автофокус при `?search=`.
+- **Селект типов на `/equipment`** — подгружается по выбранной
+  категории (серверная фильтрация). `{{type_options}}`
+  в шаблоне, `selected` по текущему фильтру.
+- **Селект статусов на `/equipment`** — `{{status_options}}`
+  с сервера, включая синтетический `unplaced` («Не размещено»).
+- **`{{pagination}}`** в `views/equipment.html` — блок под таблицей.
+- **`{{search_value}}`** в `views/equipment.html` — сохранение
+  значения поиска после редиректа.
+- **`check-css.js`**: автопроверка всех `views/*.html` —
+  каждый плейсхолдер `{{...}}` должен иметь `.replace` в
+  `routes/*.js` или `utils/*.js`. Ловит класс багов
+  «плейсхолдер в HTML есть, но роут его не заменяет»
+  (актуально после фикса `{{user_options}}`).
+- **Компактный двухколоночный layout** в формах
+  `/admin/edit/:id` и `/admin/add`: `.edit-layout` (grid
+  720px + 340px), sticky-панель `.edit-info-col` справа.
+- **Живой предпросмотр** в правой колонке форм: `.info-card`
+  обновляется по мере ввода (`bindLivePreview`,
+  `bindInput`, `bindSelect`). Подсветка изменённых полей —
+  `.info-list dd.changed`.
+- **`.form-grid-2`** — двухколоночная сетка полей внутри формы.
+- **`.location-preview` / `.location-type-switch` / `.info-card` /
+  `.info-list`** — вынесены в `components.css` (были дубли
+  в `admin-add.css` / `admin-edit.css`).
+- **`autoSelectLocationType(status)`** в `admin-edit.js` —
+  агрессивное переключение radio при выборе статуса:
+  `placed` → workplace, `available` → warehouse.
+
+### Changed
+
+- **`database/modules/equipment.js` → `getEquipmentWithLocation`**:
+  новые фильтры `workplace_id` и `unplaced`
+  (`status='available' AND cell_id IS NULL AND workplace_id IS NULL`).
+  Работает в паре с `include_total` и пагинацией.
+- **`routes/equipment.js` → `renderEquipmentDashboard`** — читает
+  `req.query` (`category_id`, `type_id`, `warehouse_id`,
+  `workplace_id`, `status`, `search`, `page`). `PAGE_SIZE=10`.
+  Селект типов фильтруется по выбранной категории. Все селекты
+  рендерят `selected` по текущему фильтру.
+- **`routes/admin.js` → `renderEditEquipment`**:
+  - `{{user_options}}` **заполняется** (был пропущен вызов
+    `getAllUsers()` — select назначения был пуст);
+  - все статусы равноправны в `<select id="status">`
+    (`placed` больше не `disabled`);
+  - `{{info_*}}` плейсхолдеры правой колонки.
+- **`routes/admin.js` → `updateEquipmentAPI`**: встроенная проверка
+  `is_full`/`capacity` заменена на `checkCellAvailability`.
+- **`database/modules/warehouses.js` → `moveEquipmentToCell`**:
+  встроенная проверка заменена на `checkCellAvailability`.
+- **`database/modules/equipment.js` → `moveEquipmentToCellDetailed`**:
+  встроенная проверка заменена на `checkCellAvailability`.
+- **Логика статусов в `admin-edit.js`**:
+  - `assignSection` показывается при **любом** выбранном
+    `assigned` (а не только при переходе);
+  - `locationCard` скрывается при `assigned`;
+  - `submitForm()` не отправляет `cell_id`/`workplace_id`
+    при `assigned`; обнуляет место при переходе
+    `placed → available`/`maintenance`/`retired`;
+  - валидация «`placed` требует `workplace_id`»,
+    «`available` несовместим с `workplace_id`».
+- **`workplaces.capacity`** — **удалена**. Миграция
+  `migrateWorkplacesDropCapacity` в `scripts/migrate.js`
+  (DROP COLUMN на SQLite 3.35+, fallback — NULL). Seed
+  `seedOffices` больше не пишет `capacity`. `getWorkplaceSummary` /
+  `getWorkplaceOccupancy` считают заполненность по числу
+  рабочих мест, а не по сумме capacity.
+- **`check-css.js`** — расширен: список `expected` для
+  `equipment.html` обновлён под новую структуру (убран
+  `{{{types_json}}}`, `onchange="onCategoryFilterChange()"`,
+  добавлены `{{type_options}}`, `{{status_options}}`,
+  `{{pagination}}`, `{{search_value}}`).
+- **`.search-wrapper`** — стилизован: иконка 🔍 слева,
+  focus-within подсвечивает иконку, padding и фон
+  согласованы с `.filter-group select` (вровень по высоте).
+- **UI селектов `filterCategory` / `filterType` / `filterStatus`** —
+  все `onchange="applyFilters()"` (клиентская фильтрация
+  удалена).
+
+### Fixed
+
+- **`{{user_options}}` в `/admin/edit/:id`** — не заполнялся
+  в `renderEditEquipment`, select назначения был пуст.
+- **Валидация статусов и места** — при `available` + `workplace_id`
+  сервер молча конвертировал в `placed`; теперь на клиенте
+  выдаётся ошибка «Техника на рабочем месте не может быть
+  Доступна». Аналогично — `placed` без `workplace_id`.
+- **Поиск `#filterSearch`** — обработчики `input` / `keydown` /
+  `search` были привязаны **вне** `DOMContentLoaded`
+  (`searchInput is not defined`). Исправлено в
+  `2.11.12-fix1`.
+- **Автофокус поиска** — после редиректа фокус терялся;
+  добавлен автофокус + курсор в конец значения, если в URL
+  есть `?search=`.
+
+### Removed
+
+- **`moveEquipmentToCell`** из `database/modules/warehouses.js` —
+  мёртвый код, никем не вызывался с момента перехода на
+  `moveEquipmentToCellDetailed`. Убран вместе с неиспользуемым
+  импортом `checkCellAvailability` из `./cells`.
+- **Клиентская фильтрация** на `/equipment` (`applyFilters`,
+  `showEmptyStateIfNeeded`, работа с `row.style.display`) —
+  заменена на редирект с URL-query.
+- **`data-types`** из `views/equipment.html` — типы теперь
+  приходят через `{{type_options}}`.
+- **`data-*` атрибуты** из строк таблицы `/equipment` —
+  не нужны при серверной фильтрации.
+
+### Технический долг (отложено)
+
+- **`package.json`** — версия пока `2.11.3`; синхронизация
+  запланирована вместе с `README.md` в следующем чате.
+- **`README.md`** — не обновлялся в 2.11.4 – 2.11.12.
+- **Селект размера страницы** на `/equipment` (сейчас
+  `PAGE_SIZE=10` хардкод в `routes/equipment.js`).
+- **Статус `maintenance`** — «виртуальный склад ремонта».
+- **Статус `retired`** — «склад списания».
+- **Фильтр на `/admin`** — сейчас клиентский; возможно,
+  перевести на серверный по аналогии с `/equipment`.
+- **`getAllTypes`** на `/equipment` — при отсутствии фильтра
+  по категории подгружаются все типы (для больших объёмов
+  не оптимально).
+
+### Теги
+
+- v2.11.4 — перенос `checkCellAvailability` — идея (в итоге
+  реализовано в 2.11.9)
+- v2.11.5 — обсуждение правки формы `/admin/edit/:id` (в итоге 2.11.8)
+- v2.11.6 — `is_full` у ячеек (уже в 2.11.6-fix2, до этой секции)
+- v2.11.7 — `capacity` убрана у рабочих мест
+- v2.11.8 — компактные формы + live preview + логика статусов
+- v2.11.9 — вынос `checkCellAvailability` в `cells.js`
+- v2.11.10 — удалён мёртвый `moveEquipmentToCell`
+- v2.11.11 — серверный фильтр на `/equipment`
+- **v2.11.12 — поиск на `/equipment` (этот финал)**
+
 ## [2.11.3] - 2026-10-05
 
 **Фиксы после Этапа 2: статус `placed`, локализация, ссылки на рабочие места**
