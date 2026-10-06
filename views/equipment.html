@@ -1,12 +1,6 @@
 <!-- views/equipment.html -->
 <!-- Контент страницы "Техника" (без layout) -->
 
-<!-- Данные для JS (безопасно через data-атрибут) -->
-<div id="pageData" 
-     data-types='{{{types_json}}}'
-     style="display: none;">
-</div>
-
 <div class="page-header">
     <div>
         <h1 class="page-title">🔧 Учет техники</h1>
@@ -55,14 +49,14 @@
 <div class="filters-panel">
     <div class="filter-group">
         <label>Категория</label>
-        <select id="filterCategory" onchange="onCategoryFilterChange()">
-            {{category_options}}
-        </select>
+            <select id="filterCategory" onchange="applyFilters()">
+                {{category_options}}
+            </select>
     </div>
     <div class="filter-group">
         <label>Тип</label>
-        <select id="filterType" onchange="onTypeFilterChange()">
-            <option value="">Все типы</option>
+        <select id="filterType" onchange="applyFilters()">
+            {{type_options}}
         </select>
     </div>
     <div class="filter-group">
@@ -80,13 +74,7 @@
     <div class="filter-group">
         <label>Статус</label>
         <select id="filterStatus" onchange="applyFilters()">
-            <option value="">Все статусы</option>
-            <option value="available">✅ Доступна</option>
-            <option value="placed">🪑 На рабочем месте</option>
-            <option value="assigned">👤 Назначена</option>
-            <option value="maintenance">🔧 В ремонте</option>
-            <option value="retired">❌ Списана</option>
-            <option value="unplaced">⚠️ Не размещено</option>
+            {{status_options}}
         </select>
     </div>
     <div class="filter-actions">
@@ -114,6 +102,9 @@
         </tbody>
     </table>
 </div>
+
+<!-- 🆕 Пагинация -->
+{{pagination}}
 
 <!-- Модальное окно просмотра техники -->
 <div class="modal-overlay" id="viewEquipmentModal">

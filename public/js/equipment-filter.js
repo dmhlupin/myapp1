@@ -1,234 +1,53 @@
 // public/js/equipment-filter.js
-// Логика фильтрации техники на странице /equipment
-
-let allTypes = [];
+// Логика фильтрации техники на странице /equipment (серверная через URL)
 
 // ============================================================
-// ИНИЦИАЛИЗАЦИЯ
+// ФИЛЬТРАЦИЯ (через URL, сервер)
 // ============================================================
 
-document.addEventListener('DOMContentLoaded', function() {
-    // Читаем типы из data-атрибута
-    const pageData = document.getElementById('pageData');
-    
-    if (pageData && pageData.dataset.types) {
-        try {
-            allTypes = JSON.parse(pageData.dataset.types);
-            console.log(`✅ Загружено типов: ${allTypes.length}`);
-        } catch (e) {
-            console.error('❌ Ошибка парсинга типов:', e);
-            allTypes = [];
-        }
-    } else {
-        console.warn('⚠️ Данные типов не найдены на странице');
-    }
-});
-
-// ============================================================
-// ФИЛЬТРАЦИЯ
-// ============================================================
-
-/**
- * При смене категории — обновляем список типов + применяем фильтр
- */
-function onCategoryFilterChange() {
-    const categoryId = document.getElementById('filterCategory').value;
-    const typeSelect = document.getElementById('filterType');
-    
-    // Обновляем список типов
-    if (categoryId) {
-        const filteredTypes = allTypes.filter(t => String(t.category_id) === String(categoryId));
-        
-        typeSelect.innerHTML = '<option value="">Все типы</option>' +
-            filteredTypes.map(t => `
-                <option value="${t.id}">
-                    ${t.icon || '📦'} ${escapeHtml(t.name)} (${t.equipment_count || 0})
-                </option>
-            `).join('');
-    } else {
-        typeSelect.innerHTML = '<option value="">Все типы</option>';
-    }
-    
-    // Сбрасываем выбор типа и применяем фильтр
-    typeSelect.value = '';
-    applyFilters();
-}
-
-/**
- * При смене типа — применяем фильтр
- */
-function onTypeFilterChange() {
-    applyFilters();
-}
-
-/**
- * Применить все фильтры
- */
 function applyFilters() {
-    const categoryId = document.getElementById('filterCategory').value;
-    const typeId = document.getElementById('filterType').value;
-    const warehouseId = document.getElementById('filterWarehouse').value;
-    const workplaceId = document.getElementById('filterWorkplace')?.value || '';
-    const status = document.getElementById('filterStatus').value;
-    
-    const tbody = document.getElementById('equipmentTableBody');
-    if (!tbody) return;
-    
-    const rows = tbody.querySelectorAll('tr:not(.empty-row)');
-    let visibleCount = 0;
-    
-    rows.forEach(row => {
-        const rowCategoryId = row.dataset.categoryId || '';
-        const rowTypeId = row.dataset.typeId || '';
-        const rowWarehouseId = row.dataset.warehouseId || '';
-        const rowWorkplaceId = row.dataset.workplaceId || '';
-        
-        let visible = true;
-        
-        // Фильтр по категории
-        if (categoryId && rowCategoryId !== categoryId) {
-            visible = false;
-        }
-        
-        // Фильтр по типу
-        if (typeId && rowTypeId !== typeId) {
-            visible = false;
-        }
-        
-        // 🆕 Фильтр по складу
-        if (warehouseId) {
-            if (warehouseId === '__none__') {
-                // "Не на складе" — техника без warehouse_id
-                if (rowWarehouseId) {
-                    visible = false;
-                }
-            } else {
-                // Конкретный склад
-                if (rowWarehouseId !== warehouseId) {
-                    visible = false;
-                }
-            }
-        }
-        
-        // 🆕 Фильтр по рабочему месту
-        if (workplaceId) {
-            if (workplaceId === '__none__') {
-                // "Не на рабочем месте" — техника без workplace_id
-                if (rowWorkplaceId) {
-                    visible = false;
-                }
-            } else {
-                // Конкретное рабочее место
-                if (rowWorkplaceId !== workplaceId) {
-                    visible = false;
-                }
-            }
-        }
+    const params = new URLSearchParams();
 
-        // Фильтр по статусу
-        if (status === 'unplaced') {
-            // 🆕 Синтетический фильтр: available + без cell_id и workplace_id
-            const statusCell = row.querySelector('.status-badge');
-            const isAvailable = statusCell && statusCell.classList.contains('status-available');
-            const hasLocation = row.dataset.hasLocation === '1';
-            if (!isAvailable || hasLocation) {
-                visible = false;
-            }
-        } else if (status) {
-            const statusCell = row.querySelector('.status-badge');
-            const hasStatusClass = statusCell && statusCell.classList.contains(`status-${status}`);
-            if (!hasStatusClass) {
-                visible = false;
-            }
-        }
-        
-        row.style.display = visible ? '' : 'none';
-        if (visible) visibleCount++;
-    });
-    
-    showEmptyStateIfNeeded(visibleCount);
+    const categoryId = document.getElementById('filterCategory')?.value;
+    const typeId = document.getElementById('filterType')?.value;
+    const warehouseId = document.getElementById('filterWarehouse')?.value;
+    const workplaceId = document.getElementById('filterWorkplace')?.value;
+    const status = document.getElementById('filterStatus')?.value;
+
+    if (categoryId) params.set('category_id', categoryId);
+    if (typeId) params.set('type_id', typeId);
+    if (warehouseId) params.set('warehouse_id', warehouseId);
+    if (workplaceId) params.set('workplace_id', workplaceId);
+    if (status) params.set('status', status);
+
+    // Сброс на 1-ю страницу
+    // page не задаём — сервер по умолчанию = 1
+
+    const qs = params.toString();
+    window.location.href = '/equipment' + (qs ? '?' + qs : '');
 }
 
-/**
- * Показать сообщение "не найдено"
- */
-function showEmptyStateIfNeeded(count) {
-    const tbody = document.getElementById('equipmentTableBody');
-    if (!tbody) return;
-    
-    let emptyRow = tbody.querySelector('.empty-row');
-    
-    if (count === 0) {
-        if (!emptyRow) {
-            emptyRow = document.createElement('tr');
-            emptyRow.className = 'empty-row';
-            emptyRow.innerHTML = `
-                <td colspan="8" class="empty-state">
-                    <span class="emoji">🔍</span>
-                    <h3>Ничего не найдено</h3>
-                    <p>Попробуйте изменить фильтры</p>
-                </td>
-            `;
-            tbody.appendChild(emptyRow);
-        }
-        emptyRow.style.display = '';
-    } else if (emptyRow) {
-        emptyRow.style.display = 'none';
-    }
-}
-
-/**
- * Сбросить все фильтры
- */
 function resetFilters() {
-    document.getElementById('filterCategory').value = '';
-    document.getElementById('filterType').innerHTML = '<option value="">Все типы</option>';
-    document.getElementById('filterWarehouse').value = '';
-    document.getElementById('filterWorkplace').value = '';   // 🆕
-    document.getElementById('filterStatus').value = '';
-    
-    // Показываем все строки
-    const rows = document.querySelectorAll('#equipmentTableBody tr:not(.empty-row)');
-    rows.forEach(row => {
-        row.style.display = '';
-    });
-    
-    // Скрываем пустое состояние
-    const emptyRow = document.querySelector('#equipmentTableBody .empty-row');
-    if (emptyRow) {
-        emptyRow.style.display = 'none';
-    }
-    
-    if (typeof showToast === 'function') {
-        showToast('🔄 Фильтры сброшены', 'info');
-    }
+    window.location.href = '/equipment';
 }
 
-// ============================================================
-// БЫСТРЫЙ ФИЛЬТР «НЕ РАЗМЕЩЕНО»
-// ============================================================
-
-/**
- * Установить фильтр «Не размещено» и применить
- * (вызывается кликом по карточке в шапке)
- */
 function filterUnplaced() {
-    const statusSelect = document.getElementById('filterStatus');
-    if (!statusSelect) return;
-
-    // Сбрасываем остальные фильтры, чтобы карточка работала предсказуемо
-    document.getElementById('filterCategory').value = '';
-    document.getElementById('filterType').innerHTML = '<option value="">Все типы</option>';
-    document.getElementById('filterWarehouse').value = '';
-    document.getElementById('filterWorkplace').value = '';
-    statusSelect.value = 'unplaced';
-
-    applyFilters();
-
-    if (typeof showToast === 'function') {
-        showToast('⚠️ Показана техника без места хранения', 'info');
-    }
+    window.location.href = '/equipment?status=unplaced';
 }
+
+// ============================================================
+// ПРОСМОТР КАРТОЧКИ ТЕХНИКИ
+// (без изменений — viewEquipmentFromList, renderEquipmentCard,
+//  closeViewEquipmentModal, getInitials, escapeHtml)
+// ============================================================
+
+// ... оставь как было ...
+
+// ============================================================
+// ЗАКРЫТИЕ МОДАЛКИ ПО ESCAPE / КЛИКУ
+// ============================================================
+
+// ... оставь как было ...
 
 
 // ============================================================
