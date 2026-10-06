@@ -125,6 +125,142 @@ function checkPlaceholders(viewFile, expected) {
   return { file: viewFile, missing };
 }
 
+// ------------------------------------------------------------
+// 7. Автопроверка: все {{...}} из views/*.html должны иметь replace в JS
+// ------------------------------------------------------------
+
+/**
+ * Собирает плейсхолдеры {{...}} и {{{...}}} из HTML.
+ * Возвращает Map: placeholder -> [строки, где встречается]
+ */
+function collectPlaceholdersFromHtml(filePath) {
+  const html = fs.readFileSync(filePath, 'utf8');
+  const map = new Map();
+  // поддерживаем {{{...}}} (тройные) и {{...}}
+  const re = /\{\{\{?([\w.\-:]+)\}?\}\}/g;
+  let m;
+  const lines = html.split('\n');
+  while ((m = re.exec(html)) !== null) {
+    const name = m[1];
+    // находим номер строки
+    const before = html.substring(0, m.index);
+    const lineNum = before.split('\n').length;
+    const key = m[0].startsWith('{{{') ? `{{{${name}}}}` : `{{${name}}}`;
+    if (!map.has(key)) map.set(key, []);
+    map.get(key).push({ line: lineNum, raw: lines[lineNum - 1].trim().slice(0, 120) });
+  }
+  return map;
+}
+
+/**
+ * Собирает все плейсхолдеры, которые где-то заменяются в JS.
+ * Ищем .replace('{{x}}', ...) и .replace(/\{\{x\}\}/g, ...) и .replace("{{x}}", ...)
+ * а также похожие конструкции с template literal.
+ */
+function collectReplacedPlaceholders(jsFiles) {
+  const set = new Set();
+  for (const file of jsFiles) {
+    const js = fs.readFileSync(file, 'utf8');
+
+    // 1. Простой формат: '{{id}}', "{{id}}", {{{x}}}, `{{id}}`
+    //    (в том числе внутри .replace('{{id}}', ...))
+    const simple = /\{\{\{?([\w.\-:]+)\}?\}\}/g;
+    let m;
+    while ((m = simple.exec(js)) !== null) {
+      set.add(m[0]); // сохраняем точный вид: '{{id}}' или '{{{types_json}}}'
+    }
+
+    // 2. Экранированный формат (в регулярках): \{\{id\}\}
+    //    Учитываем экранированные точки: \{\{office\.id\}\}
+    const escaped = /\\\{\\\{([\w.\\\-:]+?)\\\}\\\}/g;
+    while ((m = escaped.exec(js)) !== null) {
+      const name = m[1].replace(/\\\./g, '.');
+      set.add(`{{${name}}}`);
+    }
+  }
+  return set;
+}
+
+function checkAllPlaceholders() {
+  console.log('\n' + '─'.repeat(60));
+  console.log('📦 Автопроверка плейсхолдеров views/*.html → routes/*.js\n');
+
+  const viewsDir = path.join(ROOT, 'views');
+  const routesDir = path.join(ROOT, 'routes');
+  const utilsDir = path.join(ROOT, 'utils');
+
+  if (!fs.existsSync(viewsDir)) {
+    console.log('⚠️  views/ не найден, пропуск');
+    return 0;
+  }
+
+  // 1. Собираем JS-файлы, где может быть replace
+  const jsFiles = [];
+  for (const dir of [routesDir, utilsDir]) {
+    if (!fs.existsSync(dir)) continue;
+    for (const f of fs.readdirSync(dir)) {
+      if (f.endsWith('.js')) jsFiles.push(path.join(dir, f));
+    }
+  }
+
+  // 2. Собираем "заменяемые" плейсхолдеры
+  const replaced = collectReplacedPlaceholders(jsFiles);
+
+  // 3. Обходим views
+  const htmlFiles = fs.readdirSync(viewsDir).filter(f => f.endsWith('.html'));
+
+  // Известные плейсхолдеры, которые заменяются НЕ в routes/, а в layout.js
+  // (или других местах) — оставляем в белом списке.
+
+
+const whitelist = new Set([
+  // Общие из layout.js
+  '{{title}}', '{{content}}', '{{pageCss}}', '{{pageJs}}',
+  '{{user}}', '{{username}}', '{{userRole}}', '{{currentYear}}',
+  // Клиентские шаблоны (Handlebars/Vue)
+  '{{this.name}}', '{{this.file}}',
+  // ... по мере появления
+]);
+
+const whitelistPatterns = [
+  /^\{\{this\.[\w.]+\}\}$/,   // {{this.*}} — клиентские шаблоны
+];
+
+function isWhitelisted(key) {
+  if (whitelist.has(key)) return true;
+  return whitelistPatterns.some(re => re.test(key));
+}
+
+  let totalIssues = 0;
+
+  for (const file of htmlFiles) {
+    const fullPath = path.join(viewsDir, file);
+    const placeholders = collectPlaceholdersFromHtml(fullPath);
+
+    const missing = [];
+    for (const [key, occurrences] of placeholders) {
+      if (replaced.has(key)) continue;
+      if (isWhitelisted(key)) continue;
+      missing.push({ key, occurrences });
+    }
+
+    if (missing.length === 0) {
+      console.log(`✅ ${file} — все плейсхолдеры обрабатываются (${placeholders.size})`);
+    } else {
+      console.log(`❌ ${file} — НЕ обрабатываются (${missing.length} из ${placeholders.size}):`);
+      for (const { key, occurrences } of missing) {
+        console.log(`     ${key}   (${occurrences.length}×)`);
+        // показываем первую строку для контекста
+        const occ = occurrences[0];
+        console.log(`       ↳ строка ${occ.line}: ${occ.raw}`);
+      }
+      totalIssues += missing.length;
+    }
+  }
+
+  return totalIssues;
+}
+
 // ============================================================
 // MAIN
 // ============================================================
@@ -356,6 +492,10 @@ for (const check of placeholderChecks) {
     totalPlaceholderIssues += result.missing.length;
   }
 }
+
+// --- 3b. Автопроверка всех плейсхолдеров ---
+const autoPlaceholderIssues = checkAllPlaceholders();
+totalPlaceholderIssues += autoPlaceholderIssues;
 
 // ------------------------------------------------------------
 // ИТОГ
