@@ -27,15 +27,15 @@ document.addEventListener('DOMContentLoaded', async function () {
 
   // Склады для места хранения
   await loadWarehouses();
+
+  // 🆕 2.11.8.2.2: живой предпросмотр
+  bindLivePreview();
 });
 
 // ============================================================
 // СПРАВОЧНИК: КАТЕГОРИИ И ТИПЫ
 // ============================================================
 
-/**
- * Загрузить категории
- */
 async function loadCategories() {
   try {
     const response = await fetch('/api/admin/categories');
@@ -65,9 +65,6 @@ async function loadCategories() {
   }
 }
 
-/**
- * При смене категории — загружаем типы
- */
 async function onCategoryChange() {
   const categoryId = document.getElementById('category_id').value;
   const typeSelect = document.getElementById('type_id');
@@ -191,9 +188,6 @@ async function submitForm(event) {
 // МЕСТО ХРАНЕНИЯ (каскадные селекты)
 // ============================================================
 
-/**
- * Загрузить список складов
- */
 async function loadWarehouses() {
   try {
     const response = await fetch('/api/admin/warehouses');
@@ -220,9 +214,6 @@ async function loadWarehouses() {
   }
 }
 
-/**
- * При смене склада — загружаем зоны
- */
 async function onWarehouseChange() {
   const warehouseId = document.getElementById('warehouseId').value;
   const zoneSelect = document.getElementById('zoneId');
@@ -266,9 +257,6 @@ async function onWarehouseChange() {
   }
 }
 
-/**
- * При смене зоны — загружаем стеллажи
- */
 async function onZoneChange() {
   const zoneId = document.getElementById('zoneId').value;
   const rackSelect = document.getElementById('rackId');
@@ -309,9 +297,6 @@ async function onZoneChange() {
   }
 }
 
-/**
- * При смене стеллажа — загружаем ячейки
- */
 async function onRackChange() {
   const rackId = document.getElementById('rackId').value;
   const cellSelect = document.getElementById('cellId');
@@ -358,9 +343,6 @@ async function onRackChange() {
   }
 }
 
-/**
- * Обновить превью адреса
- */
 function updateLocationPreview() {
   const warehouseId = document.getElementById('warehouseId')?.value;
   const zoneId = document.getElementById('zoneId')?.value;
@@ -394,21 +376,71 @@ function updateLocationPreview() {
     }
   }
 
+  // Блок .location-preview — под селектами
   if (parts.length === 0) {
     preview.style.display = 'none';
   } else {
     preview.style.display = 'flex';
     previewText.textContent = parts.join(' → ');
   }
+
+  // 🆕 Обновляем правую колонку
+  const infoLoc = document.getElementById('info_location');
+  if (infoLoc) {
+    if (parts.length === 0) {
+      infoLoc.textContent = '—';
+      infoLoc.classList.add('muted');
+    } else {
+      infoLoc.textContent = parts.join(' / ');
+      infoLoc.classList.remove('muted');
+    }
+  }
+}
+
+// ============================================================
+// 2.11.8.2.2: ЖИВОЙ ПРЕДПРОСМОТР В ПРАВОЙ КОЛОНКЕ
+// ============================================================
+
+function bindLivePreview() {
+  bindInput('inventory_number', 'info_inv');
+  bindInput('name',             'info_name');
+  bindInput('model',            'info_model');
+  bindInput('serial_number',    'info_serial');
+
+  bindSelect('category_id', 'info_category');
+  bindSelect('type_id',     'info_type');
+  bindSelect('status',      'info_status');
+}
+
+function bindInput(inputId, infoId) {
+  const input = document.getElementById(inputId);
+  const info = document.getElementById(infoId);
+  if (!input || !info) return;
+
+  input.addEventListener('input', () => {
+    const v = input.value.trim();
+    info.textContent = v || '—';
+    info.classList.toggle('muted', !v);
+  });
+}
+
+function bindSelect(selectId, infoId) {
+  const select = document.getElementById(selectId);
+  const info = document.getElementById(infoId);
+  if (!select || !info) return;
+
+  select.addEventListener('change', () => {
+    const opt = select.options[select.selectedIndex];
+    const v = opt ? opt.textContent.trim() : '';
+    info.textContent = v || '—';
+    info.classList.toggle('muted', !v);
+  });
 }
 
 // ============================================================
 // ВСПОМОГАТЕЛЬНЫЕ
 // ============================================================
 
-/**
- * Экранирование HTML
- */
 function escapeHtml(str) {
   if (!str) return '';
   return String(str)
@@ -419,9 +451,6 @@ function escapeHtml(str) {
     .replace(/'/g, '&#039;');
 }
 
-/**
- * Генерация случайного инвентарного номера (пример-плейсхолдер)
- */
 function generateInventoryNumber() {
   const date = new Date();
   const year = date.getFullYear();

@@ -11,144 +11,177 @@
   </div>
 </div>
 
-<form id="addForm" onsubmit="submitForm(event)">
+<div class="edit-layout">
 
   <!-- ============================================================ -->
-  <!-- ОСНОВНАЯ ИНФОРМАЦИЯ                                           -->
+  <!-- ЛЕВАЯ КОЛОНКА: ФОРМА                                          -->
   <!-- ============================================================ -->
-  <div class="card">
-    <div class="card-header">
-      <h2 class="card-title">📋 Основная информация</h2>
-    </div>
-    <div class="card-body">
+  <div class="edit-form-col">
+    <form id="addForm" onsubmit="submitForm(event)">
 
-      <div class="form-group">
-        <label>Инвентарный номер <span class="required">*</span></label>
-        <input type="text" id="inventory_number" required placeholder="Например: EQ-001">
-      </div>
-
-      <div class="form-group">
-        <label>Категория <span class="required">*</span></label>
-        <select id="category_id" required onchange="onCategoryChange()">
-          <option value="">— Выберите категорию —</option>
-        </select>
-        <div class="help-text">Например: Компьютерная техника, Периферия</div>
-      </div>
-
-      <div class="form-group">
-        <label>Тип <span class="required">*</span></label>
-        <select id="type_id" required disabled>
-          <option value="">— Сначала выберите категорию —</option>
-        </select>
-        <div class="help-text">Например: Ноутбук, Монитор, Клавиатура</div>
-      </div>
-
-      <div class="form-group">
-        <label>Название <span class="required">*</span></label>
-        <input type="text" id="name" required placeholder="Например: Ноутбук">
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label>Модель</label>
-          <input type="text" id="model" placeholder="Например: MacBook Pro 14&quot;">
+      <!-- ============================================================ -->
+      <!-- ОСНОВНАЯ ИНФОРМАЦИЯ                                           -->
+      <!-- ============================================================ -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">📋 Основная информация</h2>
         </div>
-        <div class="form-group">
-          <label>Серийный номер</label>
-          <input type="text" id="serial_number" placeholder="Например: C02ZR0L5MD6P">
+        <div class="card-body">
+
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label>Инвентарный номер <span class="required">*</span></label>
+              <input type="text" id="inventory_number" required placeholder="Например: EQ-001">
+            </div>
+            <div class="form-group">
+              <label>Название <span class="required">*</span></label>
+              <input type="text" id="name" required placeholder="Например: Ноутбук">
+            </div>
+
+            <div class="form-group">
+              <label>Категория <span class="required">*</span></label>
+              <select id="category_id" required onchange="onCategoryChange()">
+                <option value="">— Загрузка категорий... —</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Тип <span class="required">*</span></label>
+              <select id="type_id" required disabled>
+                <option value="">— Сначала выберите категорию —</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Модель</label>
+              <input type="text" id="model" placeholder="Например: MacBook Pro 14&quot;">
+            </div>
+            <div class="form-group">
+              <label>Серийный номер</label>
+              <input type="text" id="serial_number" placeholder="Например: C02ZR0L5MD6P">
+            </div>
+
+            <div class="form-group">
+              <label>Производитель</label>
+              <input type="text" id="manufacturer" placeholder="Например: Apple">
+            </div>
+            <div class="form-group">
+              <label>Статус</label>
+              <select id="status">
+                <option value="available">✅ Доступна</option>
+                <option value="assigned">👤 Назначена</option>
+                <option value="maintenance">🔧 В ремонте</option>
+                <option value="retired">❌ Списана</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Дата покупки</label>
+              <input type="date" id="purchase_date">
+            </div>
+            <div class="form-group">
+              <label>Гарантия до</label>
+              <input type="date" id="warranty_until">
+            </div>
+
+            <div class="form-group full-width">
+              <label>Описание</label>
+              <textarea id="description" rows="3" placeholder="Дополнительная информация о технике..."></textarea>
+            </div>
+          </div>
+
         </div>
       </div>
 
-      <div class="form-group">
-        <label>Производитель</label>
-        <input type="text" id="manufacturer" placeholder="Например: Apple">
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label>Дата покупки</label>
-          <input type="date" id="purchase_date">
+      <!-- ============================================================ -->
+      <!-- МЕСТО ХРАНЕНИЯ                                                -->
+      <!-- ============================================================ -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">📍 Место хранения</h2>
         </div>
-        <div class="form-group">
-          <label>Гарантия до</label>
-          <input type="date" id="warranty_until">
+        <div class="card-body">
+          <div class="help-text" style="margin-bottom: 12px;">
+            Укажите, где будет храниться техника. Необязательно.
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Склад</label>
+              <select id="warehouseId" onchange="onWarehouseChange()">
+                <option value="">— Не указано —</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Зона</label>
+              <select id="zoneId" onchange="onZoneChange()" disabled>
+                <option value="">— Сначала выберите склад —</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Стеллаж</label>
+              <select id="rackId" onchange="onRackChange()" disabled>
+                <option value="">— Сначала выберите зону —</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Ячейка</label>
+              <select id="cellId" onchange="updateLocationPreview()" disabled>
+                <option value="">— Сначала выберите стеллаж —</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="location-preview" id="locationPreview" style="display: none;">
+            <span class="location-preview-icon">📍</span>
+            <span id="locationPreviewText"></span>
+          </div>
         </div>
       </div>
 
-      <div class="form-group">
-        <label>Статус</label>
-        <select id="status">
-          <option value="available">Доступна</option>
-          <option value="assigned">Назначена</option>
-          <option value="maintenance">В ремонте</option>
-          <option value="retired">Списана</option>
-        </select>
+      <!-- ДЕЙСТВИЯ -->
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" id="submitBtn">💾 Сохранить</button>
+        <a href="/admin" class="btn btn-ghost">Отмена</a>
       </div>
 
-      <div class="form-group">
-        <label>Описание</label>
-        <textarea id="description" placeholder="Дополнительная информация о технике..."></textarea>
-      </div>
-
-    </div>
+    </form>
   </div>
 
   <!-- ============================================================ -->
-  <!-- МЕСТО ХРАНЕНИЯ                                                -->
+  <!-- ПРАВАЯ КОЛОНКА: ПРЕДПРОСМОТР                                  -->
   <!-- ============================================================ -->
-  <div class="card">
-    <div class="card-header">
-      <h2 class="card-title">📍 Место хранения</h2>
+  <aside class="edit-info-col">
+    <div class="info-card">
+      <h3>👁️ Предпросмотр</h3>
+      <dl class="info-list">
+        <dt>Инв. №</dt>
+        <dd id="info_inv" class="muted">—</dd>
+
+        <dt>Название</dt>
+        <dd id="info_name" class="muted">—</dd>
+
+        <dt>Категория</dt>
+        <dd id="info_category" class="muted">—</dd>
+
+        <dt>Тип</dt>
+        <dd id="info_type" class="muted">—</dd>
+
+        <dt>Модель</dt>
+        <dd id="info_model" class="muted">—</dd>
+
+        <dt>Серийный</dt>
+        <dd id="info_serial" class="muted">—</dd>
+
+        <dt>Статус</dt>
+        <dd id="info_status">✅ Доступна</dd>
+
+        <dt>Расположение</dt>
+        <dd id="info_location" class="muted">—</dd>
+      </dl>
     </div>
-    <div class="card-body">
-      <div class="help-text" style="margin-bottom: 15px;">
-        Укажите, где будет храниться техника. Необязательно.
-      </div>
+  </aside>
 
-      <div class="form-row">
-        <div class="form-group">
-          <label>Склад</label>
-          <select id="warehouseId" onchange="onWarehouseChange()">
-            <option value="">— Не указано —</option>
-            <option value="__loading__" disabled>⏳ Загрузка...</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Зона</label>
-          <select id="zoneId" onchange="onZoneChange()" disabled>
-            <option value="">— Сначала выберите склад —</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label>Стеллаж</label>
-          <select id="rackId" onchange="onRackChange()" disabled>
-            <option value="">— Сначала выберите зону —</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Ячейка</label>
-          <select id="cellId" onchange="updateLocationPreview()" disabled>
-            <option value="">— Сначала выберите стеллаж —</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="location-preview" id="locationPreview" style="display: none;">
-        <span class="location-preview-icon">📍</span>
-        <span id="locationPreviewText"></span>
-      </div>
-    </div>
-  </div>
-
-  <!-- ============================================================ -->
-  <!-- ДЕЙСТВИЯ                                                      -->
-  <!-- ============================================================ -->
-  <div class="form-actions">
-    <button type="submit" class="btn btn-primary" id="submitBtn">💾 Сохранить</button>
-    <a href="/admin" class="btn btn-ghost">Отмена</a>
-  </div>
-
-</form>
+</div>
