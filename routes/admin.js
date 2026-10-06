@@ -129,7 +129,7 @@ async function renderAdmin(req, res) {
       
       const statusLabels = {
         'available':   '✅ Доступна',
-        'placed':      '🪑 На месте',
+        'placed':      '🪑 На рабочем месте',
         'assigned':    '👤 Назначена',
         'maintenance': '🔧 В ремонте',
         'retired':     '❌ Списана',
@@ -632,39 +632,23 @@ async function renderEditEquipment(req, res) {
     content = content.replace(/\{\{cell_id\}\}/g, equipment.cell_id || '');
     content = content.replace(/\{\{workplace_id\}\}/g, equipment.workplace_id || '');
 
-    // Статусы — русские подписи
+    // Статусы — русские подписи. Все статусы равноправны и выбираемы.
     const statusLabels = {
       'available':   '✅ Доступна',
       'placed':      '🪑 На месте',
       'assigned':    '👤 Назначена',
       'maintenance': '🔧 В ремонте',
-      'retired':     '📦 Списана',
+      'retired':     '❌ Списана',
     };
-    // 'placed' отображается, но выбирать вручную нельзя —
-    // статус ставится автоматически при перемещении на рабочее место
     const statuses = ['available', 'placed', 'assigned', 'maintenance', 'retired'];
+
     let statusOptions = '';
     statuses.forEach(s => {
       const selected = s === equipment.status ? 'selected' : '';
-      const isPlaced = s === 'placed';
-      const disabled = isPlaced ? 'disabled' : '';
-      const label = statusLabels[s] || s;
-      const suffix = isPlaced ? ' (управляется перемещением)' : '';
-      statusOptions += `<option value="${s}" ${selected} ${disabled}>${label}${suffix}</option>`;
+      statusOptions += `<option value="${s}" ${selected}>${statusLabels[s]}</option>`;
     });
-    // Многострочная вставка — без /g
-    content = content.replace('{{status_options}}', statusOptions);
 
-    // Пользователи для назначения
-    const users = await getAllUsers();
-    let userOptions = '';
-    users.forEach(user => {
-      const fullName = user.full_name || user.username;
-      const dept = user.department ? ` (${user.department})` : '';
-      userOptions += `<option value="${user.id}">${escapeHtml(fullName)}${escapeHtml(dept)}</option>`;
-    });
-    // Многострочная вставка — без /g
-    content = content.replace('{{user_options}}', userOptions);
+    content = content.replace('{{status_options}}', statusOptions);
 
     // 🆕 Правая колонка: текущая информация (2.11.8.2)
     const infoStatus = statusLabels[equipment.status] || equipment.status || '—';
@@ -684,6 +668,16 @@ async function renderEditEquipment(req, res) {
     content = content.replace(/\{\{info_model\}\}/g, escapeHtml(equipment.model || '—'));
     content = content.replace(/\{\{info_serial\}\}/g, escapeHtml(equipment.serial_number || '—'));
     content = content.replace(/\{\{info_status\}\}/g, escapeHtml(infoStatus));
+
+        // 🆕 Загрузка пользователей для назначения
+    const users = await getAllUsers();
+    let userOptions = '';
+    users.forEach(user => {
+      const fullName = user.full_name || user.username;
+      const dept = user.department ? ` (${user.department})` : '';
+      userOptions += `<option value="${user.id}">${escapeHtml(fullName)}${escapeHtml(dept)}</option>`;
+    });
+    content = content.replace('{{user_options}}', userOptions);
 
     const fullHtml = renderPage({
       title: 'Редактировать технику – MoveIT service',

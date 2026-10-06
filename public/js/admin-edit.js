@@ -192,13 +192,40 @@ async function submitForm(event) {
     submitBtn.disabled = true;
     submitBtn.textContent = '⏳ Обновление...';
 
-    // 🆕 Тип расположения (при 'assigned' место не имеет смысла — шлём null)
+    // 🆕 Тип расположения
+    const oldStatusForLoc = document.getElementById('currentStatus')?.value || '';
     let cellId = null;
     let workplaceId = null;
+
     if (newStatus !== 'assigned') {
         const locationType = document.querySelector('input[name="locationType"]:checked')?.value || 'none';
         cellId = locationType === 'warehouse' ? (document.getElementById('cellId')?.value || null) : null;
         workplaceId = locationType === 'workplace' ? (document.getElementById('workplaceId')?.value || null) : null;
+    }
+
+    // 🆕 Если техника была на рабочем месте ('placed'), а статус меняется
+    // на что-то кроме 'placed' / 'assigned' — место обнуляем.
+    if (oldStatusForLoc === 'placed' && newStatus !== 'placed' && newStatus !== 'assigned') {
+        cellId = null;
+        workplaceId = null;
+    }
+
+    // 🆕 Валидация связки «статус ↔ место»
+    if (newStatus === 'placed' && !workplaceId) {
+        showToast('❌ Для статуса «На месте» выберите рабочее место', 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = '💾 Обновить';
+        return;
+    }
+    if (newStatus === 'available' && workplaceId) {
+        showToast('❌ Техника на рабочем месте не может быть «Доступна». Измените статус на «На месте»', 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = '💾 Обновить';
+        return;
+    }
+    if (newStatus === 'placed' && !workplaceId) {
+        // уже покрыто выше — оставлено для наглядности
+        // (если workplaceId null и есть cellId — тоже ошибка)
     }
 
     const formData = {
@@ -646,13 +673,21 @@ function onStatusChange() {
     if (info) info.classList.remove('show');
     if (assignSection) assignSection.classList.remove('show');
 
-    // 🆕 Скрываем карточку «Расположение» при статусе «Назначена»
+    // Карточка «Расположение»:
+    //   - assigned → скрыта (техника у пользователя, место не нужно);
+    //   - остальные → показана.
     if (locationCard) {
         locationCard.style.display = (newStatus === 'assigned') ? 'none' : '';
     }
 
-    // 🆕 Показываем assignSection, если ТЕКУЩИЙ статус в select = 'assigned'
-    // (а не только при переходе available → assigned).
+    // 🆕 Автовыбор типа расположения по статусу
+    // (не трогаем, если пользователь уже что-то выбрал вручную — только если
+    //  radio не выбрано вообще или не совпадает со "смыслом" статуса)
+    if (newStatus !== 'assigned') {
+        autoSelectLocationType(newStatus);
+    }
+
+    // Логика подсказок и блоков
     if (newStatus === 'assigned') {
         if (info) info.classList.add('show');
         if (assignSection) assignSection.classList.add('show');
@@ -665,14 +700,61 @@ function onStatusChange() {
             }
         }
     } else if (oldStatus === 'assigned' && newStatus === 'available') {
-        // Возврат техники
         if (warning) warning.classList.add('show');
         if (helpText) {
             helpText.textContent = '⚠️ Техника будет автоматически возвращена от пользователя';
         }
+    } else if (newStatus === 'placed') {
+        if (helpText) {
+            helpText.textContent = '🪑 Укажите рабочее место ниже — это обязательно';
+        }
+    } else if (newStatus === 'available') {
+        if (helpText) {
+            helpText.textContent = '✅ Техника на складе — при необходимости укажите ячейку';
+        }
+    } else if (newStatus === 'maintenance') {
+        if (helpText) {
+            helpText.textContent = '🔧 Техника в ремонте';
+        }
+    } else if (newStatus === 'retired') {
+        if (helpText) {
+            helpText.textContent = '❌ Техника списана';
+        }
     } else {
         if (helpText) {
             helpText.textContent = 'Выберите статус техники';
+        }
+    }
+}
+
+/**
+ * Агрессивный автовыбор типа расположения при смене статуса.
+ *   placed    → workplace (всегда)
+ *   available → warehouse (всегда)
+ * Остальные статусы — radio не трогаем.
+ *
+ * При переключении radio вызывается onLocationTypeChange(),
+ * который сбрасывает поля "другой" ветки (складские селекты или workplace).
+ */
+function autoSelectLocationType(status) {
+    let target = null;
+
+    if (status === 'placed') {
+        target = 'workplace';
+    } else if (status === 'available') {
+        target = 'warehouse';
+    }
+
+    if (!target) return;
+
+    const radio = document.querySelector(`input[name="locationType"][value="${target}"]`);
+    if (!radio) return;
+
+    // Всегда переключаем — даже если пользователь вручную выбрал другое.
+    if (!radio.checked) {
+        radio.checked = true;
+        if (typeof onLocationTypeChange === 'function') {
+            onLocationTypeChange();
         }
     }
 }
