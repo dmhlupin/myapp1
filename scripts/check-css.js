@@ -419,17 +419,20 @@ const placeholderChecks = [
     file: 'equipment.html',
     expected: [
               'id="filterCategory"', 'id="filterType"', 'id="filterWarehouse"',
-              'id="filterWorkplace"',                              // 🆕
+              'id="filterWorkplace"',
               'id="filterStatus"', 'id="equipmentTableBody"',
               'id="viewEquipmentModal"', 'id="viewEquipmentBody"',
-              '{{category_options}}', '{{warehouse_options}}',
+              '{{category_options}}', '{{type_options}}',           // 🆕
+              '{{warehouse_options}}',
               '{{workplace_options}}',
-              '{{equipment_rows}}', '{{{types_json}}}',
+              '{{status_options}}',                                 // 🆕
+              '{{equipment_rows}}',
+              '{{pagination}}',                                     // 🆕
               '{{placed_equipment}}',
-              '{{unplaced_equipment}}',                            // 🆕
-              'onchange="onCategoryFilterChange()"',
+              '{{unplaced_equipment}}',
               'onchange="applyFilters()"',
               'onclick="resetFilters()"',
+              'onclick="filterUnplaced()"',                         // 🆕
     ],
   },
   {
