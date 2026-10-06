@@ -34,6 +34,7 @@ async function renderEquipmentDashboard(req, res) {
     html = html.replace(/\{\{available_equipment\}\}/g, stats.available_equipment || 0);
     html = html.replace(/\{\{placed_equipment\}\}/g, stats.placed_equipment || 0);
     html = html.replace(/\{\{assigned_equipment\}\}/g, stats.assigned_equipment || 0);
+    html = html.replace(/\{\{unplaced_equipment\}\}/g, stats.unplaced_equipment || 0);
     html = html.replace(/\{\{total_users\}\}/g, stats.total_users || 0);
     
     // Селект категорий
@@ -90,8 +91,10 @@ async function renderEquipmentDashboard(req, res) {
         ? `<span class="type-badge">${item.type_icon || '📦'} ${item.type_name}</span>`
         : '<span style="color: #a0aec0;">—</span>';
       
-      // 🆕 Место хранения: склад ИЛИ рабочее место
+      // 🆕 Место хранения: склад ИЛИ рабочее место ИЛИ не размещено
+      const hasLocation = !!(item.cell_id || item.workplace_id);
       let locationCell = '<span style="color: #cbd5e0;">—</span>';
+
       if (item.cell_id) {
         locationCell = `<div class="location-cell">
              <div class="location-path">${item.warehouse_name} → ${item.zone_name} → ${item.rack_name}</div>
@@ -111,6 +114,9 @@ async function renderEquipmentDashboard(req, res) {
                <span class="location-cell-code location-cell-code--workplace">🪑 ${wpLabel}</span>
              </a>
            </div>`;
+      } else if (item.status === 'available') {
+        // 🆕 Доступна и без ячейки, и без места — не размещена
+        locationCell = '<span class="location-cell-unplaced">⚠️ Не размещено</span>';
       }
       
       const statusLabels = {
@@ -127,6 +133,7 @@ async function renderEquipmentDashboard(req, res) {
             data-type-id="${item.type_id || ''}" 
             data-warehouse-id="${item.warehouse_id || ''}"
             data-workplace-id="${item.workplace_id || ''}"
+            data-has-location="${hasLocation ? '1' : '0'}"
             onclick="viewEquipmentFromList(${item.id})"
             style="cursor: pointer;"
             title="Нажмите для просмотра">

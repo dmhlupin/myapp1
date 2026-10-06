@@ -126,7 +126,15 @@ function applyFilters() {
         }
 
         // Фильтр по статусу
-        if (status) {
+        if (status === 'unplaced') {
+            // 🆕 Синтетический фильтр: available + без cell_id и workplace_id
+            const statusCell = row.querySelector('.status-badge');
+            const isAvailable = statusCell && statusCell.classList.contains('status-available');
+            const hasLocation = row.dataset.hasLocation === '1';
+            if (!isAvailable || hasLocation) {
+                visible = false;
+            }
+        } else if (status) {
             const statusCell = row.querySelector('.status-badge');
             const hasStatusClass = statusCell && statusCell.classList.contains(`status-${status}`);
             if (!hasStatusClass) {
@@ -193,6 +201,32 @@ function resetFilters() {
     
     if (typeof showToast === 'function') {
         showToast('🔄 Фильтры сброшены', 'info');
+    }
+}
+
+// ============================================================
+// БЫСТРЫЙ ФИЛЬТР «НЕ РАЗМЕЩЕНО»
+// ============================================================
+
+/**
+ * Установить фильтр «Не размещено» и применить
+ * (вызывается кликом по карточке в шапке)
+ */
+function filterUnplaced() {
+    const statusSelect = document.getElementById('filterStatus');
+    if (!statusSelect) return;
+
+    // Сбрасываем остальные фильтры, чтобы карточка работала предсказуемо
+    document.getElementById('filterCategory').value = '';
+    document.getElementById('filterType').innerHTML = '<option value="">Все типы</option>';
+    document.getElementById('filterWarehouse').value = '';
+    document.getElementById('filterWorkplace').value = '';
+    statusSelect.value = 'unplaced';
+
+    applyFilters();
+
+    if (typeof showToast === 'function') {
+        showToast('⚠️ Показана техника без места хранения', 'info');
     }
 }
 

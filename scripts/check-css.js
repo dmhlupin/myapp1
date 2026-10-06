@@ -289,7 +289,8 @@ const placeholderChecks = [
               '{{category_options}}', '{{warehouse_options}}',
               '{{workplace_options}}',
               '{{equipment_rows}}', '{{{types_json}}}',
-              '{{placed_equipment}}',                              // 🆕
+              '{{placed_equipment}}',
+              '{{unplaced_equipment}}',                            // 🆕
               'onchange="onCategoryFilterChange()"',
               'onchange="applyFilters()"',
               'onclick="resetFilters()"',

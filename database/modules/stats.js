@@ -18,6 +18,11 @@ module.exports = ({ db, run, get, all }) => ({
           (SELECT COUNT(*) FROM equipment WHERE status = 'assigned') as assigned_equipment,
           (SELECT COUNT(*) FROM equipment WHERE status = 'maintenance') as maintenance_equipment,
           (SELECT COUNT(*) FROM equipment WHERE status = 'retired') as retired_equipment,
+          (SELECT COUNT(*) FROM equipment
+            WHERE status = 'available'
+              AND cell_id IS NULL
+              AND workplace_id IS NULL
+          ) as unplaced_equipment,
           (SELECT COUNT(*) FROM user_equipment WHERE returned_date IS NULL) as active_assignments
       `, (err, row) => {
         if (err) reject(err);

@@ -39,6 +39,11 @@
         <div class="number warning">{{assigned_equipment}}</div>
         <div class="label">Назначено</div>
     </div>
+    <div class="stat-card clickable" onclick="filterUnplaced()" title="Показать только технику без места хранения">
+        <span class="icon">⚠️</span>
+        <div class="number warning">{{unplaced_equipment}}</div>
+        <div class="label">Не размещено</div>
+    </div>
     <div class="stat-card">
         <span class="icon">👥</span>
         <div class="number">{{total_users}}</div>
@@ -81,6 +86,7 @@
             <option value="assigned">👤 Назначена</option>
             <option value="maintenance">🔧 В ремонте</option>
             <option value="retired">❌ Списана</option>
+            <option value="unplaced">⚠️ Не размещено</option>
         </select>
     </div>
     <div class="filter-actions">
