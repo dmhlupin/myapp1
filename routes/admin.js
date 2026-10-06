@@ -365,6 +365,40 @@ async function updateEquipmentAPI(req, res) {
     } else if (finalStatus === 'available' && finalWorkplaceId) {
       finalStatus = 'placed';
     }
+
+    // 🆕 Проверка ячейки: is_full и capacity (как в moveEquipmentToCell)
+    // Только если ячейка реально меняется (или назначается заново).
+    if (finalCellId && finalCellId !== existing.cell_id) {
+      const { db } = require('../database/db');
+
+      const cellCheck = await new Promise((resolve, reject) => {
+        db.get(`
+          SELECT c.id, c.name, c.code, c.capacity, c.is_full,
+                 (SELECT COUNT(*) FROM equipment 
+                  WHERE cell_id = c.id AND id != ?
+                 ) as current_count
+          FROM cells c
+          WHERE c.id = ?
+        `, [id, finalCellId], (err, row) => {
+          if (err) reject(err);
+          else resolve(row);
+        });
+      });
+
+      if (!cellCheck) {
+        return res.status(400).json({ error: 'Ячейка не найдена' });
+      }
+      if (cellCheck.is_full === 1) {
+        return res.status(400).json({ 
+          error: `Ячейка ${cellCheck.code || cellCheck.name} отмечена как заполненная` 
+        });
+      }
+      if (cellCheck.capacity && cellCheck.current_count >= cellCheck.capacity) {
+        return res.status(400).json({ 
+          error: `Ячейка ${cellCheck.code || cellCheck.name} переполнена (${cellCheck.current_count}/${cellCheck.capacity})` 
+        });
+      }
+    }
     
     // Если назначаем технику пользователю
     if (status === 'assigned' && assign_user_id) {
