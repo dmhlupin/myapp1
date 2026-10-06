@@ -192,10 +192,14 @@ async function submitForm(event) {
     submitBtn.disabled = true;
     submitBtn.textContent = '⏳ Обновление...';
 
-    // 🆕 Тип расположения
-    const locationType = document.querySelector('input[name="locationType"]:checked')?.value || 'none';
-    const cellId = locationType === 'warehouse' ? (document.getElementById('cellId')?.value || null) : null;
-    const workplaceId = locationType === 'workplace' ? (document.getElementById('workplaceId')?.value || null) : null;
+    // 🆕 Тип расположения (при 'assigned' место не имеет смысла — шлём null)
+    let cellId = null;
+    let workplaceId = null;
+    if (newStatus !== 'assigned') {
+        const locationType = document.querySelector('input[name="locationType"]:checked')?.value || 'none';
+        cellId = locationType === 'warehouse' ? (document.getElementById('cellId')?.value || null) : null;
+        workplaceId = locationType === 'workplace' ? (document.getElementById('workplaceId')?.value || null) : null;
+    }
 
     const formData = {
         inventory_number: document.getElementById('inventory_number').value.trim(),
@@ -635,28 +639,38 @@ function onStatusChange() {
     const info = document.getElementById('statusInfo');
     const assignSection = document.getElementById('assignSection');
     const helpText = document.getElementById('statusHelpText');
-    
+    const locationCard = document.getElementById('locationCard');
+
     // Скрываем все служебные блоки
     if (warning) warning.classList.remove('show');
     if (info) info.classList.remove('show');
     if (assignSection) assignSection.classList.remove('show');
-    
-    // Проверяем переходы
-    if (oldStatus === 'assigned' && newStatus === 'available') {
+
+    // 🆕 Скрываем карточку «Расположение» при статусе «Назначена»
+    if (locationCard) {
+        locationCard.style.display = (newStatus === 'assigned') ? 'none' : '';
+    }
+
+    // 🆕 Показываем assignSection, если ТЕКУЩИЙ статус в select = 'assigned'
+    // (а не только при переходе available → assigned).
+    if (newStatus === 'assigned') {
+        if (info) info.classList.add('show');
+        if (assignSection) assignSection.classList.add('show');
+
+        if (helpText) {
+            if (oldStatus === 'assigned') {
+                helpText.textContent = 'Техника уже назначена. Для переназначения выберите другого пользователя.';
+            } else {
+                helpText.textContent = 'ℹ️ Выберите пользователя для назначения техники';
+            }
+        }
+    } else if (oldStatus === 'assigned' && newStatus === 'available') {
         // Возврат техники
         if (warning) warning.classList.add('show');
         if (helpText) {
             helpText.textContent = '⚠️ Техника будет автоматически возвращена от пользователя';
         }
-    } else if (oldStatus === 'available' && newStatus === 'assigned') {
-        // Назначение техники
-        if (info) info.classList.add('show');
-        if (assignSection) assignSection.classList.add('show');
-        if (helpText) {
-            helpText.textContent = 'ℹ️ Выберите пользователя для назначения техники';
-        }
     } else {
-        // Другие переходы
         if (helpText) {
             helpText.textContent = 'Выберите статус техники';
         }
