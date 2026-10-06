@@ -666,6 +666,25 @@ async function renderEditEquipment(req, res) {
     // Многострочная вставка — без /g
     content = content.replace('{{user_options}}', userOptions);
 
+    // 🆕 Правая колонка: текущая информация (2.11.8.2)
+    const infoStatus = statusLabels[equipment.status] || equipment.status || '—';
+
+    content = content.replace(/\{\{info_inventory\}\}/g, escapeHtml(equipment.inventory_number || '—'));
+    content = content.replace(/\{\{info_name\}\}/g, escapeHtml(equipment.name || '—'));
+    content = content.replace(/\{\{info_category\}\}/g,
+      equipment.category_name
+        ? `${equipment.category_icon || '📁'} ${escapeHtml(equipment.category_name)}`
+        : '—'
+    );
+    content = content.replace(/\{\{info_type\}\}/g,
+      equipment.type_name
+        ? `${equipment.type_icon || '📦'} ${escapeHtml(equipment.type_name)}`
+        : '—'
+    );
+    content = content.replace(/\{\{info_model\}\}/g, escapeHtml(equipment.model || '—'));
+    content = content.replace(/\{\{info_serial\}\}/g, escapeHtml(equipment.serial_number || '—'));
+    content = content.replace(/\{\{info_status\}\}/g, escapeHtml(infoStatus));
+
     const fullHtml = renderPage({
       title: 'Редактировать технику – MoveIT service',
       content,

@@ -56,6 +56,17 @@ document.addEventListener('DOMContentLoaded', async function() {
     } else {
         setLocationType('none');
     }
+
+    // 🆕 2.11.8.2: сохранить initial-значения для подсветки изменений.
+    // ВАЖНО: после loadCategories() и loadTypesForCategory(), иначе
+    // у category_id/type_id будут пустые значения.
+    [
+        'inventory_number', 'name', 'model', 'serial_number',
+        'category_id', 'type_id', 'status'
+    ].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.dataset.initialValue = el.value || '';
+    });
 });
 
 /**
@@ -660,9 +671,133 @@ document.addEventListener('DOMContentLoaded', function() {
     // Инициализируем состояние для отображения правильных блоков
     onStatusChange();
 });
+
+// ============================================================
+// 2.11.8.2: Живой preview в правой колонке
+// ============================================================
+
+document.addEventListener('DOMContentLoaded', () => {
+  if (!equipmentId || isNaN(equipmentId)) return;
+
+  // 1) Первичная загрузка текущего расположения (назначен/склад/место)
+  loadCurrentLocation();
+
+  // 2) Живой биндинг полей формы → правая колонка
+  bindLivePreview();
+});
+
+/**
+ * Загрузить текущее расположение: назначен / склад / рабочее место / ничего
+ */
+async function loadCurrentLocation() {
+  try {
+    const res = await fetch(`/api/admin/equipment/${equipmentId}/details`);
+    if (!res.ok) return;
+
+    const data = await res.json();
+    const cur = data.stats?.current_user;
+    const loc = data.location || {};
+
+    // Кому назначена
+    const assignedEl = document.getElementById('info_assigned');
+    if (assignedEl) {
+      if (cur) {
+        const dept = cur.department ? ` (${cur.department})` : '';
+        assignedEl.textContent = `${cur.full_name}${dept}`;
+        assignedEl.classList.remove('muted');
+      } else {
+        assignedEl.textContent = '—';
+        assignedEl.classList.add('muted');
+      }
+    }
+
+    // Расположение
+    const locEl = document.getElementById('info_location');
+    if (locEl) {
+      let text = '—';
+      if (loc.type === 'workplace') {
+        const code = loc.workplace_code ? ` [${loc.workplace_code}]` : '';
+        text = `🪑 ${loc.workplace_name}${code} — ${loc.office_name} / ${loc.room_name}`;
+      } else if (loc.type === 'cell') {
+        text = `📦 ${loc.cell_name} [${loc.cell_code}] — ${loc.warehouse_name} / ${loc.zone_name} / ${loc.rack_name}`;
+      } else if (loc.type === 'user') {
+        text = '👤 У пользователя';
+      }
+      locEl.textContent = text;
+      locEl.classList.toggle('muted', text === '—');
+    }
+  } catch (err) {
+    console.error('❌ Не удалось загрузить текущее расположение:', err);
+  }
+}
+
+/**
+ * Связать поля формы с полями правой колонки
+ */
+function bindLivePreview() {
+  bindInput('inventory_number', 'info_inv');
+  bindInput('name',             'info_name');
+  bindInput('model',            'info_model');
+  bindInput('serial_number',    'info_serial');
+
+  bindSelect('category_id', 'info_category');
+  bindSelect('type_id',     'info_type');
+  bindSelect('status',      'info_status');
+}
+
+function bindInput(inputId, infoId) {
+  const input = document.getElementById(inputId);
+  const info = document.getElementById(infoId);
+  if (!input || !info) return;
+
+  input.addEventListener('input', () => {
+    const v = input.value.trim();
+    info.textContent = v || '—';
+    info.classList.toggle('muted', !v);
+    markChanged(info, inputId);
+  });
+}
+
+function bindSelect(selectId, infoId) {
+  const select = document.getElementById(selectId);
+  const info = document.getElementById(infoId);
+  if (!select || !info) return;
+
+  select.addEventListener('change', () => {
+    const opt = select.options[select.selectedIndex];
+    const v = opt ? opt.textContent.trim() : '';
+    info.textContent = v || '—';
+    info.classList.toggle('muted', !v);
+    markChanged(info, selectId);
+  });
+}
+
+/**
+ * Подсветить поле, если значение отличается от исходного
+ */
+function markChanged(infoEl, fieldId) {
+  // Исходное значение берём из скрытого поля current* или из начального value
+  const originalMap = {
+    inventory_number: '{{inventory_number}}',  // ← не сработает, шаблон уже отрендерен
+  };
+  // Проще: считаем, что «изменено» — если отличается от initialValue, снятого при загрузке.
+  // Сохраняем initialValue в data-атрибут при DOMContentLoaded.
+  const input = document.getElementById(fieldId);
+  if (!input) return;
+
+  const initial = input.dataset.initialValue ?? '';
+  const current = (input.value || '').trim();
+  infoEl.classList.toggle('changed', current !== initial);
+}
+
+
+
 // ============================================================
 // ВСПОМОГАТЕЛЬНЫЕ
 // ============================================================
+
+
+
 
 function escapeHtml(str) {
     if (!str) return '';

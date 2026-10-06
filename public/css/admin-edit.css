@@ -140,3 +140,224 @@
   color: var(--text-primary);
   font-weight: 600;
 }
+
+/* ============================================================ */
+/* 2.11.8: Компактная форма + рабочая сетка                      */
+/* ============================================================ */
+
+/* Карточки формы — плотнее */
+#editForm .card,
+#addForm .card {
+  padding: 20px;
+}
+
+#editForm .card-header,
+#addForm .card-header {
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+}
+
+#editForm .card-body,
+#addForm .card-body {
+  /* без изменений — только точечные отступы ниже */
+}
+
+/* Группы полей — плотнее */
+#editForm .form-group,
+#addForm .form-group {
+  margin-bottom: 12px;
+}
+
+#editForm .form-group label,
+#addForm .form-group label {
+  margin-bottom: 4px;
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--text-muted);
+}
+
+/* Инпуты компактнее */
+#editForm .form-group input,
+#editForm .form-group select,
+#editForm .form-group textarea,
+#addForm .form-group input,
+#addForm .form-group select,
+#addForm .form-group textarea {
+  padding: 8px 12px;
+}
+
+#editForm .form-group textarea,
+#addForm .form-group textarea {
+  min-height: 60px;
+}
+
+/* 🎯 ГЛАВНОЕ: чиним .form-row */
+#editForm .form-row,
+#addForm .form-row {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+#editForm .form-row > .form-group,
+#addForm .form-row > .form-group {
+  margin-bottom: 0;
+}
+
+/* Новый класс для двухколоночной сетки всего блока */
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.form-grid-2 > .form-group {
+  margin-bottom: 0;
+}
+
+.form-grid-2 > .form-group.full-width {
+  grid-column: 1 / -1;
+}
+
+/* Адаптив */
+@media (max-width: 768px) {
+  #editForm .form-row,
+  #addForm .form-row,
+  .form-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================================ */
+/* 2.11.8.2: двухколоночный layout «форма + превью»             */
+/* ============================================================ */
+
+.edit-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 720px) 340px;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 1200px) {
+  .edit-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.edit-form-col {
+  min-width: 0;
+}
+
+.edit-info-col {
+  position: sticky;
+  top: calc(var(--header-height) + 16px);
+}
+
+/* Компактные карточки внутри формы */
+.edit-form-col .card {
+  padding: 20px;
+}
+
+.edit-form-col .card-header {
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+}
+
+/* Сетка полей формы */
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.form-grid-2 > .form-group {
+  margin-bottom: 0;
+  min-width: 0;
+}
+
+.form-grid-2 > .form-group.full-width {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 768px) {
+  .form-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Инпуты компактнее */
+.edit-form-col .form-group input,
+.edit-form-col .form-group select,
+.edit-form-col .form-group textarea {
+  padding: 8px 12px;
+  font-size: var(--text-base);
+}
+
+.edit-form-col .form-group label {
+  margin-bottom: 4px;
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--text-muted);
+}
+
+.edit-form-col .form-group textarea {
+  min-height: 60px;
+}
+
+/* ---------- Карточка «Текущая информация» ---------- */
+
+.info-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+  box-shadow: var(--shadow-sm);
+}
+
+.info-card h3 {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 12px 0;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.info-list {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 14px;
+  font-size: var(--text-sm);
+  margin: 0;
+}
+
+.info-list dt {
+  color: var(--text-muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.info-list dd {
+  color: var(--text-primary);
+  margin: 0;
+  word-break: break-word;
+  min-width: 0;
+}
+
+.info-list dd.muted {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Подсветка изменившихся полей */
+.info-list dd.changed {
+  color: var(--accent);
+  font-weight: 600;
+}
