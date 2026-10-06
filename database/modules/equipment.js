@@ -316,6 +316,8 @@ module.exports = ({ db, run, get, all }) => ({
         status = null,
         search = null,
         warehouse_id = null,
+        workplace_id = null,   // 🆕
+        unplaced = false,      // 🆕
         limit = null,
         offset = 0,
         include_total = false,
@@ -390,6 +392,19 @@ module.exports = ({ db, run, get, all }) => ({
         sql += ' AND wh.id = ?';
         params.push(warehouse_id);
       }
+
+      if (workplace_id) {
+        sql += ' AND e.workplace_id = ?';
+        params.push(workplace_id);
+      }
+
+      // 🆕 Синтетический фильтр «Не размещено»:
+      // available + без cell_id + без workplace_id
+      if (unplaced) {
+        sql += ` AND e.status = 'available'
+                 AND e.cell_id IS NULL
+                 AND e.workplace_id IS NULL`;
+      }
       
       if (search) {
         sql += ` AND (
@@ -444,6 +459,15 @@ module.exports = ({ db, run, get, all }) => ({
         if (warehouse_id) {
           countSql += ' AND wh.id = ?';
           countParams.push(warehouse_id);
+        }
+        if (workplace_id) {
+          countSql += ' AND e.workplace_id = ?';
+          countParams.push(workplace_id);
+        }
+        if (unplaced) {
+          countSql += ` AND e.status = 'available'
+                        AND e.cell_id IS NULL
+                        AND e.workplace_id IS NULL`;
         }
         if (search) {
           countSql += ` AND (
