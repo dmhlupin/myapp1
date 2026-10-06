@@ -954,7 +954,6 @@ async function createWorkplacesTable() {
       room_id INTEGER NOT NULL,
       name TEXT NOT NULL,
       code TEXT,
-      capacity INTEGER,
       description TEXT,
       sort_order INTEGER DEFAULT 0,
       is_active INTEGER NOT NULL DEFAULT 1,
@@ -1041,8 +1040,8 @@ async function seedOffices() {
 
   for (const [i, w] of wp101.entries()) {
     await run(`
-      INSERT INTO workplaces (room_id, name, code, capacity, sort_order, is_active)
-      VALUES (?, ?, ?, 1, ?, 1)
+      INSERT INTO workplaces (room_id, name, code, sort_order, is_active)
+      VALUES (?, ?, ?, ?, 1)
     `, [room101.lastID, w.name, w.code, i + 1]);
   }
   console.log(`      ✅ ${wp101.length} рабочих мест`);
@@ -1062,9 +1061,9 @@ async function seedOffices() {
 
   for (const [i, w] of wp102.entries()) {
     await run(`
-      INSERT INTO workplaces (room_id, name, code, capacity, sort_order, is_active)
-      VALUES (?, ?, ?, 1, ?, 1)
-    `, [room102.lastID, w.name, w.code, i + 1]);
+      INSERT INTO workplaces (room_id, name, code, sort_order, is_active)
+      VALUES (?, ?, ?, ?, 1)
+    `, [room101.lastID, w.name, w.code, i + 1]);
   }
   console.log(`      ✅ ${wp102.length} рабочих мест`);
 
@@ -1100,9 +1099,9 @@ async function seedOffices() {
 
   for (const [i, w] of wp201.entries()) {
     await run(`
-      INSERT INTO workplaces (room_id, name, code, capacity, sort_order, is_active)
-      VALUES (?, ?, ?, 1, ?, 1)
-    `, [room201.lastID, w.name, w.code, i + 1]);
+      INSERT INTO workplaces (room_id, name, code, sort_order, is_active)
+      VALUES (?, ?, ?, ?, 1)
+    `, [room101.lastID, w.name, w.code, i + 1]);
   }
   console.log(`      ✅ ${wp201.length} рабочих мест`);
 
@@ -1121,9 +1120,9 @@ async function seedOffices() {
 
   for (const [i, w] of wp202.entries()) {
     await run(`
-      INSERT INTO workplaces (room_id, name, code, capacity, sort_order, is_active)
-      VALUES (?, ?, ?, 1, ?, 1)
-    `, [room202.lastID, w.name, w.code, i + 1]);
+      INSERT INTO workplaces (room_id, name, code, sort_order, is_active)
+      VALUES (?, ?, ?, ?, 1)
+    `, [room101.lastID, w.name, w.code, i + 1]);
   }
   console.log(`      ✅ ${wp202.length} рабочих мест`);
 
@@ -1211,6 +1210,44 @@ async function migrateCellsIsFull() {
 }
 
 // ============================================================
+// ЭТАП 4.8: УДАЛЕНИЕ capacity У РАБОЧИХ МЕСТ
+// ============================================================
+
+/**
+ * Убрать поле capacity у рабочих мест.
+ *
+ * SQLite 3.35+ умеет DROP COLUMN — используем его.
+ * На старых версиях обнуляем (код всё равно больше не читает).
+ */
+async function migrateWorkplacesDropCapacity() {
+  const exists = await tableExists('workplaces');
+  if (!exists) return;
+
+  console.log('📋 Миграция рабочих мест: удаление capacity...');
+
+  const hasCapacity = await columnExists('workplaces', 'capacity');
+  if (!hasCapacity) {
+    console.log('  ⏭️  Поле workplaces.capacity уже отсутствует');
+    console.log('');
+    return;
+  }
+
+  // Проверяем версию SQLite
+  const verRow = await get('SELECT sqlite_version() AS v');
+  const [maj, min] = (verRow.v || '0.0').split('.').map(Number);
+  const supportsDrop = maj > 3 || (maj === 3 && min >= 35);
+
+  if (supportsDrop) {
+    await run(`ALTER TABLE workplaces DROP COLUMN capacity`);
+    console.log(`  ✅ Колонка workplaces.capacity удалена (SQLite ${verRow.v})`);
+  } else {
+    await run(`UPDATE workplaces SET capacity = NULL WHERE capacity IS NOT NULL`);
+    console.log(`  ⚠️  SQLite ${verRow.v} < 3.35 — capacity обнулена, но не удалена`);
+  }
+  console.log('');
+}
+
+// ============================================================
 // ГЛАВНАЯ ФУНКЦИЯ МИГРАЦИИ
 // ============================================================
 
@@ -1269,6 +1306,7 @@ async function migrate() {
     await seedOffices();
     await migrateEquipmentPlacedStatus();
     await migrateCellsIsFull();
+    await migrateWorkplacesDropCapacity(); 
 
     // ===== ИТОГИ =====
     console.log('═══════════════════════════════════════════════');

@@ -562,7 +562,7 @@ async function getWorkplaceAPI(req, res) {
  */
 async function createWorkplaceAPI(req, res) {
   try {
-    const { room_id, name, code, capacity, description, sort_order } = req.body;
+    const { room_id, name, code, description, sort_order } = req.body;
 
     if (!room_id) {
       return res.status(400).json({ error: 'Кабинет обязателен' });
@@ -575,7 +575,6 @@ async function createWorkplaceAPI(req, res) {
       room_id: parseInt(room_id),
       name: name.trim(),
       code: (code || '').trim(),
-      capacity: capacity ? parseInt(capacity) : null,
       description: (description || '').trim(),
       sort_order: parseInt(sort_order) || 0,
     });
@@ -604,7 +603,7 @@ async function createWorkplaceAPI(req, res) {
 async function updateWorkplaceAPI(req, res) {
   try {
     const id = parseInt(req.params.id);
-    const { name, code, capacity, description, sort_order, is_active } = req.body;
+    const { name, code, description, sort_order, is_active } = req.body;
 
     if (!name || !name.trim()) {
       return res.status(400).json({ error: 'Название рабочего места обязательно' });
@@ -613,7 +612,6 @@ async function updateWorkplaceAPI(req, res) {
     const result = await updateWorkplace(id, {
       name: name.trim(),
       code: (code || '').trim(),
-      capacity: capacity ? parseInt(capacity) : null,
       description: (description || '').trim(),
       sort_order: parseInt(sort_order) || 0,
       is_active: is_active !== false && is_active !== 'false',
@@ -721,7 +719,7 @@ async function moveEquipmentToWorkplaceAPI(req, res) {
 
     res.json({ success: true, message: 'Техника перемещена', data: result });
   } catch (error) {
-    if (error.message.includes('не найдена') || error.message.includes('переполнено')) {
+    if (error.message.includes('не найдена')) {
       res.status(400).json({ error: error.message });
     } else {
       res.status(500).json({ error: error.message });

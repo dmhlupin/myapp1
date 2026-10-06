@@ -414,7 +414,6 @@ module.exports = ({ db, run, get, all }) => ({
           w.room_id,
           w.name,
           w.code,
-          w.capacity,
           w.description,
           w.sort_order,
           w.is_active,
@@ -460,7 +459,7 @@ module.exports = ({ db, run, get, all }) => ({
    */
   createWorkplace(data) {
     return new Promise((resolve, reject) => {
-      const { room_id, name, code, capacity, description, sort_order } = data;
+      const { room_id, name, code, description, sort_order } = data;
 
       // Проверяем кабинет
       db.get('SELECT id FROM rooms WHERE id = ?', [room_id], (err, room) => {
@@ -474,13 +473,12 @@ module.exports = ({ db, run, get, all }) => ({
         }
 
         db.run(`
-          INSERT INTO workplaces (room_id, name, code, capacity, description, sort_order, is_active)
-          VALUES (?, ?, ?, ?, ?, ?, 1)
+          INSERT INTO workplaces (room_id, name, code, description, sort_order, is_active)
+          VALUES (?, ?, ?, ?, ?, 1)
         `, [
           room_id,
           name,
           code || null,
-          capacity || null,
           description || null,
           sort_order || 0
         ], function(err) {
@@ -503,17 +501,16 @@ module.exports = ({ db, run, get, all }) => ({
    */
   updateWorkplace(id, data) {
     return new Promise((resolve, reject) => {
-      const { name, code, capacity, description, sort_order, is_active } = data;
+      const { name, code, description, sort_order, is_active } = data;
 
       db.run(`
         UPDATE workplaces
-        SET name = ?, code = ?, capacity = ?, description = ?,
+        SET name = ?, code = ?, description = ?,
             sort_order = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `, [
         name,
         code || null,
-        capacity || null,
         description || null,
         sort_order || 0,
         is_active !== undefined ? (is_active ? 1 : 0) : 1,
@@ -586,7 +583,6 @@ module.exports = ({ db, run, get, all }) => ({
           w.id as workplace_id,
           w.name as workplace_name,
           w.code as workplace_code,
-          w.capacity as workplace_capacity,
           w.sort_order as workplace_sort,
           (SELECT COUNT(*) FROM equipment WHERE workplace_id = w.id) as equipment_count
         FROM offices o
@@ -631,7 +627,6 @@ module.exports = ({ db, run, get, all }) => ({
                 id: row.workplace_id,
                 name: row.workplace_name,
                 code: row.workplace_code,
-                capacity: row.workplace_capacity,
                 sort_order: row.workplace_sort,
                 equipment_count: row.equipment_count
               });
@@ -780,23 +775,13 @@ module.exports = ({ db, run, get, all }) => ({
             callback(null);
             return;
           }
-          db.get(`
-            SELECT w.id, w.capacity,
-                   (SELECT COUNT(*) FROM equipment WHERE workplace_id = w.id) as current_count
-            FROM workplaces w
-            WHERE w.id = ?
-          `, [workplaceId], (err, wp) => {
+          db.get('SELECT id FROM workplaces WHERE id = ?', [workplaceId], (err, wp) => {
             if (err) {
               reject(err);
               return;
             }
             if (!wp) {
               reject(new Error('Рабочее место не найдено'));
-              return;
-            }
-            // Проверка на переполнение
-            if (wp.capacity && wp.current_count >= wp.capacity && eq.workplace_id !== workplaceId) {
-              reject(new Error(`Рабочее место переполнено (${wp.current_count}/${wp.capacity})`));
               return;
             }
             callback(wp);
@@ -875,11 +860,7 @@ module.exports = ({ db, run, get, all }) => ({
             JOIN workplaces w ON e.workplace_id = w.id
             JOIN rooms r ON w.room_id = r.id
             WHERE r.office_id = o.id
-          ) as equipment_count,
-          (SELECT COALESCE(SUM(w.capacity), 0) FROM workplaces w
-            JOIN rooms r ON w.room_id = r.id
-            WHERE r.office_id = o.id AND w.is_active = 1
-          ) as total_capacity
+          ) as equipment_count
         FROM offices o
         WHERE o.is_active = 1
         ORDER BY o.is_default DESC, o.name ASC
@@ -889,13 +870,12 @@ module.exports = ({ db, run, get, all }) => ({
           return;
         }
 
+        // Заполненность считаем по количеству рабочих мест (ёмкость не лимитируем)
         const result = (rows || []).map(o => ({
           ...o,
-          fill_percent: o.total_capacity > 0
-            ? Math.round((o.equipment_count / o.total_capacity) * 100)
-            : (o.workplaces_count > 0
-                ? Math.round((o.equipment_count / o.workplaces_count) * 100)
-                : 0)
+          fill_percent: o.workplaces_count > 0
+            ? Math.round((o.equipment_count / o.workplaces_count) * 100)
+            : 0
         }));
 
         resolve(result);
@@ -957,7 +937,6 @@ module.exports = ({ db, run, get, all }) => ({
           w.id,
           w.name,
           w.code,
-          w.capacity,
           (SELECT COUNT(*) FROM equipment e WHERE e.workplace_id = w.id) as current_count,
           r.name as room_name,
           o.name as office_name
@@ -972,11 +951,10 @@ module.exports = ({ db, run, get, all }) => ({
           return;
         }
 
+        // Без capacity — «заполнено» = есть ли хоть что-то
         const result = (rows || []).map(w => ({
           ...w,
-          percent: w.capacity > 0
-            ? Math.round((w.current_count / w.capacity) * 100)
-            : (w.current_count > 0 ? 100 : 0)
+          percent: w.current_count > 0 ? 100 : 0
         }));
 
         resolve(result);

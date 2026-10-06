@@ -152,19 +152,12 @@ function renderRoom(room) {
 
 function renderWorkplace(wp) {
     const equipmentCount = wp.equipment_count || 0;
-    const capacity = wp.capacity || 0;
 
-    // Класс счётчика
-    let countClass = 'empty';
-    if (equipmentCount > 0) {
-        countClass = capacity > 0 && equipmentCount >= capacity ? 'full' : 'has-items';
-    }
+    // Класс счётчика: пусто или есть техника
+    const countClass = equipmentCount > 0 ? 'has-items' : 'empty';
 
     // Текст счётчика
-    let countText = `${equipmentCount}`;
-    if (capacity > 0) {
-        countText += ` / ${capacity}`;
-    }
+    const countText = `${equipmentCount}`;
 
     return `
         <div class="tree-workplace" data-workplace-id="${wp.id}" onclick="viewWorkplace(${wp.id})">
@@ -354,7 +347,6 @@ function openWorkplaceModal(id = null, roomId = null) {
         document.getElementById('workplaceRoomId').value = wp.room_id;
         document.getElementById('workplaceName').value = wp.name || '';
         document.getElementById('workplaceCode').value = wp.code || '';
-        document.getElementById('workplaceCapacity').value = wp.capacity || '';
         document.getElementById('workplaceDescription').value = wp.description || '';
         document.getElementById('workplaceIsActive').checked = wp.is_active !== 0;
         activeGroup.style.display = 'block';
@@ -364,7 +356,6 @@ function openWorkplaceModal(id = null, roomId = null) {
         document.getElementById('workplaceRoomId').value = roomId || '';
         document.getElementById('workplaceName').value = '';
         document.getElementById('workplaceCode').value = '';
-        document.getElementById('workplaceCapacity').value = '';
         document.getElementById('workplaceDescription').value = '';
         document.getElementById('workplaceIsActive').checked = true;
         activeGroup.style.display = 'none';
@@ -390,7 +381,6 @@ async function saveWorkplace(event) {
         room_id: roomId,
         name: document.getElementById('workplaceName').value.trim(),
         code: document.getElementById('workplaceCode').value.trim(),
-        capacity: document.getElementById('workplaceCapacity').value || null,
         description: document.getElementById('workplaceDescription').value.trim(),
         is_active: document.getElementById('workplaceIsActive').checked,
     };
@@ -451,8 +441,6 @@ async function viewWorkplace(workplaceId) {
 
         title.textContent = `🪑 ${wp.name}`;
 
-        const capacityText = wp.capacity ? ` / ${wp.capacity}` : '';
-
         let html = `
             <div class="workplace-view-header">
                 <div class="workplace-view-icon">🪑</div>
@@ -471,12 +459,8 @@ async function viewWorkplace(workplaceId) {
                 <h4>ℹ️ Информация</h4>
                 <div class="detail-grid">
                     <div class="detail-item">
-                        <label>Вместимость</label>
-                        <div class="value">${wp.capacity || 'без ограничений'}</div>
-                    </div>
-                    <div class="detail-item">
                         <label>Занято</label>
-                        <div class="value">${equipment.length}${capacityText}</div>
+                        <div class="value">${equipment.length}</div>
                     </div>
                     <div class="detail-item">
                         <label>Офис</label>

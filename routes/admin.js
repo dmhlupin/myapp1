@@ -1475,8 +1475,6 @@ async function getEquipmentDetailsAPI(req, res) {
         room_name: equipment.room_name,
         office_id: equipment.office_id,
         office_name: equipment.office_name,
-        capacity: equipment.workplace_capacity || null,
-        description: equipment.workplace_description || null,
       };
     } else if (equipment.cell_id) {
       location = {
