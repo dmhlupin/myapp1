@@ -47,11 +47,22 @@
 
 <!-- Фильтры -->
 <div class="filters-panel">
+    <div class="filter-group filter-group--search">
+        <label>Поиск</label>
+        <div class="search-wrapper">
+            <span class="search-icon">🔍</span>
+            <input type="search"
+                id="filterSearch"
+                placeholder="Инв. №, название, модель..."
+                autocomplete="off"
+                value="{{search_value}}">
+        </div>
+    </div>
     <div class="filter-group">
         <label>Категория</label>
-            <select id="filterCategory" onchange="applyFilters()">
-                {{category_options}}
-            </select>
+        <select id="filterCategory" onchange="applyFilters()">
+            {{category_options}}
+        </select>
     </div>
     <div class="filter-group">
         <label>Тип</label>

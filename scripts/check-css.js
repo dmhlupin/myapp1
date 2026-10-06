@@ -426,6 +426,7 @@ const placeholderChecks = [
               '{{warehouse_options}}',
               '{{workplace_options}}',
               '{{status_options}}',                                 // 🆕
+              '{{search_value}}',                                   // 🆕
               '{{equipment_rows}}',
               '{{pagination}}',                                     // 🆕
               '{{placed_equipment}}',

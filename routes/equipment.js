@@ -137,6 +137,9 @@ async function renderEquipmentDashboard(req, res) {
     });
     html = html.replace('{{status_options}}', statusOptions);
 
+        // 🆕 Значение поиска — чтобы не терять его после редиректа
+    html = html.replace(/\{\{search_value\}\}/g, escapeHtml(filters.search || ''));
+
     // 🆕 Таблица — построение без data-*
     let tableRows = '';
     if (equipment.length === 0) {

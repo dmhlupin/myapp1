@@ -1,11 +1,29 @@
-// public/js/equipment-filter.js
-// Логика фильтрации техники на странице /equipment (серверная через URL)
+// ============================================================
+// ПОИСК С ДЕБАУНСОМ
+// ============================================================
+
+let searchDebounceTimer = null;
+
+function onSearchInput() {
+    clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = setTimeout(() => {
+        applyFilters({ resetPage: true });
+    }, 300);
+}
+
+function onSearchKeydown(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        clearTimeout(searchDebounceTimer);
+        applyFilters({ resetPage: true });
+    }
+}
 
 // ============================================================
 // ФИЛЬТРАЦИЯ (через URL, сервер)
 // ============================================================
 
-function applyFilters() {
+function applyFilters(options = {}) {
     const params = new URLSearchParams();
 
     const categoryId = document.getElementById('filterCategory')?.value;
@@ -13,19 +31,23 @@ function applyFilters() {
     const warehouseId = document.getElementById('filterWarehouse')?.value;
     const workplaceId = document.getElementById('filterWorkplace')?.value;
     const status = document.getElementById('filterStatus')?.value;
+    const search = document.getElementById('filterSearch')?.value.trim();
 
     if (categoryId) params.set('category_id', categoryId);
     if (typeId) params.set('type_id', typeId);
     if (warehouseId) params.set('warehouse_id', warehouseId);
     if (workplaceId) params.set('workplace_id', workplaceId);
     if (status) params.set('status', status);
+    if (search) params.set('search', search);
 
-    // Сброс на 1-ю страницу
-    // page не задаём — сервер по умолчанию = 1
+    // При смене фильтра — всегда на 1-ю страницу
+    // (page в URL не задаём — сервер по умолчанию = 1)
 
     const qs = params.toString();
     window.location.href = '/equipment' + (qs ? '?' + qs : '');
 }
+
+// ... resetFilters, filterUnplaced — без изменений ...
 
 function resetFilters() {
     window.location.href = '/equipment';
@@ -40,14 +62,6 @@ function filterUnplaced() {
 // (без изменений — viewEquipmentFromList, renderEquipmentCard,
 //  closeViewEquipmentModal, getInitials, escapeHtml)
 // ============================================================
-
-// ... оставь как было ...
-
-// ============================================================
-// ЗАКРЫТИЕ МОДАЛКИ ПО ESCAPE / КЛИКУ
-// ============================================================
-
-// ... оставь как было ...
 
 
 // ============================================================
@@ -359,6 +373,25 @@ function escapeHtml(str) {
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
 }
+
+
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('filterSearch');
+    if (searchInput) {
+        searchInput.addEventListener('input', onSearchInput);
+        searchInput.addEventListener('keydown', onSearchKeydown);
+
+        // 🆕 2.11.12-fix2: если в URL есть ?search= — ставим фокус
+        // и курсор в конец, чтобы можно было продолжать печатать.
+        const params = new URLSearchParams(window.location.search);
+        const searchValue = params.get('search');
+        if (searchValue) {
+            searchInput.focus();
+            const len = searchInput.value.length;
+            searchInput.setSelectionRange(len, len);
+        }
+    }
+});
 
 // ============================================================
 // ВСПОМОГАТЕЛЬНЫЕ
