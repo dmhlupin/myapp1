@@ -814,7 +814,7 @@ module.exports = ({ db, run, get, all }) => ({
         // Проверяем новую ячейку
         db.get(`
           SELECT 
-            c.id, c.name, c.code, c.capacity,
+            c.id, c.name, c.code, c.capacity, c.is_full,
             rack.name as rack_name,
             zone.name as zone_name,
             wh.name as warehouse_name,
@@ -845,7 +845,12 @@ module.exports = ({ db, run, get, all }) => ({
             return;
           }
           
-          // Проверка capacity (если capacity задан)
+          // 🆕 Ручной флаг «заполнена»
+          if (cell.is_full === 1) {
+            reject(new Error(`Ячейка ${cell.code || cell.name} отмечена как заполненная`));
+            return;
+          }
+          // Числовой лимит (если задан)
           if (cell.capacity && cell.current_count >= cell.capacity) {
             reject(new Error(`Ячейка ${cell.code || cell.name} переполнена (${cell.current_count}/${cell.capacity})`));
             return;

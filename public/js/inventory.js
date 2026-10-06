@@ -314,15 +314,19 @@ function renderWarehouseDetail(inventory, occupancy) {
     } else {
         occupancy.forEach(c => {
             const percent = c.percent || 0;
+            const manualFull = c.is_full === 1;
+            const capacityReached = c.capacity > 0 && c.current_count >= c.capacity;
+            const isFull = manualFull || capacityReached;
             let fillColor = 'var(--border-light)';
-            if (percent >= 90) fillColor = 'var(--danger)';
+            if (isFull || percent >= 90) fillColor = 'var(--danger)';
             else if (percent >= 60) fillColor = 'var(--warning)';
-            else if (percent >= 30) fillColor = 'var(--success)';
             else if (percent > 0) fillColor = 'var(--success)';
             
-            const capacityText = c.capacity > 0 
-                ? `${c.current_count} / ${c.capacity}`
-                : `${c.current_count}`;
+            const capacityText = isFull
+                ? `🔴 ${c.current_count}${c.capacity > 0 ? ` / ${c.capacity}` : ''}`
+                : (c.capacity > 0 
+                    ? `${c.current_count} / ${c.capacity}`
+                    : `${c.current_count}`);
             
             html += `
                 <div class="occupancy-item">

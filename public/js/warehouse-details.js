@@ -157,17 +157,25 @@ function renderRack(rack, zoneId) {
 function renderCell(cell) {
     const equipmentCount = cell.equipment_count || 0;
     const capacity = cell.capacity || 0;
+    const manualFull = cell.is_full === 1;
+    const capacityReached = capacity > 0 && equipmentCount >= capacity;
+    const isFull = manualFull || capacityReached;
 
     // Определяем класс счётчика
     let countClass = 'empty';
-    if (equipmentCount > 0) {
-        countClass = capacity > 0 && equipmentCount >= capacity ? 'full' : 'has-items';
+    if (isFull) {
+        countClass = 'full';
+    } else if (equipmentCount > 0) {
+        countClass = 'has-items';
     }
 
     // Текст счётчика
     let countText = `${equipmentCount}`;
     if (capacity > 0) {
         countText += ` / ${capacity}`;
+    }
+    if (isFull) {
+        countText = `🔴 ${countText}`;
     }
 
     return `
@@ -445,6 +453,7 @@ function openCellModal(id = null, rackId = null) {
         document.getElementById('cellName').value = cell.name || '';
         document.getElementById('cellCode').value = cell.code || '';
         document.getElementById('cellCapacity').value = cell.capacity || '';
+        document.getElementById('cellIsFull').checked = cell.is_full === 1;
         document.getElementById('cellDescription').value = cell.description || '';
         document.getElementById('cellIsActive').checked = cell.is_active !== 0;
         activeGroup.style.display = 'block';
@@ -456,11 +465,11 @@ function openCellModal(id = null, rackId = null) {
         document.getElementById('cellName').value = '';
         document.getElementById('cellCode').value = '';
         document.getElementById('cellCapacity').value = '';
+        document.getElementById('cellIsFull').checked = false;
         document.getElementById('cellDescription').value = '';
         document.getElementById('cellIsActive').checked = true;
         activeGroup.style.display = 'none';
     }
-
     modal.classList.add('active');
     setTimeout(() => document.getElementById('cellName').focus(), 100);
 }
@@ -482,6 +491,7 @@ async function saveCell(event) {
         name: document.getElementById('cellName').value.trim(),
         code: document.getElementById('cellCode').value.trim(),
         capacity: document.getElementById('cellCapacity').value || null,
+        is_full: document.getElementById('cellIsFull').checked,
         description: document.getElementById('cellDescription').value.trim(),
         is_active: document.getElementById('cellIsActive').checked,
     };
@@ -544,6 +554,10 @@ async function viewCell(cellId) {
 
         // Информация о ячейке
         const capacityText = cell.capacity ? ` / ${cell.capacity}` : '';
+        const manualFull = cell.is_full === 1;
+        const capacityReached = cell.capacity > 0 && equipment.length >= cell.capacity;
+        const isFull = manualFull || capacityReached;
+        const isAlmostFull = !isFull && cell.capacity > 0 && equipment.length === cell.capacity - 1;
 
         let html = `
             <div class="cell-view-header">
@@ -567,6 +581,17 @@ async function viewCell(cellId) {
                     <div class="detail-item">
                         <label>Занято</label>
                         <div class="value">${equipment.length}${capacityText}</div>
+                    </div>
+                    <div class="detail-item">
+                        <label>Статус ячейки</label>
+                        <div class="value">
+                            ${isFull
+                                ? '<span class="badge badge-danger">🔴 Заполнена</span>'
+                                : (isAlmostFull
+                                    ? '<span class="badge badge-warning">🟡 Почти заполнена</span>'
+                                    : '<span class="badge badge-success">✅ Есть место</span>')
+                            }
+                        </div>
                     </div>
                     <div class="detail-item">
                         <label>Склад</label>

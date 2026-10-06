@@ -178,6 +178,19 @@
       <div class="form-group">
         <label>Вместимость (макс. единиц)</label>
         <input type="number" id="cellCapacity" min="0" placeholder="Оставьте пустым, если без ограничений">
+        <div class="help-text">
+          Необязательно. Если не указано — ограничений по количеству нет.
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input type="checkbox" id="cellIsFull">
+          <span>🔴 Заполнена (нет места)</span>
+        </label>
+        <div class="help-text">
+          Отметьте, если в ячейке физически нет места для новой техники.
+        </div>
       </div>
 
       <div class="form-group">

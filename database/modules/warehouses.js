@@ -595,6 +595,7 @@ module.exports = ({ db, run, get, all }) => ({
           c.name,
           c.code,
           c.capacity,
+          c.is_full,
           c.description,
           c.sort_order,
           c.is_active,
@@ -641,7 +642,7 @@ module.exports = ({ db, run, get, all }) => ({
    */
   createCell(data) {
     return new Promise((resolve, reject) => {
-      const { rack_id, name, code, capacity, description, sort_order } = data;
+      const { rack_id, name, code, capacity, description, sort_order, is_full } = data;
 
       // Проверяем стеллаж
       db.get('SELECT id FROM racks WHERE id = ?', [rack_id], (err, rack) => {
@@ -655,9 +656,9 @@ module.exports = ({ db, run, get, all }) => ({
         }
 
         db.run(`
-          INSERT INTO cells (rack_id, name, code, capacity, description, sort_order, is_active)
-          VALUES (?, ?, ?, ?, ?, ?, 1)
-        `, [rack_id, name, code || null, capacity || null, description || null, sort_order || 0], function(err) {
+          INSERT INTO cells (rack_id, name, code, capacity, description, sort_order, is_full, is_active)
+          VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+        `, [rack_id, name, code || null, capacity || null, description || null, sort_order || 0, is_full ? 1 : 0], function(err) {
           if (err) {
             if (err.message.includes('UNIQUE')) {
               reject(new Error('Ячейка с таким названием уже есть в этом стеллаже'));
@@ -677,12 +678,12 @@ module.exports = ({ db, run, get, all }) => ({
    */
   updateCell(id, data) {
     return new Promise((resolve, reject) => {
-      const { name, code, capacity, description, sort_order, is_active } = data;
+      const { name, code, capacity, description, sort_order, is_active, is_full } = data;
 
       db.run(`
         UPDATE cells 
         SET name = ?, code = ?, capacity = ?, description = ?, 
-            sort_order = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP
+            sort_order = ?, is_full = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `, [
         name,
@@ -690,6 +691,7 @@ module.exports = ({ db, run, get, all }) => ({
         capacity || null,
         description || null,
         sort_order || 0,
+        is_full ? 1 : 0,
         is_active !== undefined ? (is_active ? 1 : 0) : 1,
         id
       ], function(err) {
@@ -783,6 +785,8 @@ module.exports = ({ db, run, get, all }) => ({
           c.id as cell_id,
           c.name as cell_name,
           c.code as cell_code,
+          c.capacity as cell_capacity,
+          c.is_full as cell_is_full,
           c.sort_order as cell_sort,
           (SELECT COUNT(*) FROM equipment WHERE cell_id = c.id) as equipment_count
         FROM warehouses w
@@ -832,6 +836,8 @@ module.exports = ({ db, run, get, all }) => ({
                   id: row.cell_id,
                   name: row.cell_name,
                   code: row.cell_code,
+                  capacity: row.cell_capacity,
+                  is_full: row.cell_is_full,
                   equipment_count: row.equipment_count
                 });
               }
@@ -906,7 +912,7 @@ module.exports = ({ db, run, get, all }) => ({
             return;
           }
           db.get(`
-            SELECT c.id, c.capacity, 
+            SELECT c.id, c.capacity, c.is_full, 
                    (SELECT COUNT(*) FROM equipment WHERE cell_id = c.id) as current_count
             FROM cells c WHERE c.id = ?
           `, [cellId], (err, cell) => {
@@ -918,7 +924,12 @@ module.exports = ({ db, run, get, all }) => ({
               reject(new Error('Ячейка не найдена'));
               return;
             }
-            // Проверка на переполнение
+            // 🆕 Ручной флаг «заполнена»
+            if (cell.is_full === 1 && eq.cell_id !== cellId) {
+              reject(new Error('Ячейка отмечена как заполненная'));
+              return;
+            }
+            // Числовой лимит (если задан)
             if (cell.capacity && cell.current_count >= cell.capacity && eq.cell_id !== cellId) {
               reject(new Error(`Ячейка переполнена (${cell.current_count}/${cell.capacity})`));
               return;
@@ -1011,8 +1022,13 @@ module.exports = ({ db, run, get, all }) => ({
           (SELECT COALESCE(SUM(c.capacity), 0) FROM cells c 
             JOIN racks r ON c.rack_id = r.id
             JOIN zones z ON r.zone_id = z.id
-            WHERE z.warehouse_id = w.id AND c.is_active = 1
-          ) as total_capacity
+            WHERE z.warehouse_id = w.id AND c.is_active = 1 AND c.is_full = 0
+          ) as total_capacity,
+          (SELECT COUNT(*) FROM cells c 
+            JOIN racks r ON c.rack_id = r.id
+            JOIN zones z ON r.zone_id = z.id
+            WHERE z.warehouse_id = w.id AND c.is_active = 1 AND c.is_full = 1
+          ) as cells_full
         FROM warehouses w
         WHERE w.is_active = 1
         ORDER BY w.is_default DESC, w.name ASC
@@ -1091,6 +1107,7 @@ module.exports = ({ db, run, get, all }) => ({
           c.name,
           c.code,
           c.capacity,
+          c.is_full,
           (SELECT COUNT(*) FROM equipment e WHERE e.cell_id = c.id) as current_count,
           rack.name as rack_name,
           zone.name as zone_name
@@ -1105,13 +1122,18 @@ module.exports = ({ db, run, get, all }) => ({
           return;
         }
         
-        // Процент заполнения
-        const result = (rows || []).map(c => ({
-          ...c,
-          percent: c.capacity > 0 
-            ? Math.round((c.current_count / c.capacity) * 100)
-            : (c.current_count > 0 ? 100 : 0)
-        }));
+        // Процент заполнения: is_full → 100%, capacity → пропорция, иначе 0/100
+        const result = (rows || []).map(c => {
+          let percent = 0;
+          if (c.is_full === 1) {
+            percent = 100;
+          } else if (c.capacity > 0) {
+            percent = Math.round((c.current_count / c.capacity) * 100);
+          } else {
+            percent = c.current_count > 0 ? 100 : 0;
+          }
+          return { ...c, percent };
+        });
         
         resolve(result);
       });
@@ -1132,7 +1154,8 @@ module.exports = ({ db, run, get, all }) => ({
           (SELECT COUNT(*) FROM equipment WHERE cell_id IS NOT NULL) as equipment_on_stock,
           (SELECT COUNT(*) FROM equipment WHERE status = 'available' AND cell_id IS NULL) as available_without_cell,
           (SELECT COUNT(*) FROM equipment WHERE status = 'assigned') as equipment_assigned,
-          (SELECT COALESCE(SUM(capacity), 0) FROM cells WHERE is_active = 1) as total_capacity
+          (SELECT COALESCE(SUM(capacity), 0) FROM cells WHERE is_active = 1 AND is_full = 0) as total_capacity,
+          (SELECT COUNT(*) FROM cells WHERE is_active = 1 AND is_full = 1) as cells_full
       `, (err, row) => {
         if (err) {
           reject(err);

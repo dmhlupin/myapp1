@@ -670,6 +670,7 @@ async function createCellAPI(req, res) {
       capacity: capacity ? parseInt(capacity) : null,
       description: (description || '').trim(),
       sort_order: parseInt(sort_order) || 0,
+      is_full: is_full === true || is_full === 'true' || is_full === 1,
     });
 
     await logAction({
@@ -696,7 +697,7 @@ async function createCellAPI(req, res) {
 async function updateCellAPI(req, res) {
   try {
     const id = parseInt(req.params.id);
-    const { name, code, capacity, description, sort_order, is_active } = req.body;
+    const { name, code, capacity, description, sort_order, is_active, is_full } = req.body;
 
     if (!name || !name.trim()) {
       return res.status(400).json({ error: 'Название ячейки обязательно' });
@@ -709,6 +710,7 @@ async function updateCellAPI(req, res) {
       description: (description || '').trim(),
       sort_order: parseInt(sort_order) || 0,
       is_active: is_active !== false && is_active !== 'false',
+      is_full: is_full === true || is_full === 'true' || is_full === 1,
     });
 
     await logAction({

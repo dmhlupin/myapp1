@@ -1170,6 +1170,47 @@ async function migrateEquipmentPlacedStatus() {
 }
 
 // ============================================================
+// ЭТАП 4.7: ФЛАГ is_full ДЛЯ ЯЧЕЕК СКЛАДА
+// ============================================================
+
+/**
+ * Добавить ячейкам флаг is_full (заполнена вручную).
+ * Заодно — обнулить capacity у всех ячеек, т.к. старые значения
+ * (5/10/15 из seed) были проставлены «на глазок» и не отражают
+ * реальную вместимость (монитор ≠ мышь).
+ *
+ * После миграции: по умолчанию ячейка без ограничений. Админ может
+ * вручную отметить «Заполнена» или задать числовой лимит.
+ */
+async function migrateCellsIsFull() {
+  const exists = await tableExists('cells');
+  if (!exists) return;
+
+  console.log('📋 Миграция ячеек: флаг is_full + сброс capacity...');
+
+  const hasIsFull = await columnExists('cells', 'is_full');
+  if (!hasIsFull) {
+    await run(`ALTER TABLE cells ADD COLUMN is_full INTEGER NOT NULL DEFAULT 0`);
+    console.log('  ✅ Добавлено поле: cells.is_full');
+  } else {
+    console.log('  ⏭️  Поле cells.is_full уже есть');
+  }
+
+  // Обнуляем capacity только если в ячейках есть ненулевые значения
+  const withCapacity = await get(
+    `SELECT COUNT(*) as count FROM cells WHERE capacity IS NOT NULL`
+  );
+
+  if (withCapacity.count > 0) {
+    await run(`UPDATE cells SET capacity = NULL WHERE capacity IS NOT NULL`);
+    console.log(`  ✅ Сброшено capacity у ${withCapacity.count} ячеек (без ограничений)`);
+  } else {
+    console.log('  ⏭️  Нет ячеек с capacity');
+  }
+  console.log('');
+}
+
+// ============================================================
 // ГЛАВНАЯ ФУНКЦИЯ МИГРАЦИИ
 // ============================================================
 
@@ -1227,6 +1268,7 @@ async function migrate() {
     await createWorkplacesIndexes();
     await seedOffices();
     await migrateEquipmentPlacedStatus();
+    await migrateCellsIsFull();
 
     // ===== ИТОГИ =====
     console.log('═══════════════════════════════════════════════');
