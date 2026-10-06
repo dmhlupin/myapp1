@@ -231,7 +231,7 @@ async function viewEquipmentFromList(equipmentId) {
  * Отрисовать карточку техники
  */
 function renderEquipmentCard(data) {
-    const { equipment, stats, history } = data;
+    const { equipment, stats, history, location } = data;
     
     // Форматирование дат
     const purchaseDate = equipment.purchase_date
@@ -250,6 +250,7 @@ function renderEquipmentCard(data) {
     // Статус
     const statusLabels = {
         'available': { label: 'Доступна', class: 'badge-success', icon: '✅' },
+        'placed': { label: 'На месте', class: 'badge-accent', icon: '🪑' },
         'assigned': { label: 'Назначена', class: 'badge-info', icon: '👤' },
         'maintenance': { label: 'В ремонте', class: 'badge-warning', icon: '🔧' },
         'retired': { label: 'Списана', class: 'badge-danger', icon: '❌' }
@@ -265,13 +266,15 @@ function renderEquipmentCard(data) {
         ? `<span class="badge badge-muted">📦 ${escapeHtml(equipment.type_name)}</span>`
         : '';
     
-    // Текущий владелец
-    let currentUserHtml = '';
-    if (stats.current_user) {
-        const u = stats.current_user;
+    // 🆕 Текущее расположение: пользователь / рабочее место / ячейка / ничего
+    let locationHtml = '';
+    const loc = location || { type: 'none' };
+
+    if (loc.type === 'user' && loc.user) {
+        const u = loc.user;
         const initials = getInitials(u.full_name || u.username);
         const assignedDate = new Date(u.assigned_date).toLocaleDateString('ru-RU');
-        currentUserHtml = `
+        locationHtml = `
             <div class="current-user-card">
                 <div class="current-user-avatar">${initials}</div>
                 <div class="current-user-info">
@@ -282,29 +285,67 @@ function renderEquipmentCard(data) {
                 <span class="current-user-status">Активно</span>
             </div>
         `;
-    } else {
-        currentUserHtml = `
-            <div class="empty-equipment">
-                <span class="empty-icon">📭</span>
-                <p>Техника не назначена пользователю</p>
-            </div>
-        `;
-    }
-    
-    // Место хранения
-    let locationHtml = '';
-    if (equipment.cell_id) {
+    } else if (loc.type === 'workplace') {
+        const officeLabel = loc.office_name ? escapeHtml(loc.office_name) : '';
+        const roomLabel = loc.room_name ? escapeHtml(loc.room_name) : '';
+        const wpLabel = escapeHtml(loc.workplace_name || 'Рабочее место');
+        const wpCode = loc.workplace_code ? ` [${escapeHtml(loc.workplace_code)}]` : '';
+        const link = loc.office_id
+            ? `/admin/workplaces/${loc.office_id}?highlightWorkplace=${loc.workplace_id}`
+            : '#';
+
         locationHtml = `
-            <div class="user-detail-section">
-                <h4>📍 Место хранения</h4>
-                <div class="detail-item" style="background: var(--info-bg); border-left: 3px solid var(--info); padding: 12px;">
-                    <div class="value">
-                        ${escapeHtml(equipment.warehouse_name || '—')} 
-                        → ${escapeHtml(equipment.zone_name || '—')} 
-                        → ${escapeHtml(equipment.rack_name || '—')} 
-                        → <strong>${escapeHtml(equipment.cell_name || '—')}${equipment.cell_code ? ` [${equipment.cell_code}]` : ''}</strong>
+            <div class="current-location-card">
+                <div class="current-location-avatar">🪑</div>
+                <div class="current-location-info">
+                    <div class="current-location-name">${wpLabel}${wpCode}</div>
+                    <div class="current-location-path">
+                        ${officeLabel ? `🏛️ ${officeLabel}` : ''}
+                        ${roomLabel ? ` / 🚪 ${roomLabel}` : ''}
+                    </div>
+                    <div class="current-location-actions">
+                        <a href="${link}" class="btn btn-sm btn-ghost" title="Открыть в дереве офиса">
+                            🔗 Открыть в дереве офиса
+                        </a>
                     </div>
                 </div>
+                <span class="current-location-badge">На месте</span>
+            </div>
+        `;
+    } else if (loc.type === 'cell') {
+        const warehouseLabel = loc.warehouse_name ? escapeHtml(loc.warehouse_name) : '';
+        const zoneLabel = loc.zone_name ? escapeHtml(loc.zone_name) : '';
+        const rackLabel = loc.rack_name ? escapeHtml(loc.rack_name) : '';
+        const cellLabel = escapeHtml(loc.cell_name || 'Ячейка');
+        const cellCode = loc.cell_code ? ` [${escapeHtml(loc.cell_code)}]` : '';
+        const link = loc.warehouse_id
+            ? `/admin/warehouses/${loc.warehouse_id}`
+            : '#';
+
+        locationHtml = `
+            <div class="current-location-card">
+                <div class="current-location-avatar">📦</div>
+                <div class="current-location-info">
+                    <div class="current-location-name">${cellLabel}${cellCode}</div>
+                    <div class="current-location-path">
+                        ${warehouseLabel ? `🏢 ${warehouseLabel}` : ''}
+                        ${zoneLabel ? ` / 📍 ${zoneLabel}` : ''}
+                        ${rackLabel ? ` / 🗄️ ${rackLabel}` : ''}
+                    </div>
+                    <div class="current-location-actions">
+                        <a href="${link}" class="btn btn-sm btn-ghost" title="Открыть дерево склада">
+                            🔗 Открыть дерево склада
+                        </a>
+                    </div>
+                </div>
+                <span class="current-location-badge">На складе</span>
+            </div>
+        `;
+    } else {
+        locationHtml = `
+            <div class="empty-equipment">
+                <span class="empty-icon">📭</span>
+                <p>Не размещено: ни на складе, ни на рабочем месте</p>
             </div>
         `;
     }
@@ -423,11 +464,9 @@ function renderEquipmentCard(data) {
             ` : ''}
         </div>
         
-        ${locationHtml}
-        
         <div class="user-detail-section">
-            <h4>👤 Текущий владелец</h4>
-            ${currentUserHtml}
+            <h4>📍 Текущее расположение</h4>
+            ${locationHtml}
         </div>
         
         <div class="user-detail-section">
@@ -471,16 +510,7 @@ function escapeHtml(str) {
 // ============================================================
 // ВСПОМОГАТЕЛЬНЫЕ
 // ============================================================
-
-function escapeHtml(str) {
-    if (!str) return '';
-    return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-}
+// escapeHtml уже объявлена выше (после getInitials)
 
 // Закрытие модалки по Escape
 document.addEventListener('keydown', function(e) {

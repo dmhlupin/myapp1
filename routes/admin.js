@@ -1422,10 +1422,45 @@ async function getEquipmentDetailsAPI(req, res) {
         condition_on_assign: activeAssignment.condition_on_assign
       } : null
     };
-    
+
+    // 🆕 Текущее расположение: пользователь / рабочее место / ячейка / ничего
+    let location = { type: 'none' };
+
+    if (activeAssignment) {
+      location = {
+        type: 'user',
+        user: stats.current_user,
+      };
+    } else if (equipment.workplace_id) {
+      location = {
+        type: 'workplace',
+        workplace_id: equipment.workplace_id,
+        workplace_name: equipment.workplace_name,
+        workplace_code: equipment.workplace_code,
+        room_id: equipment.room_id,
+        room_name: equipment.room_name,
+        office_id: equipment.office_id,
+        office_name: equipment.office_name,
+        capacity: equipment.workplace_capacity || null,
+        description: equipment.workplace_description || null,
+      };
+    } else if (equipment.cell_id) {
+      location = {
+        type: 'cell',
+        cell_id: equipment.cell_id,
+        cell_name: equipment.cell_name,
+        cell_code: equipment.cell_code,
+        rack_name: equipment.rack_name,
+        zone_name: equipment.zone_name,
+        warehouse_id: equipment.warehouse_id,
+        warehouse_name: equipment.warehouse_name,
+      };
+    }
+
     res.json({
       equipment,
       stats,
+      location,
       history
     });
   } catch (error) {
