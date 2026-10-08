@@ -203,6 +203,12 @@ async function submitForm(event) {
         workplaceId = locationType === 'workplace' ? (document.getElementById('workplaceId')?.value || null) : null;
     }
 
+    // 🆕 2.11.13: maintenance / retired — не могут быть на рабочем месте.
+    // Место обнуляем, ячейку оставляем (техника лежит на складе).
+    if (newStatus === 'maintenance' || newStatus === 'retired') {
+        workplaceId = null;
+    }
+
     // 🆕 Если техника была на рабочем месте ('placed'), а статус меняется
     // на что-то кроме 'placed' / 'assigned' — место обнуляем.
     if (oldStatusForLoc === 'placed' && newStatus !== 'placed' && newStatus !== 'assigned') {
@@ -714,11 +720,11 @@ function onStatusChange() {
         }
     } else if (newStatus === 'maintenance') {
         if (helpText) {
-            helpText.textContent = '🔧 Техника в ремонте';
+            helpText.textContent = '🔧 Техника в ремонте. Может лежать на складе (в ячейке), но не на рабочем месте';
         }
     } else if (newStatus === 'retired') {
         if (helpText) {
-            helpText.textContent = '❌ Техника списана';
+            helpText.textContent = '❌ Техника списана. Может лежать на складе (в ячейке), но не на рабочем месте';
         }
     } else {
         if (helpText) {

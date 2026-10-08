@@ -356,6 +356,12 @@ async function updateEquipmentAPI(req, res) {
       finalWorkplaceId = null;
     }
 
+    // 🆕 2.11.13: maintenance / retired не могут быть на рабочем месте.
+    // Место обнуляем, ячейку — оставляем (техника лежит на складе).
+    if (status === 'maintenance' || status === 'retired') {
+      finalWorkplaceId = null;
+    }
+
     // 🆕 Согласование статуса с расположением.
     // Если статус 'placed', но место не указано — статус становится 'available'.
     // Если статус 'available' и указано место — статус становится 'placed'.
