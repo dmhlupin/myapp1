@@ -1,6 +1,6 @@
 {
-  "name": "MoveIT service",
-  "version": "2.10.0",
+  "name": "moveit-service",
+  "version": "2.11.12",
   "description": "MoveIT service — система учёта техники с адресным хранением на складах и рабочих местах",
   "main": "server.js",
   "scripts": {
@@ -12,6 +12,7 @@
     "reset": "npm run migrate && npm run seed -- --force",
     "check-db": "node scripts/check-db.js",
     "check-catalog": "node scripts/check-catalog.js",
+    "check-css": "node scripts/check-css.js",
     "create-admin": "node scripts/create-admin.js",
     "reset-admin": "node scripts/reset-admin-password.js",
     "fix-assignments": "node scripts/fix-double-assignments.js"
@@ -30,6 +31,7 @@
     "equipment",
     "inventory",
     "warehouse",
+    "workplace",
     "storage",
     "management",
     "nodejs",
