@@ -1091,6 +1091,89 @@ module.exports = ({ db, run, get, all }) => ({
         resolve(row || {});
       });
     });
+  },
+
+  // ============================================================
+  // ВИРТУАЛЬНЫЕ СКЛАДЫ: maintenance / retired (2.11.14)
+  // ============================================================
+
+  /**
+   * Сводка по «виртуальным складам»:
+   *   - maintenance — техника в ремонте
+   *   - retired     — списанная техника
+   *
+   * Техника в этих статусах может физически лежать в ячейках
+   * обычных складов (cell_id), но не может быть на рабочем месте.
+   *
+   * Возвращает:
+   *   {
+   *     maintenance: {
+   *       total, with_cell, without_cell,
+   *       by_warehouse: [{ warehouse_id, warehouse_name, count }]
+   *     },
+   *     retired: { ... то же ... }
+   *   }
+   */
+  getSpecialStatusSummary() {
+    return new Promise((resolve, reject) => {
+      const statuses = ['maintenance', 'retired'];
+      const result = {};
+
+      let pending = statuses.length;
+
+      const finishOne = () => {
+        pending -= 1;
+        if (pending === 0) resolve(result);
+      };
+
+      statuses.forEach(status => {
+        // 1) Общее + с ячейкой / без
+        db.get(`
+          SELECT
+            COUNT(*) AS total,
+            SUM(CASE WHEN cell_id IS NOT NULL THEN 1 ELSE 0 END) AS with_cell,
+            SUM(CASE WHEN cell_id IS NULL     THEN 1 ELSE 0 END) AS without_cell
+          FROM equipment
+          WHERE status = ?
+        `, [status], (err, row) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+
+          const bucket = {
+            total: row?.total || 0,
+            with_cell: row?.with_cell || 0,
+            without_cell: row?.without_cell || 0,
+            by_warehouse: [],
+          };
+
+          // 2) Разбивка по складам
+          db.all(`
+            SELECT
+              w.id   AS warehouse_id,
+              w.name AS warehouse_name,
+              COUNT(*) AS count
+            FROM equipment e
+            JOIN cells c ON e.cell_id = c.id
+            JOIN racks r ON c.rack_id = r.id
+            JOIN zones z ON r.zone_id = z.id
+            JOIN warehouses w ON z.warehouse_id = w.id
+            WHERE e.status = ?
+            GROUP BY w.id, w.name
+            ORDER BY count DESC, w.name ASC
+          `, [status], (err2, rows) => {
+            if (err2) {
+              reject(err2);
+              return;
+            }
+            bucket.by_warehouse = rows || [];
+            result[status] = bucket;
+            finishOne();
+          });
+        });
+      });
+    });
   }
 
 });

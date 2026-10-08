@@ -100,6 +100,7 @@ const {
   renderInventory,
   getInventorySummaryAPI,
   getInventoryTotalsAPI,
+  getSpecialStatusSummaryAPI,  // 🆕 2.11.14
   getWarehouseInventoryAPI,
   getCellOccupancyAPI,
   exportInventoryCSV,
@@ -369,6 +370,7 @@ app.get('/admin/inventory', requireAdmin, renderInventory);
 // API
 app.get('/api/admin/inventory/summary', requireAdmin, getInventorySummaryAPI);
 app.get('/api/admin/inventory/totals', requireAdmin, getInventoryTotalsAPI);
+app.get('/api/admin/inventory/special', requireAdmin, getSpecialStatusSummaryAPI);  // 🆕 2.11.14
 
 // Сначала более конкретные
 app.get('/api/admin/warehouses/:id/inventory/export', requireAdmin, exportInventoryCSV);

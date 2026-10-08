@@ -41,6 +41,7 @@ const {
   getWarehouseInventory,
   getCellOccupancy,
   getInventoryTotals,
+  getSpecialStatusSummary,  // 🆕 2.11.14
 } = require('../database/db');
 const { logAction } = require('../utils/logger');
 const { renderPage } = require('../utils/layout');
@@ -865,6 +866,20 @@ async function getInventoryTotalsAPI(req, res) {
 }
 
 /**
+ * GET /api/admin/inventory/special — сводка по maintenance/retired
+ * (виртуальные склады: ремонт и списание)
+ */
+async function getSpecialStatusSummaryAPI(req, res) {
+  try {
+    const summary = await getSpecialStatusSummary();
+    res.json(summary);
+  } catch (error) {
+    console.error('❌ Ошибка сводки maintenance/retired:', error);
+    res.status(500).json({ error: error.message });
+  }
+}
+
+/**
  * GET /api/admin/warehouses/:id/inventory — техника на складе
  */
 async function getWarehouseInventoryAPI(req, res) {
@@ -1019,6 +1034,7 @@ module.exports = {
   renderInventory,
   getInventorySummaryAPI,
   getInventoryTotalsAPI,
+  getSpecialStatusSummaryAPI,  // 🆕 2.11.14
   getWarehouseInventoryAPI,
   getCellOccupancyAPI,
   exportInventoryCSV,
