@@ -411,12 +411,176 @@
 }
 
 /* ============================================================
+   ВИРТУАЛЬНЫЕ СКЛАДЫ (2.11.15): ремонт и списание
+   ============================================================ */
+
+.special-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: var(--space-md);
+}
+
+.special-card {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    transition: var(--transition-base);
+}
+
+.special-card-maintenance {
+    border-left: 4px solid var(--warning);
+}
+
+.special-card-retired {
+    border-left: 4px solid var(--danger);
+}
+
+.special-card.is-empty {
+    opacity: 0.65;
+}
+
+/* Заголовок */
+.special-card-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    font-size: var(--text-base);
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.special-card-icon {
+    font-size: 22px;
+}
+
+/* Итог */
+.special-card-total {
+    text-align: center;
+    padding: var(--space-sm) 0;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+}
+
+.special-total-link {
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--space-xs);
+    text-decoration: none;
+    color: inherit;
+    transition: var(--transition-fast);
+}
+
+.special-total-link:hover .special-total-number {
+    color: var(--accent);
+}
+
+.special-total-number {
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--text-primary);
+    line-height: 1;
+}
+
+.special-total-label {
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+}
+
+/* Разбивка с ячейкой / без */
+.special-card-breakdown {
+    display: flex;
+    justify-content: space-around;
+    gap: var(--space-sm);
+}
+
+.special-breakdown-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    flex: 1;
+}
+
+.special-breakdown-label {
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.special-breakdown-value {
+    font-size: var(--text-lg);
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+/* Список складов */
+.special-card-warehouses {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.special-warehouses-title {
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+}
+
+.special-warehouse-link {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 10px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    transition: var(--transition-fast);
+}
+
+.special-warehouse-link:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.special-warehouse-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.special-warehouse-count {
+    font-weight: 700;
+    color: var(--accent);
+    flex-shrink: 0;
+    margin-left: var(--space-xs);
+}
+
+.special-empty {
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+    text-align: center;
+    padding: var(--space-xs) 0;
+}
+
+/* ============================================================
    АДАПТИВНОСТЬ
    (.stats-grid адаптивность — в components.css)
    ============================================================ */
 
 @media (max-width: 900px) {
     .warehouse-summary {
+        grid-template-columns: 1fr;
+    }
+    .special-summary {
         grid-template-columns: 1fr;
     }
 }

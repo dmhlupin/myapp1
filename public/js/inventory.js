@@ -17,6 +17,7 @@ let currentWarehouse = null;
 document.addEventListener('DOMContentLoaded', async function() {
     await loadSummary();
     await loadTotals();
+    await loadSpecialSummary();  // 🆕 2.11.15
 });
 
 /**
@@ -58,6 +59,109 @@ async function loadTotals() {
     } catch (error) {
         console.error('❌ Ошибка загрузки итогов:', error);
     }
+}
+
+/**
+ * 🆕 2.11.15: загрузить сводку по виртуальным складам
+ * (maintenance — в ремонте, retired — списано)
+ */
+async function loadSpecialSummary() {
+    const container = document.getElementById('specialSummary');
+    if (!container) return;
+
+    container.innerHTML = '<div class="loading-block">⏳ Загрузка...</div>';
+
+    try {
+        const response = await fetch('/api/admin/inventory/special');
+        const data = await response.json();
+        renderSpecialSummary(data);
+    } catch (error) {
+        console.error('❌ Ошибка загрузки виртуальных складов:', error);
+        container.innerHTML = `
+            <div class="empty-state">
+                <span class="emoji">❌</span>
+                <h3>Ошибка загрузки</h3>
+                <p>Не удалось получить сводку по ремонту и списанию</p>
+            </div>
+        `;
+    }
+}
+
+/**
+ * 🆕 2.11.15: отрисовать блок виртуальных складов
+ */
+function renderSpecialSummary(data) {
+    const container = document.getElementById('specialSummary');
+    if (!container) return;
+
+    const maintenance = data.maintenance || { total: 0, with_cell: 0, without_cell: 0, by_warehouse: [] };
+    const retired     = data.retired     || { total: 0, with_cell: 0, without_cell: 0, by_warehouse: [] };
+
+    container.innerHTML = `
+        ${renderSpecialCard('maintenance', maintenance, '🔧', 'В ремонте', 'maintenance')}
+        ${renderSpecialCard('retired',     retired,     '📦', 'Списано',   'retired')}
+    `;
+}
+
+/**
+ * 🆕 2.11.15: карточка одного виртуального склада
+ */
+function renderSpecialCard(key, bucket, icon, title, statusSlug) {
+    const total = bucket.total || 0;
+    const withCell = bucket.with_cell || 0;
+    const withoutCell = bucket.without_cell || 0;
+    const byWarehouse = bucket.by_warehouse || [];
+
+    // Разбивка по складам
+    let warehouseList = '';
+    if (byWarehouse.length === 0) {
+        warehouseList = `<div class="special-empty">Нет техники на складах</div>`;
+    } else {
+        warehouseList = byWarehouse.map(w => `
+            <a href="/equipment?status=${statusSlug}&warehouse_id=${w.warehouse_id}"
+               class="special-warehouse-link"
+               title="Показать всю технику этого статуса на складе «${escapeHtml(w.warehouse_name)}»">
+                <span class="special-warehouse-name">🏢 ${escapeHtml(w.warehouse_name)}</span>
+                <span class="special-warehouse-count">${w.count}</span>
+            </a>
+        `).join('');
+    }
+
+    const isEmpty = total === 0;
+
+    return `
+        <div class="special-card special-card-${key}${isEmpty ? ' is-empty' : ''}">
+            <div class="special-card-header">
+                <span class="special-card-icon">${icon}</span>
+                <span class="special-card-title">${title}</span>
+            </div>
+
+            <div class="special-card-total">
+                <a href="/equipment?status=${statusSlug}" class="special-total-link">
+                    <span class="special-total-number">${total}</span>
+                    <span class="special-total-label">единиц</span>
+                </a>
+            </div>
+
+            <div class="special-card-breakdown">
+                <div class="special-breakdown-item">
+                    <span class="special-breakdown-label">📦 На складах:</span>
+                    <span class="special-breakdown-value">${withCell}</span>
+                </div>
+                <div class="special-breakdown-item">
+                    <span class="special-breakdown-label">❔ Без ячейки:</span>
+                    <span class="special-breakdown-value">${withoutCell}</span>
+                </div>
+            </div>
+
+            ${byWarehouse.length > 0 ? `
+                <div class="special-card-warehouses">
+                    <div class="special-warehouses-title">По складам:</div>
+                    ${warehouseList}
+                </div>
+            ` : ''}
+        </div>
+    `;
 }
 
 /**
