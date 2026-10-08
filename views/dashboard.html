@@ -19,20 +19,25 @@
         <div class="number accent">{{stats.total_equipment}}</div>
         <div class="label">Всего техники</div>
     </a>
-    <a href="/equipment" class="stat-card">
+    <a href="/equipment?status=available" class="stat-card">
         <span class="icon">✅</span>
         <div class="number success">{{stats.available_equipment}}</div>
         <div class="label">Доступно</div>
     </a>
-    <a href="/equipment" class="stat-card">
+    <a href="/equipment?status=assigned" class="stat-card">
         <span class="icon">👤</span>
         <div class="number warning">{{stats.assigned_equipment}}</div>
         <div class="label">Назначено</div>
     </a>
-    <a href="/equipment" class="stat-card">
+    <a href="/equipment?status=maintenance" class="stat-card">
         <span class="icon">🔧</span>
         <div class="number danger">{{stats.maintenance_equipment}}</div>
         <div class="label">В ремонте</div>
+    </a>
+    <a href="/equipment?status=retired" class="stat-card">
+        <span class="icon">📦</span>
+        <div class="number danger">{{stats.retired_equipment}}</div>
+        <div class="label">Списано</div>
     </a>
     <a href="/users" class="stat-card">
         <span class="icon">👥</span>
@@ -88,16 +93,6 @@
         </div>
         <div class="attention-container">
             {{attention_blocks}}
-        </div>
-    </div>
-
-    <!-- Техника без категории -->
-    <div class="card">
-        <div class="card-header">
-            <h2 class="card-title">🏷️ Техника без категории</h2>
-        </div>
-        <div>
-            {{without_category}}
         </div>
     </div>
 

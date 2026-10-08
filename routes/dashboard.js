@@ -7,8 +7,7 @@ const {
   getEquipmentNeedingAttention,
   getDashboardActivityByDay,
   getTopUsers,
-  getCategoryStats,           // 🆕
-  getEquipmentWithoutCategory // 🆕
+  getCategoryStats,           
 } = require('../database/db');
 
 /**
@@ -18,14 +17,13 @@ const {
 async function renderDashboard(req, res) {
   try {
     // Загружаем все данные параллельно
-    const [stats, recentActivity, attention, activityByDay, topUsers, categoryStats, withoutCategory] = await Promise.all([
+    const [stats, recentActivity, attention, activityByDay, topUsers, categoryStats] = await Promise.all([
       getDashboardStats(),
       getRecentActivity(10),
       getEquipmentNeedingAttention(),
       getDashboardActivityByDay(14),
       getTopUsers(5),
-      getCategoryStats(),
-      getEquipmentWithoutCategory()
+      getCategoryStats()
     ]);
     
     // Читаем HTML
@@ -37,6 +35,7 @@ async function renderDashboard(req, res) {
     html = html.replace(/\{\{stats\.available_equipment\}\}/g, stats.available_equipment || 0);
     html = html.replace(/\{\{stats\.assigned_equipment\}\}/g, stats.assigned_equipment || 0);
     html = html.replace(/\{\{stats\.maintenance_equipment\}\}/g, stats.maintenance_equipment || 0);
+    html = html.replace(/\{\{stats\.retired_equipment\}\}/g, stats.retired_equipment || 0);
     html = html.replace(/\{\{stats\.active_users\}\}/g, stats.active_users || 0);
     html = html.replace(/\{\{stats\.actions_today\}\}/g, stats.actions_today || 0);
     
@@ -278,36 +277,7 @@ async function renderDashboard(req, res) {
       });
     }
     html = html.replace('{{category_stats}}', categoryStatsHtml);
-    
-    // ===== Техника без категории =====
-    let withoutCategoryHtml = '';
-    if (withoutCategory.length === 0) {
-      withoutCategoryHtml = `
-        <div class="empty-block" style="padding: 20px;">
-          <span style="font-size: 32px;">✅</span>
-          <p>Вся техника имеет категорию</p>
-        </div>
-      `;
-    } else {
-      withoutCategoryHtml = `
-        <div class="attention-block attention-warning" style="margin: 0;">
-          <div class="attention-header">
-            <span class="attention-icon">⚠️</span>
-            <span class="attention-title">Без категории (${withoutCategory.length})</span>
-          </div>
-          <ul class="attention-list">
-            ${withoutCategory.map(eq => `
-              <li>
-                <span class="inv-num">${eq.inventory_number}</span>
-                <span class="inv-name">${eq.name}</span>
-              </li>
-            `).join('')}
-          </ul>
-        </div>
-      `;
-    }
-    html = html.replace('{{without_category}}', withoutCategoryHtml);
-    
+       
     // ===== График активности (SVG) =====
     const chartSvg = generateActivityChart(activityByDay);
     html = html.replace('{{activity_chart}}', chartSvg);
