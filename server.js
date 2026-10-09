@@ -258,10 +258,10 @@ app.post('/api/profile/update', requireAuth, updateProfileAPI);
 // ОСНОВНЫЕ РОУТЫ (только авторизованные)
 // ============================================
 app.get('/', requireAdmin, renderDashboard);  // ← вместо requireAuth
-app.get('/users', requireAuth, renderUsers);
+app.get('/users', requireAdmin, renderUsers);
 app.get('/pdf', requireAuth, renderPdfList);
 app.get('/pdf/:filename', requireAuth, renderPdfFile);
-app.get('/equipment', requireAuth, renderEquipmentDashboard);
+app.get('/equipment', requireAdmin, renderEquipmentDashboard);
 
 // ============================================
 // АДМИН-ПАНЕЛЬ (только администраторы!)

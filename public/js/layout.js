@@ -122,11 +122,10 @@ function highlightActiveSection() {
     if (path === '/') activePage = 'dashboard';
     else if (path === '/equipment' || path.startsWith('/equipment/')) activePage = 'equipment';
     else if (path === '/users' || path.startsWith('/users/')) activePage = 'users';
-    else if (path === '/profile') activePage = null; // Профиль — не в sidebar
+    else if (path === '/profile') activePage = 'profile';
     else if (path === '/admin/warehouses' || path.startsWith('/admin/warehouses/')) activePage = 'warehouses';
     else if (path === '/admin/workplaces' || path.startsWith('/admin/workplaces/')) activePage = 'workplaces';
     else if (path === '/admin/inventory') activePage = 'inventory';
-    else if (path === '/admin/moves' || path.startsWith('/admin/moves/')) activePage = 'moves';
     else if (path === '/admin/logs') activePage = 'logs';
     else if (path === '/admin/catalog') activePage = 'catalog';
     else if (path === '/pdf' || path.startsWith('/pdf/')) activePage = 'pdf';

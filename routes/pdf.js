@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { renderPage } = require('../utils/layout');
+const { renderPage, renderPageFor } = require('../utils/layout');
 
 const pdfLinks = [
   { name: 'Инструкция по установке', file: 'install.pdf' },
@@ -54,12 +54,12 @@ function renderPdfList(req, res) {
       content = before + pdfItemsHtml + after;
     }
 
-    const fullHtml = renderPage({
-      title: 'PDF инструкции – MoveIT service',
-      content,
-      pageCss: '/css/pdf.css',
+    renderPageFor(req, res, {
+        title: 'PDF инструкции – MoveIT service',
+        content,
+        pageCss: '/css/pdf.css',
     });
-    res.send(fullHtml);
+    
   } catch (error) {
     console.error('❌ Ошибка загрузки PDF-инструкций:', error);
     res.status(500).send('Ошибка загрузки страницы');

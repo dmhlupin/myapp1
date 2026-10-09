@@ -91,7 +91,7 @@ function requireAdmin(req, res, next) {
           <div class="icon">🚫</div>
           <h1>Доступ запрещён</h1>
           <p>У вас недостаточно прав для доступа к этой странице.</p>
-          <a href="/" class="btn">← На главную</a>
+          <a href="/profile" class="btn">← На главную</a>
         </div>
       </body>
       </html>

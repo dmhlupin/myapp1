@@ -8,7 +8,7 @@ const {
   getUserStats,
   updateUserProfile,
 } = require('../database/db');
-const { renderPage } = require('../utils/layout');
+const { renderPage, renderPageFor } = require('../utils/layout');
 const { logAction } = require('../utils/logger');
 
 /**
@@ -93,14 +93,14 @@ async function renderProfile(req, res) {
     html = html.replace('{{history_rows}}', historyRows);
 
     // ===== Сборка страницы =====
-    const fullHtml = renderPage({
-      title: 'Личный кабинет — MoveIT service',
-      content: html,
-      pageCss: '/css/profile.css',
-      pageJs: '/js/profile.js',
+    // ===== Сборка страницы =====
+    renderPageFor(req, res, {
+        title: 'Профиль – MoveIT service',
+        content: html,
+        pageCss: '/css/profile.css',
+        pageJs: '/js/profile.js',
     });
-
-    res.send(fullHtml);
+    
   } catch (error) {
     console.error('❌ Ошибка загрузки профиля:', error);
     res.status(500).send('Ошибка загрузки страницы');
