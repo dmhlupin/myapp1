@@ -36,16 +36,51 @@ function clearCache() {
 }
 
 /**
- * Собрать полную HTML-страницу с layout
- * 
+ * 🆕 Построить sidebar с учётом роли.
+ *
+ * В sidebar.html используются маркеры:
+ *   {{#if admin}}...{{/if}}   — только для админа
+ *   {{#if user}}...{{/if}}    — только для пользователя
+ *
+ * Регулярки нежадные: [\s\S]*? — чтобы корректно обрабатывать
+ * несколько блоков в файле.
+ */
+function buildSidebar(sidebarHtml, isAdmin) {
+    let html = sidebarHtml;
+
+    // {{#if admin}}...{{/if}}
+    html = html.replace(/\{\{#if admin\}\}([\s\S]*?)\{\{\/if\}\}/g, (_, inner) => {
+        return isAdmin ? inner : '';
+    });
+
+    // {{#if user}}...{{/if}}
+    html = html.replace(/\{\{#if user\}\}([\s\S]*?)\{\{\/if\}\}/g, (_, inner) => {
+        return isAdmin ? '' : inner;
+    });
+
+    return html;
+}
+
+/**
+ * Собрать полную HTML-страницу с layout.
+ *
+ * ⚠️ Для страниц, доступных не-админам, используйте renderPageFor(req, res, options):
+ *   renderPage(options) без параметра `user` рендерит sidebar как для админа
+ *   (обратная совместимость). Если роут доступен пользователю и вы забудете
+ *   передать `user` — sidebar будет неправильным.
+ *
  * @param {Object} options
  * @param {string} options.title — заголовок страницы
  * @param {string} options.content — HTML контент страницы
- * @param {string} [options.pageCss] — путь к CSS конкретной страницы (опционально)
- * @param {string} [options.pageJs] — путь к JS конкретной страницы (опционально)
+ * @param {string} [options.pageCss] — путь к CSS конкретной страницы
+ * @param {string} [options.pageJs] — путь к JS конкретной страницы
  * @param {string} [options.bodyClass] — класс для body
+ * @param {Object|null} [options.user] — { id, username, role, fullName }
+ *   Если undefined — sidebar рендерится как для админа (для совместимости).
+ *   Если null — как для неавторизованного/пользователя.
  * @returns {string} — полный HTML
  */
+
 function renderPage(options) {
     const {
         title = 'MoveIT service',
@@ -53,6 +88,7 @@ function renderPage(options) {
         pageCss = null,
         pageJs = null,
         bodyClass = '',
+        user = undefined,       // 🆕 { id, username, role, fullName } | null | undefined
     } = options;
     
     const partials = loadPartials();
@@ -60,6 +96,13 @@ function renderPage(options) {
     // Дополнительные CSS/JS
     const extraCss = pageCss ? `<link rel="stylesheet" href="${pageCss}">` : '';
     const extraJs = pageJs ? `<script src="${pageJs}"></script>` : '';
+    
+    // 🆕 Роле-зависимый sidebar.
+    // Если user не передан (undefined) — считаем админом для обратной
+    // совместимости. Если передан явно (в т.ч. null для неавторизованных) —
+    // используем его роль.
+    const isAdmin = (user === undefined) || (user && user.role === 'admin');
+    const sidebar = buildSidebar(partials.sidebar, isAdmin);
     
     // Собираем HTML
     return `<!DOCTYPE html>
@@ -84,7 +127,7 @@ function renderPage(options) {
 </head>
 <body class="${bodyClass}">
     <div class="app-layout">
-        ${partials.sidebar}
+        ${sidebar}
         ${partials.header}
         
         <main class="app-main">
@@ -106,6 +149,37 @@ function renderPage(options) {
     ${extraJs}
 </body>
 </html>`;
+}
+
+/**
+ * 🆕 Рекомендуемый способ рендера страниц (с роле-зависимым sidebar).
+ *
+ * Использование в роутах:
+ *   const { renderPageFor } = require('../utils/layout');
+ *   ...
+ *   renderPageFor(req, res, {
+ *       title: 'Профиль',
+ *       content,
+ *       pageCss: '/css/profile.css',
+ *       pageJs: '/js/profile.js',
+ *   });
+ *
+ * Роль берётся из req.session.role — забыть невозможно.
+ * Если req.session пуста (неавторизованный) — user = null,
+ * sidebar будет пользовательский.
+ */
+function renderPageFor(req, res, options) {
+    const user = (req && req.session && req.session.userId)
+        ? {
+            id: req.session.userId,
+            username: req.session.username,
+            role: req.session.role,
+            fullName: req.session.fullName,
+        }
+        : null;
+
+    const html = renderPage({ ...options, user });
+    res.send(html);
 }
 
 /**
@@ -131,7 +205,8 @@ function sendPage(res, options) {
 }
 
 module.exports = {
-    renderPage,
+    renderPage,      // старый способ, @deprecated — используй renderPageFor
+    renderPageFor,   // 🆕 рекомендованный способ
     sendPage,
     loadPartials,
     clearCache,
