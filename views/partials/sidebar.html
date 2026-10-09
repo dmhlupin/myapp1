@@ -1,22 +1,21 @@
 <!-- views/partials/sidebar.html -->
-<!-- Боковое меню: постоянная навигация -->
+<!-- Боковое меню: роле-зависимое -->
+<!--
+  Маркеры:
+    {{#if admin}}...{{/if}}          — только для админа
+    {{#if user}}...{{/if}}           — только для пользователя
+    {{#if admin_or_user}}...{{/if}}  — для всех
+-->
 
 <aside class="app-sidebar" id="appSidebar">
     <!-- Логотип -->
     <a href="/" class="sidebar-logo">
         <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-            <!-- Верхняя грань (полупрозрачная) -->
-            <path d="M16 2L29 9L16 16L3 9L16 2Z" 
-                  fill="currentColor" opacity="0.3"/>
-            <!-- Левая грань (средняя прозрачность) -->
-            <path d="M3 9V23L16 30V16L3 9Z" 
-                  fill="currentColor" opacity="0.5"/>
-            <!-- Правая грань (полностью залита) -->
-            <path d="M29 9V23L16 30V16L29 9Z" 
-                  fill="currentColor"/>
-            <!-- Стрелка вверх -->
-            <path d="M16 12V7M16 7L13.5 9.5M16 7L18.5 9.5" 
-                  stroke="white" stroke-width="1.5" 
+            <path d="M16 2L29 9L16 16L3 9L16 2Z" fill="currentColor" opacity="0.3"/>
+            <path d="M3 9V23L16 30V16L3 9Z" fill="currentColor" opacity="0.5"/>
+            <path d="M29 9V23L16 30V16L29 9Z" fill="currentColor"/>
+            <path d="M16 12V7M16 7L13.5 9.5M16 7L18.5 9.5"
+                  stroke="white" stroke-width="1.5"
                   stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
         <span class="logo-text">MoveIT</span>
@@ -24,25 +23,49 @@
 
     <!-- Навигация -->
     <nav class="sidebar-nav">
-        <!-- ОБЗОР -->
+
+        {{#if admin}}
+        <!-- ============================================ -->
+        <!-- ОБЗОР (только админ)                          -->
+        <!-- ============================================ -->
         <div class="sidebar-group">
             <div class="sidebar-group-title">Обзор</div>
+
             <a href="/" class="sidebar-link" data-page="dashboard">
                 <span class="sidebar-link-icon">📊</span>
-                <span class="sidebar-link-text">Дашборд</span>
+                <span class="sidebar-link-text">Обзор системы</span>
+            </a>
+
+            <a href="/equipment" class="sidebar-link" data-page="equipment">
+                <span class="sidebar-link-icon">📦</span>
+                <span class="sidebar-link-text">ТМЦ</span>
+                <span class="sidebar-link-badge" id="equipmentCount">—</span>
             </a>
         </div>
 
-        <!-- ТЕХНИКА -->
+        <!-- ============================================ -->
+        <!-- ИНВЕНТАРИЗАЦИЯ                                -->
+        <!-- ============================================ -->
         <div class="sidebar-group">
-            <div class="sidebar-group-title">Техника</div>
-            
-            <a href="/equipment" class="sidebar-link" data-page="equipment">
-                <span class="sidebar-link-icon">🔧</span>
-                <span class="sidebar-link-text">Техника</span>
-                <span class="sidebar-link-badge" id="equipmentCount">—</span>
+            <div class="sidebar-group-title">Инвентаризация</div>
+
+            <a href="/admin/inventory" class="sidebar-link" data-page="inventory">
+                <span class="sidebar-link-icon">📍</span>
+                <span class="sidebar-link-text">Инвентаризация</span>
             </a>
-            
+        </div>
+
+        <!-- ============================================ -->
+        <!-- УПРАВЛЕНИЕ                                    -->
+        <!-- ============================================ -->
+        <div class="sidebar-group">
+            <div class="sidebar-group-title">Управление</div>
+
+            <a href="/admin" class="sidebar-link" data-page="admin">
+                <span class="sidebar-link-icon">🧾</span>
+                <span class="sidebar-link-text">Учёт ТМЦ</span>
+            </a>
+
             <a href="/admin/warehouses" class="sidebar-link" data-page="warehouses">
                 <span class="sidebar-link-icon">🏢</span>
                 <span class="sidebar-link-text">Склады</span>
@@ -52,52 +75,63 @@
                 <span class="sidebar-link-icon">🏛️</span>
                 <span class="sidebar-link-text">Рабочие места</span>
             </a>
-            
-            <a href="/admin/inventory" class="sidebar-link" data-page="inventory">
-                <span class="sidebar-link-icon">📍</span>
-                <span class="sidebar-link-text">Хранение</span>
-            </a>
-            
-            <a href="/admin/moves" class="sidebar-link" data-page="moves">
-                <span class="sidebar-link-icon">🔄</span>
-                <span class="sidebar-link-text">Перемещения</span>
+
+            <a href="/admin/catalog" class="sidebar-link" data-page="catalog">
+                <span class="sidebar-link-icon">📚</span>
+                <span class="sidebar-link-text">Классификация</span>
             </a>
         </div>
+        {{/if}}
 
-        <!-- ЛЮДИ -->
+        {{#if user}}
+        <!-- ============================================ -->
+        <!-- ЛИЧНЫЙ КАБИНЕТ (только пользователь)          -->
+        <!-- ============================================ -->
         <div class="sidebar-group">
-            <div class="sidebar-group-title">Люди</div>
-            
+            <div class="sidebar-group-title">Личный кабинет</div>
+
+            <a href="/profile" class="sidebar-link" data-page="profile">
+                <span class="sidebar-link-icon">👤</span>
+                <span class="sidebar-link-text">Личный кабинет</span>
+            </a>
+        </div>
+        {{/if}}
+
+        <!-- ============================================ -->
+        <!-- СИСТЕМА (для всех)                            -->
+        <!-- ============================================ -->
+        {{#if admin}}
+        <div class="sidebar-group">
+            <div class="sidebar-group-title">Система</div>
+
             <a href="/users" class="sidebar-link" data-page="users">
                 <span class="sidebar-link-icon">👥</span>
                 <span class="sidebar-link-text">Пользователи</span>
             </a>
-        </div>
 
-        <!-- СИСТЕМА -->
-        <div class="sidebar-group">
-            <div class="sidebar-group-title">Система</div>
-            
             <a href="/admin/logs" class="sidebar-link" data-page="logs">
                 <span class="sidebar-link-icon">📈</span>
                 <span class="sidebar-link-text">Логи</span>
-            </a>
-            
-            <a href="/admin/catalog" class="sidebar-link" data-page="catalog">
-                <span class="sidebar-link-icon">📚</span>
-                <span class="sidebar-link-text">Справочник</span>
             </a>
 
             <a href="/pdf" class="sidebar-link" data-page="pdf">
                 <span class="sidebar-link-icon">📑</span>
                 <span class="sidebar-link-text">PDF инструкции</span>
             </a>
+        </div>
+        {{/if}}
 
-            <a href="/admin" class="sidebar-link" data-page="admin">
-                <span class="sidebar-link-icon">⚙️</span>
-                <span class="sidebar-link-text">Админ-панель</span>
+        {{#if user}}
+        <div class="sidebar-group">
+            <div class="sidebar-group-title">Система</div>
+
+            <a href="/pdf" class="sidebar-link" data-page="pdf">
+                <span class="sidebar-link-icon">📑</span>
+                <span class="sidebar-link-text">PDF инструкции</span>
             </a>
         </div>
+        {{/if}}
+
     </nav>
 
     <!-- Кнопка сворачивания -->
